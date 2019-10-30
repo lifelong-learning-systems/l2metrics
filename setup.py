@@ -10,8 +10,8 @@ setup(
     description='Metrics for Lifelong Learning',
     long_description=(HERE / 'README.md').read_text(),
     long_description_content_type='text/markdown',
-    author='Colin Taylor',
-    author_email='colin.taylor@jhuapl.edu',
+    author='Megan Baker',
+    author_email='megan.baker@jhuapl.edu',
     license='UNLICENSED',
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -24,6 +24,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'learnkit',
-        'pandas'
+        'pandas',
+        'numpy'
     ]
 )

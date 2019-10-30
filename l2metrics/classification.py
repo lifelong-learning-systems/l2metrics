@@ -1,4 +1,5 @@
 from . import core, util
+import numpy as np
 
 """
 Standard metrics for Classification tasks
@@ -15,7 +16,7 @@ class ClassificationMetric1(ClassificationMetric):
     description = "Calculates the performance across all tasks and phases"
     
     def calculate(self, dataframe):
-        return {'global_perf': mean(dataframe["perf"])}
+        return {'global_perf': np.mean(dataframe["perf"])}
 
 
 class ClassificationMetric2(ClassificationMetric):
@@ -29,15 +30,20 @@ class ClassificationMetric2(ClassificationMetric):
         result = dict()
         for task in unique_tasks:
             rows = dataframe['phase'] == "eval" & dataframe['task'] == task
-            result[task] = mean(rows["perf"])
+            result[task] = np.mean(rows["perf"])
         return result
 
 
 class ClassificationMetricsReport(core.MetricsReport):
 
     def __init__(self, **kwargs):
+        # Defines log_dir, syllabus_subtype, and initializes the _metrics list
         super().__init__(**kwargs)
+        self._log_data = util.read_log_data(self.log_dir)
         self._metrics = [ClassificationMetric1, ClassificationMetric2]
+
+    def default_metrics(self):
+        pass
 
     def calculate(self):
         pass

@@ -1,10 +1,11 @@
 import abc
 
+
 class Metric(abc.ABC):        
     """
     A single metric
     """
-    @abc.abstractproperty
+    @property
     def capability(self):
         """
         A string (one of the core capabilities that the metric calculates):
@@ -16,21 +17,21 @@ class Metric(abc.ABC):
         """
         pass
 
-    @abc.abstractproperty
+    @property
     def name(self):
         """
         A short label that uniquely identifies this metric. 
         """
         return ""
 
-    @abc.abstractproperty
+    @property
     def description(self):
         """
         A more detailed description for this metric
         """
         return ""
 
-    @abc.abstractproperty
+    @property
     def requires(self):
         """
         A dictionary of requirements for this metric. Keys 
@@ -38,9 +39,8 @@ class Metric(abc.ABC):
         """
         return {}
 
-
     @abc.abstractmethod    
-    def calculate(self):
+    def calculate(self, data, metadata):
         """
         Returns a dict of values
         """
@@ -59,21 +59,25 @@ class MetricsReport(object):
     Aggregates a list of metrics for a learner
     """
     def __init__(self, **kwargs):
-        if 'log_rootdir' in kwargs:
-            kwargs['log_rootdir']
-        else:
-            raise RuntimeError("log_rootdir is required")
+
         self._metrics = []
 
-    def calculate(self):
-        for metric in self._metrics:
-            result = metric.calculate()
+        if 'log_dir' in kwargs:
+            self.log_dir = kwargs['log_dir']
+        else:
+            raise RuntimeError("log_dir is required")
 
+        if 'syllabus_subtype' in kwargs:
+            self.syllabus_subtype = kwargs['syllabus_subtype']
+        else:
+            # TODO: Log/warn that we are using the default syllabus_subtype = CL
+            self.syllabus_subtype = "CL"
+
+    def calculate(self):
+        pass
 
     def plot(self):
         pass
 
     def add(self, metrics_lst):
-        self._metrics.append(metrics_lst)
-
-
+        self._metrics.extend(metrics_lst)

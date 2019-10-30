@@ -1,20 +1,21 @@
 import argparse
 import l2metrics
-import learnkit
+
 
 def run():
-    parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('-log_rootdir', default=None,  help='Root directory for logs')
-    parser.add_argument('-type', choices=["agent", "class"],  default="agent", help='Type of syllabus')
+    parser = argparse.ArgumentParser(description='Process some arguments.')
+    parser.add_argument('-log_dir', default=None, help='Subdirectory under the l2data root for the log files')
+    parser.add_argument('-syllabus_type', choices=["agent", "class"],  default="agent", help='Type of syllabus')
+    parser.add_argument('-syllabus_subtype', choices=["CL", "ANT_A", "ANT_B", "ANT_C"],  default="CL", help='Type of syllabus')
     args = parser.parse_args()
     
-    if args.log_rootdir is None:
-        args.log_rootdir = learnkit.data_util.utils.get_l2data_root()
+    # We assume that the logs are found as a subdirectory under the l2data root directory
+    # This subdirectory must be passed as a parameter in order to locate the logs which will be parsed by this code
     
-    if args.type == "agent":
-        report = l2metrics.AgentMetricsReport(log_rootdir=args.log_rootdir)
+    if args.syllabus_type == "class":
+        report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir)
     else:
-        report = l2metrics.ClassificationMetricsReport(log_rootdir=args.log_rootdir)
+        report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
     
     report.calculate()
     report.plot()

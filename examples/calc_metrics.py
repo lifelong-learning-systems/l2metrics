@@ -8,7 +8,7 @@ class CustomMetric1(l2metrics.AgentMetric):
     description = "Custom metric - Calculates the performance across all tasks and phases"
     
     def calculate(self, dataframe):
-        return {'global_perf': mean(dataframe["perf"])}
+        return {'global_perf': np.mean(dataframe["perf"])}
 
 
 metrics = l2metrics.AgentMetricsReport(

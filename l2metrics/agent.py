@@ -62,21 +62,33 @@ class AgentMetric3(AgentMetric):
     requires = {'syllabus_subtype': 'ANT_B'}
     description = "Calculates the performance of each task, in each evaluation, relative to a single task expert"
     
-    def calculate(self, dataframe):
-        ste_dict = util.load_default_ste_data()
-        unique_tasks = dataframe.loc[:, 'class_name'].unique()
+    def calculate(self, dataframe, phase_info):
+        # Initialize the new column of the phase info dataframe
+        phase_info["STE_normalized_saturation"] = np.nan
         result = dict()
 
-        # Make sure I have STE baselines available for all tasks, else complain
+        # Load the single task experts and compare them to the ones in the logs
+        ste_dict = util.load_default_ste_data()
+        unique_tasks = phase_info.loc[:, 'task_name'].unique()
+
+        # Make sure STE baselines are available for all tasks, else complain
         if unique_tasks.any() not in ste_dict:
             raise Exception
 
-        for task in unique_tasks:
+        for idx in range(phase_info.loc[:, 'block'].max()):
             # TODO: Do STE comparison work here. I can assume that if I tell the metrics to first calculate the within block
             # performance, I can then have access to that information in the phase_info dataframe passed in
-            rows = dataframe['phase'] == "eval" & dataframe['task'] == task
-            result[task] = np.mean(rows["perf"])
-        return result
+
+            # Get which task this block is and grab the STE performance for that task
+            this_task = phase_info.loc[idx, "task_name"]
+            this_ste_comparison = ste_dict[this_task]
+
+            # Compare the saturation value of this block to the STE performance and store it
+            phase_info.loc[idx, "STE_normalized_saturation"] = phase_info.loc[idx, "saturation_value"] / this_ste_comparison
+
+        metric_to_return = {'global_STE_normalized_saturation': np.mean(phase_info.loc[:, "STE_normalized_saturation"])}
+
+        return metric_to_return, phase_info
 
 
 class AgentMetricsReport(core.MetricsReport):
@@ -93,8 +105,9 @@ class AgentMetricsReport(core.MetricsReport):
         # Adds default metrics to list based on passed syllabus subtype
         self.default_metrics()
 
-        # Initializes a results dictionary that can be returned at the end of the calculation step
+        # Initialize a results dictionary that can be returned at the end of the calculation step
         self._results = {}
+        self._phase_info = None
 
     def default_metrics(self):
         # TODO: Add preliminary sanity checks to make sure syllabus has expected structure
@@ -103,6 +116,7 @@ class AgentMetricsReport(core.MetricsReport):
 
         elif self.syllabus_subtype == "ANT_A":
             self.add(AgentMetric2)
+            self.add(AgentMetric3)
 
         elif self.syllabus_subtype == "ANT_B":
             self.add(AgentMetric2)
@@ -120,10 +134,14 @@ class AgentMetricsReport(core.MetricsReport):
             result, phase_info = metric.calculate(metric, self._log_data, phase_info=phase_info)
             self._results[metric.name] = result
 
+    def report(self):
+        pass
+
     def plot(self):
         # TODO: Actually, you know, implement plotting
-        metric_results = [self._results[r_key] for r_key in self._results]
-        print(metric_results)
+        for r_key in self._results:
+            print('\nMetric: {:s}'.format(r_key))
+            print('Value: {:s}'.format(str(self._results[r_key])))
 
     def add(self, metrics_lst):
         self._metrics.append(metrics_lst)

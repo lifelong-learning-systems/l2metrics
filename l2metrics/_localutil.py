@@ -33,7 +33,7 @@ def parse_blocks(data):
             d2 = query_dataframe(d1, block_query_str)
             task_name = d2.loc[:, 'class_name'].unique()[0]
 
-            phase_block = {'phase': p, 'phase_number': phase_number, 'phase_type': phase_type, 'task': task_name,
+            phase_block = {'phase': p, 'phase_number': phase_number, 'phase_type': phase_type, 'task_name': task_name,
                            'block': b}
 
             if len(param_set) > 1:
@@ -48,7 +48,8 @@ def parse_blocks(data):
 
             phases_list.append(phase_block)
 
-    phases_df = pd.DataFrame(phases_list)
+    # Convenient for future dev to have the block id be the same as the index of the dataframe
+    phases_df = pd.DataFrame(phases_list).sort_values(by=['block']).set_index("block", drop=False)
 
     return test_task_nums, phases_df
 

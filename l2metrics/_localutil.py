@@ -13,8 +13,7 @@ def parse_blocks(data):
     for p in phases_from_logs:
 
         # Extract information
-        p1 = str.split(p, '-')
-        x = re.match(r'^(\d+)[.-_]*(\w+)', p1[1])
+        x = re.match(r'^(\d+)[.-_]*(\w+)', p)
         phase_number = x.group(1)
         phase_type = x.group(2)
 
@@ -23,6 +22,10 @@ def parse_blocks(data):
         d1 = query_dataframe(data, phase_query_str)
         blocks_within_phases = d1.loc[:, 'block'].unique()
         param_set = d1.loc[:, 'params'].unique()
+
+        # TODO: Check the phase_type for what I expect and make sure to complain if it's not what's expected
+        # TODO: Make more rigid expectations AND document them!
+        # TODO: Generate my own phase numbers? Or complain if phases skip numbers?
 
         # Save the block numbers involved in testing for subsequent metrics
         if phase_type == 'test':
@@ -44,7 +47,8 @@ def parse_blocks(data):
                 # Every task in this block has the same parameter set
                 phase_block['param_set'] = param_set[0]
             else:
-                raise KeyError
+                # TODO: ERROR MESSAGE HERE
+                raise KeyError()
 
             phases_list.append(phase_block)
 
@@ -54,9 +58,7 @@ def parse_blocks(data):
     return test_task_nums, phases_df
 
 
-def query_dataframe(dataframe, query_str, get_last=False):
-    df = pd.DataFrame(dataframe)
-
+def query_dataframe(df, query_str, get_last=False):
     if get_last:
         query_return = df.loc(-1, 'block')
     else:

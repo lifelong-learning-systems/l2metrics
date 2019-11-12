@@ -10,37 +10,51 @@ class AgentMetric(core.Metric):
     """
     A single metric for an Agent (aka. Reinforcement Learning) learner
     """
+    def __init__(self):
+        pass
+        # self.validate()
 
+    def plot(self, result):
+        pass
 
-class AgentMetric1(AgentMetric):
+    def validate(self, phase_info):
+        pass
+
+class GlobalMean(AgentMetric):
     name = "Global Mean Performance"
     capability = "continual_learning"
-    requires = {'syllabus_subtype': 'all'}
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'all'}
     description = "Calculates the performance across all tasks and phases"
-    
-    def calculate(self, dataframe, info):
-        return {'global_perf': np.mean(dataframe["perf"])}
+
+    def __init__(self):
+        super().__init__()
+        self.validate()
+
+    def validate(self, phase_info):
+        pass
+
+    def calculate(self, dataframe, phase_info, metrics_dict):
+        return {'global_perf': np.mean(dataframe.loc[:, "reward"])}
 
 
-class AgentMetric2(AgentMetric):
+class WithinBlockSaturation(AgentMetric):
     name = "Average Within Block Saturation Calculation"
     capability = "continual_learning"
-    requires = {'syllabus_subtype': 'ANT_A'}
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'CL'}
     description = "Calculates the performance within each block"
 
-    def calculate(self, dataframe, phase_info):
-        # Initialize the columns of the phase info dataframe
-        phase_info["saturation_value"] = np.nan
-        phase_info["eps_to_saturation"] = np.nan
+    def __init__(self):
+        super().__init__()
+        # self.validate()
 
-        max_block_num = dataframe.loc[:, 'block'].max()
+    def validate(self, phase_info):
+        pass
+
+    def calculate(self, dataframe, phase_info, metrics_dict):
         base_query_str = 'block == '
 
-        # Iterate over the blocks and compute the within block performance
-        for idx in range(max_block_num):
-            # Need to get the index of the phase_info so we can update it
-            phase_info_index = phase_info.index[phase_info["block"] == idx]
-
+        # Iterate over all of the blocks and compute the within block performance
+        for idx in range(phase_info.loc[:, 'block'].max()):
             # Need to get the part of the data corresponding to the block
             block_data = _localutil.query_dataframe(dataframe, base_query_str + str(idx))
 
@@ -48,25 +62,26 @@ class AgentMetric2(AgentMetric):
             sat_value, eps_to_sat, _ = _localutil.get_block_saturation_performance(block_data)
 
             # Record them in the correct row
-            phase_info.loc[phase_info_index, "saturation_value"] = sat_value
-            phase_info.loc[phase_info_index, "eps_to_saturation"] = eps_to_sat
+            metrics_dict["saturation_value"] = sat_value
+            metrics_dict["eps_to_saturation"] = eps_to_sat
 
-        metric_to_return = {'global_within_block_saturation': np.mean(phase_info.loc[:, "saturation_value"]),
-                            'global_num_eps_to_saturation': np.mean(phase_info.loc[:, "eps_to_saturation"])}
-        return metric_to_return, phase_info
+        metric_to_return = {'global_within_block_saturation': np.mean(metrics_dict["saturation_value"]),
+                            'global_num_eps_to_saturation': np.mean(metrics_dict["eps_to_saturation"])}
+
+        return metric_to_return, metrics_dict
 
 
-class AgentMetric3(AgentMetric):
+class STERelativePerf(AgentMetric):
     name = "Performance relative to S.T.E"
     capability = "adapt_to_new_tasks"
-    requires = {'syllabus_subtype': 'ANT_B'}
-    description = "Calculates the performance of each task, in each evaluation, relative to a single task expert"
-    
-    def calculate(self, dataframe, phase_info):
-        # Initialize the new column of the phase info dataframe
-        phase_info["STE_normalized_saturation"] = np.nan
-        result = dict()
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_B'}
+    description = "Calculates the performance of each task relative to it's corresponding single task expert"
 
+    def __init__(self):
+        super().__init__()
+        # self.validate()
+
+    def validate(self, phase_info):
         # Load the single task experts and compare them to the ones in the logs
         ste_dict = util.load_default_ste_data()
         unique_tasks = phase_info.loc[:, 'task_name'].unique()
@@ -75,20 +90,43 @@ class AgentMetric3(AgentMetric):
         if unique_tasks.any() not in ste_dict:
             raise Exception
 
-        for idx in range(phase_info.loc[:, 'block'].max()):
-            # TODO: Do STE comparison work here. I can assume that if I tell the metrics to first calculate the within block
-            # performance, I can then have access to that information in the phase_info dataframe passed in
+        # TODO: Add structure validation of phase_info
 
+        return ste_dict
+
+    def calculate(self, dataframe, phase_info, metrics_dict):
+        # Validate the STE
+        ste_dict = self.validate(phase_info)
+
+        for idx in range(phase_info.loc[:, 'block'].max()):
             # Get which task this block is and grab the STE performance for that task
             this_task = phase_info.loc[idx, "task_name"]
             this_ste_comparison = ste_dict[this_task]
 
             # Compare the saturation value of this block to the STE performance and store it
-            phase_info.loc[idx, "STE_normalized_saturation"] = phase_info.loc[idx, "saturation_value"] / this_ste_comparison
+            metrics_dict["STE_normalized_saturation"] = metrics_dict["saturation_value"] / this_ste_comparison
 
-        metric_to_return = {'global_STE_normalized_saturation': np.mean(phase_info.loc[:, "STE_normalized_saturation"])}
+        metric_to_return = {'global_STE_normalized_saturation': np.mean(metrics_dict["STE_normalized_saturation"])}
 
-        return metric_to_return, phase_info
+        return metric_to_return, metrics_dict
+
+
+class PerfMaintenance(AgentMetric):
+    name = "Performance Maintenance relative to previously trained task"
+    capability = "continual_learning"
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'CL'}
+    description = "Calculates the performance of each task, in each evaluation block, " \
+                  "relative to the previously trained task"
+
+    def __init__(self):
+        super().__init__()
+        self.validate()
+
+    def validate(self, phase_info):
+        pass
+
+    def calculate(self, dataframe, phase_info, metrics_dict):
+        pass
 
 
 class AgentMetricsReport(core.MetricsReport):
@@ -101,50 +139,60 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(util.get_l2root_base_dirs('logs', self.log_dir))
+        _, self.phase_info = _localutil.parse_blocks(self._log_data)
 
         # Adds default metrics to list based on passed syllabus subtype
-        self.default_metrics()
+        # TODO: Pass the phase_info to metrics constructor so that the metric can check what it's looking for
+        self._add_default_metrics()
+
+        # Do an initial check to make sure that reward has been logged
+        if 'reward' not in self._log_data.columns:
+            raise Exception('Reward column is required in the log data!')
 
         # Initialize a results dictionary that can be returned at the end of the calculation step
         self._results = {}
         self._phase_info = None
 
-    def default_metrics(self):
-        # TODO: Add preliminary sanity checks to make sure syllabus has expected structure
+    def _add_default_metrics(self):
+        # TODO: Add validation in the constructors to make sure syllabus has expected structure
         if self.syllabus_subtype == "CL":
-            self.add(AgentMetric2)
+            self.add(WithinBlockSaturation())
 
         elif self.syllabus_subtype == "ANT_A":
-            self.add(AgentMetric2)
-            self.add(AgentMetric3)
+            self.add(WithinBlockSaturation())
+            self.add(STERelativePerf())
 
         elif self.syllabus_subtype == "ANT_B":
-            self.add(AgentMetric2)
+            self.add(WithinBlockSaturation())
+            self.add(STERelativePerf())
 
         elif self.syllabus_subtype == "ANT_C":
-            self.add(AgentMetric2)
+            self.add(WithinBlockSaturation())
+            self.add(STERelativePerf())
 
         else:
             raise NotImplementedError
 
     def calculate(self):
-        _, phase_info = _localutil.parse_blocks(self._log_data)
+        # TODO: Refactor this such that phase info is not modified by each metric and instead modifies a dictionary
+        metrics_dict = {}
 
         for metric in self._metrics:
-            result, phase_info = metric.calculate(metric, self._log_data, phase_info=phase_info)
-            self._results[metric.name] = result
+            this_result, metrics_dict = metric.calculate(self._log_data, self.phase_info, metrics_dict)
+            self._results[metric.name] = this_result
 
     def report(self):
-        pass
-
-    def plot(self):
-        # TODO: Actually, you know, implement plotting
+        # Call a describe method to inform printing
         for r_key in self._results:
             print('\nMetric: {:s}'.format(r_key))
             print('Value: {:s}'.format(str(self._results[r_key])))
 
-    def add(self, metrics_lst):
-        self._metrics.append(metrics_lst)
+    def plot(self):
+        # TODO: Actually, you know, implement plotting
+        pass
+
+    def add(self, metrics_list):
+        self._metrics.append(metrics_list)
 
 
 

@@ -40,13 +40,13 @@ class Metric(abc.ABC):
         return {}
 
     @abc.abstractmethod    
-    def calculate(self, data, metadata):
+    def calculate(self, data, metadata, metrics_dict):
         """
         Returns a dict of values
         """
         return None
 
-    @abc.abstractmethod    
+    @abc.abstractmethod
     def plot(self, result):
         """
         Visualizes the metric using matplotlib visualizations

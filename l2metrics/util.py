@@ -50,6 +50,4 @@ def read_log_data(dir, analysis_variables=None):
                 else:
                     blocks = pd.concat([blocks, df])
 
-    merged_logs = logs.merge(blocks, on=['phase', 'class_name', 'worker', 'block'])
-    logs_to_return = merged_logs.set_index("timestamp").drop_duplicates().reset_index()
-    return logs_to_return
+    return logs.merge(blocks, on=['phase', 'class_name', 'worker', 'block'])

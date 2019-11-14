@@ -27,10 +27,10 @@ def load_default_ste_data():
     return ste_dict
 
 
-def read_log_data(dir, analysis_variables=None):
+def read_log_data(input_dir, analysis_variables=None):
     logs = None
     blocks = None
-    for root, dirs, files in os.walk(dir):
+    for root, dirs, files in os.walk(input_dir):
         for file in files:
             if file == 'data-log.tsv':
                 task = os.path.split(root)[-1]

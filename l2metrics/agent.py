@@ -18,6 +18,7 @@ class AgentMetric(core.Metric):
         pass
 
     def validate(self, phase_info):
+        # TODO: Add structure validation of phase_info
         pass
 
 class GlobalMean(AgentMetric):
@@ -28,9 +29,10 @@ class GlobalMean(AgentMetric):
 
     def __init__(self):
         super().__init__()
-        self.validate()
+        # self.validate()
 
     def validate(self, phase_info):
+        # TODO: Add structure validation of phase_info
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
@@ -48,25 +50,33 @@ class WithinBlockSaturation(AgentMetric):
         # self.validate()
 
     def validate(self, phase_info):
+        # TODO: Add structure validation of phase_info
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
         base_query_str = 'block == '
+        saturation_value = {}
+        eps_to_saturation = {}
+        all_sat_vals = []
+        all_eps_to_sat = []
 
         # Iterate over all of the blocks and compute the within block performance
         for idx in range(phase_info.loc[:, 'block'].max()):
             # Need to get the part of the data corresponding to the block
-            block_data = _localutil.query_dataframe(dataframe, base_query_str + str(idx))
+            block_data = dataframe[dataframe["block"] == idx]
 
-            # Actually make within block calculations
+            # Make within block calculations
             sat_value, eps_to_sat, _ = _localutil.get_block_saturation_performance(block_data)
 
-            # Record them in the correct row
-            metrics_dict["saturation_value"] = sat_value
-            metrics_dict["eps_to_saturation"] = eps_to_sat
+            # Record them
+            saturation_value[idx] = sat_value
+            all_sat_vals.append(sat_value)
+            eps_to_saturation[idx] = eps_to_sat
+            all_eps_to_sat.append(eps_to_sat)
 
-        metric_to_return = {'global_within_block_saturation': np.mean(metrics_dict["saturation_value"]),
-                            'global_num_eps_to_saturation': np.mean(metrics_dict["eps_to_saturation"])}
+        metrics_dict = {"saturation_value": saturation_value, "eps_to_saturation": eps_to_saturation}
+        metric_to_return = {'global_within_block_saturation': np.mean(all_sat_vals),
+                            'global_num_eps_to_saturation': np.mean(all_eps_to_sat)}
 
         return metric_to_return, metrics_dict
 
@@ -97,6 +107,8 @@ class STERelativePerf(AgentMetric):
     def calculate(self, dataframe, phase_info, metrics_dict):
         # Validate the STE
         ste_dict = self.validate(phase_info)
+        STE_normalized_saturation = {}
+        all_STE_normalized_saturations = []
 
         for idx in range(phase_info.loc[:, 'block'].max()):
             # Get which task this block is and grab the STE performance for that task
@@ -104,30 +116,62 @@ class STERelativePerf(AgentMetric):
             this_ste_comparison = ste_dict[this_task]
 
             # Compare the saturation value of this block to the STE performance and store it
-            metrics_dict["STE_normalized_saturation"] = metrics_dict["saturation_value"] / this_ste_comparison
 
-        metric_to_return = {'global_STE_normalized_saturation': np.mean(metrics_dict["STE_normalized_saturation"])}
+            STE_normalized_saturation[idx] = metrics_dict["saturation_value"][idx] / this_ste_comparison
+            all_STE_normalized_saturations.append(STE_normalized_saturation[idx])
+
+        metrics_dict["STE_normalized_saturation"] = STE_normalized_saturation
+        metric_to_return = {'global_STE_normalized_saturation': np.mean(all_STE_normalized_saturations)}
 
         return metric_to_return, metrics_dict
 
 
-class PerfMaintenance(AgentMetric):
-    name = "Performance Maintenance relative to previously trained task"
+class PerfMaintenanceANT(AgentMetric):
+    name = "Performance Maintenance relative to previously trained task - only for ANT syllabi"
     capability = "continual_learning"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'CL'}
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT'}
     description = "Calculates the performance of each task, in each evaluation block, " \
                   "relative to the previously trained task"
 
     def __init__(self):
         super().__init__()
-        self.validate()
+        # self.validate()
 
     def validate(self, phase_info):
+        # TODO: Add structure validation of phase_info
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
-        pass
+        # This metric must compute in each evaluation block the performance of the tasks
+        # relative to the previously trained ones
+        previously_trained_tasks = []
+        previously_trained_task_ids = []
 
+        # Iterate over the phases, just the evaluation portion. We need to do this in order.
+        for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
+            # Get the task names that were used for the train portion of the phase
+            trained_tasks = phase_info[(phase_info.phase_type == 'train') &
+                                      (phase_info.phase_number == phase)].loc[:, 'task_name'].tolist()
+            trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
+                                          (phase_info.phase_number == phase)].loc[:, 'block'].tolist()
+
+            previously_trained_tasks.extend(trained_tasks)
+            previously_trained_task_ids.extend(trained_task_ids)
+
+            this_phase_test_tasks = phase_info[(phase_info.phase_type == 'test') &
+                                               (phase_info.phase_number == phase)].loc[:, 'task_name'].tolist()
+            this_phase_test_task_ids = phase_info[(phase_info.phase_type == 'test') &
+                                                  (phase_info.phase_number == phase)].loc[:, 'block'].tolist()
+
+            for id, task in zip(this_phase_test_task_ids, this_phase_test_tasks):
+
+                if task in previously_trained_tasks:
+
+                    print(task)
+
+        metric_to_return = []
+
+        return metric_to_return, metrics_dict
 
 class AgentMetricsReport(core.MetricsReport):
     """
@@ -142,25 +186,27 @@ class AgentMetricsReport(core.MetricsReport):
         _, self.phase_info = _localutil.parse_blocks(self._log_data)
 
         # Adds default metrics to list based on passed syllabus subtype
-        # TODO: Pass the phase_info to metrics constructor so that the metric can check what it's looking for
         self._add_default_metrics()
 
         # Do an initial check to make sure that reward has been logged
         if 'reward' not in self._log_data.columns:
             raise Exception('Reward column is required in the log data!')
 
-        # Initialize a results dictionary that can be returned at the end of the calculation step
+        # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
+        # dictionary that can be passed around for internal calculations
         self._results = {}
+        self._metrics_dict = {}
         self._phase_info = None
 
     def _add_default_metrics(self):
-        # TODO: Add validation in the constructors to make sure syllabus has expected structure
+        # TODO: Add validation in the constructors to make sure syllabus has expected structure?
         if self.syllabus_subtype == "CL":
             self.add(WithinBlockSaturation())
 
         elif self.syllabus_subtype == "ANT_A":
             self.add(WithinBlockSaturation())
             self.add(STERelativePerf())
+            self.add(PerfMaintenanceANT())
 
         elif self.syllabus_subtype == "ANT_B":
             self.add(WithinBlockSaturation())
@@ -174,11 +220,8 @@ class AgentMetricsReport(core.MetricsReport):
             raise NotImplementedError
 
     def calculate(self):
-        # TODO: Refactor this such that phase info is not modified by each metric and instead modifies a dictionary
-        metrics_dict = {}
-
         for metric in self._metrics:
-            this_result, metrics_dict = metric.calculate(self._log_data, self.phase_info, metrics_dict)
+            this_result, self._metrics_dict = metric.calculate(self._log_data, self.phase_info, self._metrics_dict)
             self._results[metric.name] = this_result
 
     def report(self):

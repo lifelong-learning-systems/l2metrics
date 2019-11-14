@@ -7,6 +7,7 @@ def parse_blocks(data):
     # Want to get the unique phases, split out training/testing info, and return the split info
     phases_list = []
     test_task_nums = []
+    all_block_nums = []
 
     phases_from_logs = data.loc[:, 'phase'].unique()
 
@@ -17,23 +18,22 @@ def parse_blocks(data):
         phase_number = x.group(1)
         phase_type = x.group(2)
 
+        if str.lower(phase_type) not in ["train", "test"]:
+            raise Exception('Unsupported phase type: {:s}! Supported phase types are "train" and "test"'
+                            .format(phase_type))
+
         # Now must account for the multiple tasks, parameters
-        phase_query_str = "phase == '" + p + "'"
-        d1 = query_dataframe(data, phase_query_str)
+        d1 = data[data["phase"] == p]
         blocks_within_phases = d1.loc[:, 'block'].unique()
         param_set = d1.loc[:, 'params'].unique()
-
-        # TODO: Check the phase_type for what I expect and make sure to complain if it's not what's expected
-        # TODO: Make more rigid expectations AND document them!
-        # TODO: Generate my own phase numbers? Or complain if phases skip numbers?
 
         # Save the block numbers involved in testing for subsequent metrics
         if phase_type == 'test':
             test_task_nums.extend(blocks_within_phases)
 
         for b in blocks_within_phases:
-            block_query_str = "block == '" + str(b) + "'"
-            d2 = query_dataframe(d1, block_query_str)
+            all_block_nums.append(b)
+            d2 = d1[d1["block"] == b]
             task_name = d2.loc[:, 'class_name'].unique()[0]
 
             phase_block = {'phase': p, 'phase_number': phase_number, 'phase_type': phase_type, 'task_name': task_name,
@@ -47,24 +47,18 @@ def parse_blocks(data):
                 # Every task in this block has the same parameter set
                 phase_block['param_set'] = param_set[0]
             else:
-                # TODO: ERROR MESSAGE HERE
-                raise KeyError()
+                raise Exception("Error parsing the parameter set for this task: {:s}".format(param_set))
 
             phases_list.append(phase_block)
 
     # Convenient for future dev to have the block id be the same as the index of the dataframe
     phases_df = pd.DataFrame(phases_list).sort_values(by=['block']).set_index("block", drop=False)
 
+    # Quick check to make sure the block numbers (zero indexed) aren't a mismatch on the length of the block nums array
+    if (max(all_block_nums)+1)/len(all_block_nums) != 1:
+        raise Warning("Phase number: {:d} and length {:d} mismatch!".format(max(all_block_nums), len(all_block_nums)))
+
     return test_task_nums, phases_df
-
-
-def query_dataframe(df, query_str, get_last=False):
-    if get_last:
-        query_return = df.loc(-1, 'block')
-    else:
-        query_return = df.query(query_str)
-
-    return query_return
 
 
 def moving_average(values, window):

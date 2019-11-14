@@ -1,31 +1,48 @@
 # Overview of Metrics Calculation for Lifelong Learning
-##Reinforcement Learning Metric Documentation, v0.1
+## Reinforcement Learning Metric Documentation, v0.1
 
 Assumptions and Requirements:
 ------
 
-+ Log files _must_ include logged reward per episode, otherwise the metrics code will not run.
-+ Syllabi used to generate the log files _shall_ include annotations with phase information and shall conform to the following convention:
++ Log files __must__ include logged reward per episode, otherwise the metrics code will not run.
++ Single Task Expert Saturation values for each task __must__ be included in a JSON file found in $L2DATA/taskinfo/info.json
+    
+    The task names must match the names in the log files exactly. The format for this file will be: 
+    
+    {
+    "task_name_1" : 0.8746,
+    "task_name_2" : 0.9315,
+    ...,
+    "task_name_n" : 0.8089
+    }
+    
+    
++ Syllabi used to generate the log files __must__ include annotations with phase information and shall conform to the following convention:
+    Phase annotation format:
 
-    + Phase annotation format:
     {"$phase":  "1.train"}, {"$phase":  "1.test"}, etc
 
-    + Structure:
-    1) CL
-    - Consists only of a single task with parametric variations exercised throughout the syllabus. Testing phase is optional, but recommended to enable computing performance maintenance metrics
+    Structure:
+    + CL
 
-    2) ANT, subtype A
-    - Consists of multiple tasks with no parametric variations exercised throughout the syllabus. Testing phase is mandatory.
+    Consists only of a single task with parametric variations exercised throughout the syllabus. Testing phase is optional, but recommended to enable computing performance maintenance metrics
 
-    3) ANT, subtype B
-    - Consists of multiple tasks with no parametric variations exercised throughout the syllabus. Testing phase is mandatory.
+    + ANT, subtype A
+
+    Consists of multiple tasks with no parametric variations exercised throughout the syllabus. Testing phase is mandatory.
+
+    + ANT, subtype B
+
+    Consists of multiple tasks with no parametric variations exercised throughout the syllabus. Testing phase is mandatory.
 
 
 Metric definitions:
 ------
 
 + Phase
+    - Types of phases can be "train" or "test"
 + Block
+    - A unique combination of task and parameters. Subcomponent of phase.
 + Task
 + Episode
 

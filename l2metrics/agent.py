@@ -10,6 +10,7 @@ class AgentMetric(core.Metric):
     """
     A single metric for an Agent (aka. Reinforcement Learning) learner
     """
+
     def __init__(self):
         pass
         # self.validate()
@@ -20,6 +21,7 @@ class AgentMetric(core.Metric):
     def validate(self, phase_info):
         # TODO: Add structure validation of phase_info
         pass
+
 
 class GlobalMean(AgentMetric):
     name = "Global Mean Performance"
@@ -61,7 +63,7 @@ class WithinBlockSaturation(AgentMetric):
         all_eps_to_sat = []
 
         # Iterate over all of the blocks and compute the within block performance
-        for idx in range(phase_info.loc[:, 'block'].max()):
+        for idx in range(phase_info.loc[:, 'block'].max()+1):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe[dataframe["block"] == idx]
 
@@ -139,44 +141,63 @@ class PerfMaintenanceANT(AgentMetric):
 
     def validate(self, phase_info):
         # TODO: Add structure validation of phase_info
+        # Must ensure that the training phase has only one block or else handle multiple
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
         # This metric must compute in each evaluation block the performance of the tasks
         # relative to the previously trained ones
-        previously_trained_tasks = []
-        previously_trained_task_ids = []
+        previously_trained_tasks = np.array([])
+        previously_trained_task_ids = np.array([])
+        this_metric = {}
+        all_maintenance_vals = []
 
         # Iterate over the phases, just the evaluation portion. We need to do this in order.
         for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
             # Get the task names that were used for the train portion of the phase
             trained_tasks = phase_info[(phase_info.phase_type == 'train') &
-                                      (phase_info.phase_number == phase)].loc[:, 'task_name'].tolist()
+                                       (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
             trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
-                                          (phase_info.phase_number == phase)].loc[:, 'block'].tolist()
+                                          (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
-            previously_trained_tasks.extend(trained_tasks)
-            previously_trained_task_ids.extend(trained_task_ids)
+            # Validation would have ensured that the training phase has exactly one training phase
+            previously_trained_tasks = np.append(previously_trained_tasks, trained_tasks)
+            previously_trained_task_ids = np.append(previously_trained_task_ids, trained_task_ids)
 
             this_phase_test_tasks = phase_info[(phase_info.phase_type == 'test') &
-                                               (phase_info.phase_number == phase)].loc[:, 'task_name'].tolist()
+                                               (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
             this_phase_test_task_ids = phase_info[(phase_info.phase_type == 'test') &
-                                                  (phase_info.phase_number == phase)].loc[:, 'block'].tolist()
+                                                  (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
-            for id, task in zip(this_phase_test_task_ids, this_phase_test_tasks):
+            for idx, task in enumerate(this_phase_test_tasks):
 
                 if task in previously_trained_tasks:
+                    # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
+                    inds_where_task = np.where(previously_trained_tasks == task)
 
-                    print(task)
+                    # TODO: Handle multiple comparison points
+                    block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
+                    previously_trained_sat_values = metrics_dict['saturation_value'][block_ids_for_comparison[0]]
 
-        metric_to_return = []
+                    new_sat_value = metrics_dict['saturation_value'][this_phase_test_task_ids[idx]]
+
+                    this_comparison = previously_trained_sat_values - new_sat_value
+                    key_str = task + '_phase_' + str(phase) + '_maintenance'
+                    this_metric[key_str] = this_comparison
+                    all_maintenance_vals.append(this_comparison)
+
+        metric_to_return = {'mean_performance_difference': np.mean(all_maintenance_vals)}
+        print(this_metric)
+        metrics_dict['performance_maintenance'] = this_metric
 
         return metric_to_return, metrics_dict
+
 
 class AgentMetricsReport(core.MetricsReport):
     """
     Aggregates a list of metrics for an Agent learner
     """
+
     def __init__(self, **kwargs):
         # Defines log_dir, syllabus_subtype, and initializes the _metrics list
         super().__init__(**kwargs)
@@ -236,6 +257,3 @@ class AgentMetricsReport(core.MetricsReport):
 
     def add(self, metrics_list):
         self._metrics.append(metrics_list)
-
-
-

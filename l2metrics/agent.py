@@ -150,7 +150,10 @@ class PerfMaintenanceANT(AgentMetric):
         previously_trained_tasks = np.array([])
         previously_trained_task_ids = np.array([])
         this_metric = {}
-        all_maintenance_vals = []
+        all_sat_diff_vals = []
+        all_eps_to_sat_diff_vals = []
+        this_sat_val_comparison = np.nan
+        this_num_eps_to_sat_comparison = np.nan
 
         # Iterate over the phases, just the evaluation portion. We need to do this in order.
         for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
@@ -160,7 +163,7 @@ class PerfMaintenanceANT(AgentMetric):
             trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
                                           (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
-            # Validation would have ensured that the training phase has exactly one training phase
+            # Validation will have ensured that the training phase has exactly one training phase
             previously_trained_tasks = np.append(previously_trained_tasks, trained_tasks)
             previously_trained_task_ids = np.append(previously_trained_task_ids, trained_task_ids)
 
@@ -170,7 +173,6 @@ class PerfMaintenanceANT(AgentMetric):
                                                   (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
             for idx, task in enumerate(this_phase_test_tasks):
-
                 if task in previously_trained_tasks:
                     # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
                     inds_where_task = np.where(previously_trained_tasks == task)
@@ -178,17 +180,28 @@ class PerfMaintenanceANT(AgentMetric):
                     # TODO: Handle multiple comparison points
                     block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
                     previously_trained_sat_values = metrics_dict['saturation_value'][block_ids_for_comparison[0]]
+                    previously_trained_num_eps_to_sat = metrics_dict['eps_to_saturation'][block_ids_for_comparison[0]]
 
                     new_sat_value = metrics_dict['saturation_value'][this_phase_test_task_ids[idx]]
+                    new_num_eps_to_sat = metrics_dict['eps_to_saturation'][this_phase_test_task_ids[idx]]
 
-                    this_comparison = previously_trained_sat_values - new_sat_value
-                    key_str = task + '_phase_' + str(phase) + '_maintenance'
-                    this_metric[key_str] = this_comparison
-                    all_maintenance_vals.append(this_comparison)
+                    this_sat_val_comparison = previously_trained_sat_values - new_sat_value
+                    this_num_eps_to_sat_comparison = previously_trained_num_eps_to_sat - new_num_eps_to_sat
 
-        metric_to_return = {'mean_performance_difference': np.mean(all_maintenance_vals)}
-        print(this_metric)
-        metrics_dict['performance_maintenance'] = this_metric
+                    key_str_1 = task + '_phase_' + str(phase) + '_sat_value_maintenance'
+                    key_str_2 = task + '_phase_' + str(phase) + '_num_eps_maintenance'
+
+                    this_metric[key_str_1] = this_sat_val_comparison
+                    this_metric[key_str_2] = this_num_eps_to_sat_comparison
+
+                    all_sat_diff_vals.append(this_sat_val_comparison)
+                    all_eps_to_sat_diff_vals.append(this_num_eps_to_sat_comparison)
+
+        metric_to_return = {'mean_saturation_value_diff': np.mean(all_sat_diff_vals),
+                            'mean_num_eps_to_saturation_diff': np.mean(all_eps_to_sat_diff_vals)}
+
+        metrics_dict['saturation_maintenance'] = this_sat_val_comparison
+        metrics_dict['num_eps_maintenance'] = this_num_eps_to_sat_comparison
 
         return metric_to_return, metrics_dict
 
@@ -233,12 +246,14 @@ class AgentMetricsReport(core.MetricsReport):
             self.add(WithinBlockSaturation())
             self.add(STERelativePerf())
 
+        # This is an unhandled syllabus type as of right now
         elif self.syllabus_subtype == "ANT_C":
-            self.add(WithinBlockSaturation())
-            self.add(STERelativePerf())
+            raise Exception('This syllabus type ({:s}) will be handled in the future, but is not yet supported!'
+                            .format(self.syllabus_subtype))
 
         else:
-            raise NotImplementedError
+            raise Exception('Unhandled syllabus type {:s}! Supported syllabus types are: CL, ANT_A, and ANT_B'
+                            .format(self.syllabus_subtype))
 
     def calculate(self):
         for metric in self._metrics:

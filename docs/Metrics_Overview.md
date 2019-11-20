@@ -43,6 +43,12 @@ Assumptions and Requirements:
 
     Consists of multiple tasks with no parametric variations exercised throughout the syllabus. Testing phase is mandatory.
     The purpose of this type of syllabus is to assess whether the agent can transfer knowledge from a learned task to a new task.
+    
+    + ANT, subtype C
+
+    Consists of multiple tasks with parametric variations exercised throughout the syllabus. Testing phase is mandatory.
+    The purpose of this type of syllabus is to assess whether the agent can transfer knowledge from a learned task with 
+    parametric variation to a new task with parametric variation.
 
 
 Metric definitions:
@@ -64,21 +70,21 @@ Metric definitions:
 Metric calculation descriptions:
 ------
 
-1) Saturation Value
+1. Saturation Value
     + Purpose: The saturation value is computed to quantify the maximum maintained value by the agent.
     + Calculated by: Since multiple rewards may be logged per episode, the mean is taken per episode. 
     Then, the max of the rolling average is taken of the mean reward per episode with a smoothing parameter, s (default = 0.1)
     + Compared to: Future or single task expert saturation values of the same task
     + Computed for: {CL, ANT_A, ANT_B}
 
-2) Time to Saturation
+2. Time to Saturation
     + Purpose: Time to saturation is used to quantify how quickly, in number of episodes, the agent took to achieve the 
     saturation value computed above.
     + Calculated by: The first time the saturation value (or above) is seen, that episode number is recorded
     + Compared to: Future times to saturation of the same task
     + Computed for: {CL, ANT_A, ANT_B}
 
-3) Normalized Integral of Reward/Time
+3. Normalized Integral of Reward/Time
     - Purpose: Taking the Integral of Accumulated Reward over Time allows for a more robust comparison of the time to learn a particular task, 
     taking into account both the shape and saturation of the learning for future comparison. Has limitations; must be normalized by length; 
     only training phases can be compared to each other
@@ -86,35 +92,47 @@ Metric calculation descriptions:
     + Compared to: Future training instances of this metric
     + Computed for: {ANT_B}
 
-4) Recovery Time
-    + Purpose: 
-    + Calculated by:
-    + Compared to:
+4. Recovery Time
+    + Purpose: Recovery time is calculated to determine how quickly (if at all) an agent can "bounce back" after a change is introduced to its environment
+    + Calculated by: After some training phase achieves a saturation value, determine how many episodes, if any, it takes for the agent to regain the same performance on the same task
+    + Compared to: An agent's recovery time is comparable across tasks
+    + Computed for: {CL}
+
+5. Performance Maintenance on Test Sets
+    + Purpose: Performance maintenance on test sets is calculated to determine whether an agent catastrophically forgets a previously learned task
+    + Calculated by: Comparing all computed metrics on the train set (saturation values, time to saturation, etc) on the test set and computing the difference in performance  
+    + Compared to: N/A
     + Computed for: {CL, ANT_A, ANT_B}
 
-5) Performance Maintenance on Test Sets
-    + Purpose:
-    + Calculated by:
-    + Compared to:
+6. Performance relative to STE (training) - Saturation Value, Time, Integral
+    + Purpose: STE Relative performance assesses whether a lifelong learner outperforms a traditional learner.
+    + Calculated by: Normalizing metrics computed on the lifelong learner by the same metrics computed on the traditional learner 
+    + Compared to: N/A
     + Computed for: {CL, ANT_A, ANT_B}
 
-6) Performance relative to STE (training) - Saturation Value, Time, Integral
-    + Purpose:
-    + Calculated by:
-    + Compared to:
+7. Forward Transfer (cross tasks)
+    + Purpose: Forward transfer assesses whether an agent transfers knowledge from a learned task to a new task 
+    + Calculated by: 
+    + Compared to: STE performance
+    + Computed for: {CL, ANT_A, ANT_B}
+    
+8. Forward Transfer (cross tasks)
+    + Purpose: Forward transfer assesses whether an agent transfers knowledge from a learned task to a new task 
+    + Calculated by: 
+    + Compared to: STE performance
     + Computed for: {CL, ANT_A, ANT_B}
 
-7) Forward Transfer (cross tasks)
-    + Purpose:
-    + Calculated by:
+9. Time to Learn (cross tasks)
+    + Purpose: Time to learn (cross tasks) assesses whether parametric variation in learning task 1 improve time to learn in task 2
+    + Calculated by: 
     + Compared to:
-    + Computed for: {CL, ANT_A, ANT_B}
-
-8) Time to Learn (cross tasks)
-    + Purpose:
-    + Calculated by:
+    + Computed for: {ANT_C}
+    
+10. Time to Continually Learn (cross tasks)
+    + Purpose: Time to continually learn (cross tasks) assesses whether learning task 1 
+    + Calculated by: 
     + Compared to:
-    + Computed for: {CL, ANT_A, ANT_B}
+    + Computed for: {ANT_C}
 
 
 To Add Your Own Metrics:

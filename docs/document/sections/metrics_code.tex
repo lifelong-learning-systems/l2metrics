@@ -1,0 +1,77 @@
+\chapter{Metrics Code}\label{ch:metrics_code}
+
+\section{Code Release}
+
+Metrics code will be released to GitHub!
+
+\section{How to Use} 
+
+\subsection*{Assumptions and Requirements}
+
+Without further ado, 
+
+1. Log files \textbf{must} include logged reward, and the column in the data file \textbf{must} be named reward. Without this column, the metrics code will fail. This is assumed to be logged per episode. \\
+
+2. Single Task Expert Saturation values for each task \textbf{must} be included in a JSON file found in \$L2DATA/taskinfo/info.json and without this file, the metric "Comparison to STE" cannot be calculated. Further, the task names contained in the JSON file must match the names in the log files exactly. The format for this file will be: 
+    
+    {
+    "task\_name\_1" : 0.8746,
+    "task\_name\_2" : 0.9315,
+    ...,
+    "task\_name\_n" : 0.8089
+    }
+
+3. Syllabi used to generate the log files \textbf{must} include annotations with phase information and shall conform to the following convention:\\
+    
+Phase annotation format:\\
+    {"\$phase":  "1.train"}, {"\$phase":  "1.test"}, {"\$phase":  "2.train"}, {"\$phase":  "2.test"}, etc
+
+Structure:\\
+    
+    + CL
+
+    Consists only of a single task with parametric variations exercised throughout the syllabus. Testing phase is optional, 
+    but recommended. The purpose of this type of syllabus is to assess whether the agent can adjust to changes in the 
+    environment and maintain performance on the previous parameters when new ones are introduced
+
+    + ANT, subtype A
+
+    Consists of multiple tasks with no parametric variations exercised throughout the syllabus. Testing phase is mandatory.
+    The purpose of this type of syllabus is to assess whether the agent can learn a new task without forgetting the old task
+    and does not seek to assess knowledge transfer.
+
+    + ANT, subtype B
+
+    Consists of multiple tasks with no parametric variations exercised throughout the syllabus. Testing phase is mandatory.
+    The purpose of this type of syllabus is to assess whether the agent can transfer knowledge from a learned task to a new task.
+    
+    + ANT, subtype C
+
+    Consists of multiple tasks with parametric variations exercised throughout the syllabus. Testing phase is mandatory.
+    The purpose of this type of syllabus is to assess whether the agent can transfer knowledge from a learned task with 
+    parametric variation to a new task with parametric variation.
+
+\subsection*{Write your Own Custom Metric}
+
+The steps required to run your new metric in the existing metrics pipeline are as follows:
+
+1. Write your custom metric, MyCustomMetric in agent.py according to the structure set in l2metrics/core.py
+
+    More details regarding the structure of the AgentMetrics class can be found in l2metrics/core.py - your metric code to 
+    actually compute a custom metric goes in the required calculate method. Note that the required arguments are the log data,
+    the phase\_info, and the metrics\_dict. The metrics dict is filled by each metric in its turn, whereas the log data and the
+    phase info are extracted in the AgentMetricsReport constructor from the logs via two helper functions
+    
+    l2metrics/util.py - (read\_log\_data): scrapes the logs and returns a pandas dataframe of the logs and task parameters
+    l2metrics/\_localutil.py - (parse\_blocks): builds a pandas dataframe of the phase information contained in the log data
+
+
+2. Insert MyCustomMetric to be added into the appropriate default metric lists for any syllabus type you want the metric
+to be calculated for - CL, ANT\_A, and/or ANT\_B
+
+    The AgentMetricsReport adds the default list of metrics based on the passed syllabus type (a mandatory parameter to run 
+    the metrics code via command line). AgentMetricsReport will only add your new metric to the default list if you insert 
+    it in the \_add\_default\_metrics method for your desired syllabus type
+
+3. Run l2metrics/\_\_ main \_\_.py with the appropriate command line parameters and watch your metric be reported when you 
+call the report method

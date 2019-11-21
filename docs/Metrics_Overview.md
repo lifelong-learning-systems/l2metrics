@@ -75,7 +75,7 @@ Metric calculation descriptions:
     + Calculated by: Since multiple rewards may be logged per episode, the mean is taken per episode. 
     Then, the max of the rolling average is taken of the mean reward per episode with a smoothing parameter, s (default = 0.1)
     + Compared to: Future or single task expert saturation values of the same task
-    + Computed for: {CL, ANT_A, ANT_B}
+    + Computed for: {CL, ANT_A, ANT_B}                             
 
 2. Time to Saturation
     + Purpose: Time to saturation is used to quantify how quickly, in number of episodes, the agent took to achieve the 

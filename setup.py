@@ -44,8 +44,6 @@ setup(
     install_requires=[
         'learnkit',
         'pandas',
-        'numpy',
-        're',
-        'json'
+        'numpy'
     ]
 )

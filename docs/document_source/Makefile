@@ -23,6 +23,8 @@ all: $(MAIN).pdf
 
 $(MAIN).pdf: $(MAIN).tex $(MAIN).bbl .refresh $(SOURCES) $(FIGURES)
 	$(LATEXMK) $(LATEXMKOPT) -pdflatex="$(LATEX) $(LATEXOPT) $(NONSTOP) %O %S" $(MAIN)
+	mv $(MAIN).pdf ../metrics_documentation.pdf
+	make clean
 
 $(MAIN).bbl: $(MAIN).tex $(REFERENCES)
 	$(LATEX) $(MAIN)

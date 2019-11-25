@@ -5,7 +5,6 @@
 LATEX=pdflatex
 LATEXOPT=--shell-escape
 NONSTOP=--interaction=nonstopmode
-BIBTEX=bibtex
 
 LATEXMK=latexmk
 LATEXMKOPT=-pdf
@@ -13,32 +12,26 @@ CONTINUOUS=-pvc
 
 MAIN=master
 SOURCES=$(MAIN).tex Makefile
-FIGURES := $(shell find figs/* -type f)
-REFERENCES := $(shell find *.bib -type f)
+FIGURES := $(shell find sections/figs/* -type f)
 
 all: $(MAIN).pdf
 
 .refresh:
 	touch .refresh
 
-$(MAIN).pdf: $(MAIN).tex $(MAIN).bbl .refresh $(SOURCES) $(FIGURES)
+$(MAIN).pdf: $(MAIN).tex .refresh $(FIGURES)
 	$(LATEXMK) $(LATEXMKOPT) -pdflatex="$(LATEX) $(LATEXOPT) $(NONSTOP) %O %S" $(MAIN)
 	mv $(MAIN).pdf ../metrics_documentation.pdf
 	make clean
-
-$(MAIN).bbl: $(MAIN).tex $(REFERENCES)
-	$(LATEX) $(MAIN)
-	$(BIBTEX) $(MAIN)
 
 clean:
 	$(LATEXMK) -C $(MAIN)
 	rm -f $(MAIN).pdfsync
 	rm -rf *~ *.tmp
-	rm -f *.bbl *.blg *.brf *.aux *.end *.fls *.log *.out *.fdb_latexmk
+	rm -f *.blg *.brf *.aux *.end *.fls *.log *.out *.fdb_latexmk
 	rm -f .refresh
 	rm -f *.run.xml
 	rm -f *.thm
-	rm -f *-blx.bib
 
 debug:
 	$(PKGS) $(LATEX) $(LATEXOPT) $(MAIN)

@@ -5,7 +5,7 @@ In this document we introduce the Metrics component of the Test and Evaluation F
 \section{Core Capabilities}
 \label{sec:core_capabilities}
 
-We remind readers that the purpose of the metrics discussed in this document are to determine whether a system exhibits the Core Capabilities of Lifelong Learning. We therefore invite our audience to review the five Core Capabilities whose definitions are below, and refer readers to the BAA for more details.\\%\footnote{DARPA L2M Broad Agency Announcement (April 12 2017)}
+We remind readers that the purpose of the metrics discussed in this document are to determine whether a system exhibits the Core Capabilities of Lifelong Learning. These metrics may be slightly different from those which might assess a traditional learner. We invite our audience to review the five Core Capabilities whose definitions are below, and refer readers to the BAA for more details.\\%\footnote{DARPA L2M Broad Agency Announcement (April 12 2017)}
 \\
 \textbf{1. Continual Learning}\\
 
@@ -30,27 +30,22 @@ Ability to incorporate explicit (failsafe) safety constraints into system perfor
 
 \section{This Document's Focus}
 
-For the purpose of this initial development, we choose to focus our attention on the first two Core Capabilities; Continual Learning and Adapting to New Tasks. 
+For the purpose of this initial development, we chose to focus our attention on the first two Core Capabilities; Continual Learning and Adapting to New Tasks. 
 
 \subsection*{Terminology}
 
-\textit{Key Concepts}
 
-- Task
-    - A single abstract capability (or skill) that a performer system must learn\\
-- Episode
-    - A concrete instance of a task\\
-- Syllabus
-    - A sequence of episodes\\
-- Learning Lifetime
-    - One syllabus or multiple syllabi in sequence\\
-    
-\textit{Metric Specific Terms for Syllabus Design}
-    
-- Phase
-    - A phase is a subcomponent of a syllabus during which either training or evaluation takes place
-- Block
-    - A block is a unique combination of task and parameters. It is a subcomponent of phase that is automatically assigned by the logging code and does not need to be annotated by the syllabus designer.\\
+
+\textit{Key Concepts}
+\\
+Task: A single abstract capability (or skill) that a performer system must learn\\
+Episode: A concrete instance of a task\\
+Syllabus: A sequence of episodes\\
+Learning Lifetime: One syllabus or multiple syllabi in sequence\\
+\\
+\textit{Metric Specific Terms for Syllabus Design}\\
+Phase: A subcomponent of a syllabus during which either training or evaluation takes place\\
+Block: A unique combination of task and parameters. It is a subcomponent of phase that is automatically assigned by the logging code and does not need to be annotated by the syllabus designer.\\
 
 % footnote example : \footnote{\url{http://www.es.ele.tue.nl/cvpm18/}}
 % citation example : \cite{verkruysse2008remote} 

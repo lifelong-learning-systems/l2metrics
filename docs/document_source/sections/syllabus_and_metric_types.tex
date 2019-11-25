@@ -1,145 +1,85 @@
 \chapter{Syllabus Types}\label{ch:syllabus_and_metric_types}
 
-With the Core Capabilties in mind, we move on to intentional design of the syllabi. We remind our audience that the calculation of L2M metrics seeks to answer a question that may differ from traditional reinforcement learning evaluation criteria, and thus, we enforce a rigid structure to evaluation tasks.
+With the Core Capabilties in mind, we move on to intentional design of the syllabi. As a reminder, the calculation of these metrics seeks to answer a question that may differ from traditional reinforcement learning evaluation criteria, and thus, we enforce a semi-rigid structure to these evaluation tasks.
     
     
 \section{Syllabus Types by Core Capability} 
 
 
-\textit{Continual Learning}
+\subsection*{Continual Learning} 
+\textit{Syllabus Structure Requirements}\\
+\noindent\rule{8cm}{0.4pt}
+\flushleft 1. This syllabus consists of a single task with parametric variations\\
+\textit{Can involve interpolation of parameters, noisy parameters, etc. but has only one task \\}
 
-    1) This syllabus consists of a single task with parametric variations (P1, P2, P3, ...)\\
-        Can involve interpolation of parameters, noisy parameters, etc. but has only one task\\
-    2) Each phase consists of a training block and an optional evaluation block\\
-        Training block is training on one or more parametric variations \\
-        Evaluation block allows Type II metrics to be computed\\
-        
-    Question: Can the agent adjust to changes in the environment?\\
-        Metric: Recovery time (relative to previously trained parameter baseline)\\
-            Calculated within and across training blocks \\
-            After variation is introduced, does performance fall? Does it recover to the previous level? How quickly does it recover?\\
-    
-    Question: Can the agent maintain performance on previously learned parameters after being trained with new ones?\\
-        Metric: Performance on previously learned parameters\\
-            Recommended to be calculated within evaluation block\\
 
-\textit{Adaptation to New Tasks}
+\flushleft 2. Each phase consists of a training and optional but recommended evaluation block\\
+\textit{Training block is training on one or more parametric variations \\}
+\noindent\rule{8cm}{0.4pt}
 
-    This syllabus consists of multiple, distinct tasks  (T1, T2, T3, ...). Parametric variations within a task are only exercised in Subtype C\\
-    Each phase consists of a training block and an evaluation block\\
-        Training block is training on one task at a time, and can be over some parametric variation, but only in Subtype C\\
-        Evaluation block allows Type B metrics to be computed\\
+\flushleft\textit{Metric Evaluation Questions}\\[0.1in]
 
-    Subtype A: No expectation of skill transfer\\
-        Parametric variations within a task are not exercised.\\
-            Question: Can the agent learn a new task without forgetting the old task?\\
-                Metric: Recovery time (relative to previous task baseline)\\
-                    Calculated within and across training blocks \\
-                    After a new task is introduced, does performance fall? Does it recover to the previous level? How quickly does it recover? \\
-                Metric: Performance (reward statistics) on previously learned tasks\\
-                    Calculated within evaluation blocks\\
-                    Note that this is not to assess forward or reverse transfer; transfer is assessed in ANT Subtype B\\
-                    
-    Subtype B: Assess basic skill transfer\\
-        Parametric variations within a task are not exercised.\\
-        Question: Does the agent transfer knowledge from a learned task to a new task?\\
-            Metric: Recovery time (relative to previous task baseline)\\
-                Calculated within and across training blocks \\
-                After a new task is introduced, does performance fall? Does it recover to the previous level? How quickly does it recover? \\
-            Metric: Performance (reward statistics) on previously learned tasks\\
-                Calculated within evaluation blocks\\
-                Note that this is not to assess forward or reverse transfer; transfer is assessed in ANT Subtype B\\
-        Metrics are:\\
-            Time (number of episodes) to achieve threshold performance on Task 2 after being trained on Task 1\\
-            Transfer matrix\\
+Note that some of these are computed as a basis for comparison for future eval blocks, etc.\\[0.1in]
+
+\textbf{Question:} What level of performance does the agent achieve during training?\\
+\textit{Metric:} Saturation Value\\[0.1in]
+
+
+\textbf{Question:} How quickly does it achieve this saturation value?\\
+\textit{Metric:} Time to Saturation\\[0.1in]
+
+\textbf{Question:} How quickly does an agent learn during training?\\
+\textit{Metric:} Normalized Integral of Reward/Time\\[0.1in]
+
+
+\textbf{Question:} Can the agent adjust to changes in the environment? How quickly does it recover?\\
+\textit{Metric:} Recovery Time\\[0.1in]
+
+
+\textbf{Question:} Can the agent maintain performance on previously learned parameters after being trained with new ones?\\
+\textit{Metric:} Performance Maintenance\\[0.1in]
+
+
+\textbf{Question:} How does the lifelong learning agent's performance compare to a traditional agent?\\
+\textit{Metric:} Performance relative to STE \\[0.2in]
             
-    Subtype C: with Parametric skill transfer\\
-        Syllabus has: Parametric variation in Task 1 and then see if that transfers to parametric variation in task 2.\\
-        L2Arcade Example: vary paddle width in Pong; does this transfer to varying paddle width in Breakout? \\
-            this can be formulated in both a forward and reverse transfer.\\
-        Questions\\
-            Transfer of general ability: does parametric variation in Pong improve Breakout time-to-learn at all\\
-            Transfer of continual learning: Does parametric variation (continual learning) in Pong improve continual learning in Breakout?\\
-        Metrics are:\\
-            Amount of time required to learn vs from scratch \\
             
-\iffalse           
-    Compositional skill transfer
-        we see this as an instance of 3c 
-            Hava mentioned this as a prime goal for L2M program.
-            Concern
-                How do we identify the "skill relationships" between the tasks? Do we need to do this before designing the syllabus?
-            Motivation: system learns Tasks T1, T2, T3 (each having one or more "skills"). Then in T4, system has to use a combination of skills from the prior tasks.
-            What this might mean in case of L2Arcade
-                T1 = Pong (skills: paddle control, intercept ball, steer ball away from opposing paddle)
-                T2 = Breakout (skills: paddle control, intercept ball, steer ball toward blocks)
-                T3 = Freeway (skills: control ball, avoid blocks)
-                T4 = PongBreakout (skills: paddle control, intercept ball, steer ball toward blocks, and away from opposing paddle)
-\fi
 
-\section{Metric Definitions}
-
-1. Saturation Value
-    - Purpose: The saturation value is computed to quantify the maximum maintained value by the agent.\\
-    - Calculated by: Since multiple rewards may be logged per episode, the mean is taken per episode. Then, the max of the rolling average is taken of the mean reward per episode with a smoothing parameter, s (default, 0.1)\\
-    - Compared to: Future or single task expert saturation values of the same task\\
-    - Computed for: CL, ANT\_A, ANT\_B\\                   
-
-2. Time to Saturation
-    - Purpose: Time to saturation is used to quantify how quickly, in number of episodes, the agent took to achieve the saturation value computed above.\\
-    - Calculated by: The first time the saturation value (or above) is seen, that episode number is recorded\\
-    - Compared to: Future times to saturation of the same task\\
-    - Computed for: CL, ANT\_A, ANT\_B\\
-
-3. Normalized Integral of Reward/Time
-    - Purpose: Taking the Integral of Accumulated Reward over Time allows for a more robust comparison of the time to learn a particular task, taking into account both the shape and saturation of the learning for future comparison. Has limitations; must be normalized by length; only training phases can be compared to each other \\
-    - Calculated by: Integrating reward over time, then dividing by the number of episodes used to accumulate the reward\\
-    - Compared to: Future training instances of this metric\\
-    - Computed for: ANT\_B\\
-
-4. Recovery Time
-    - Purpose: Recovery time is calculated to determine how quickly (if at all) an agent can "bounce back" after a change is introduced to its environment\\
-    - Calculated by: After some training phase achieves a saturation value, determine how many episodes, if any, it takes for the agent to regain the same performance on the same task\\
-    - Compared to: An agent's recovery time is comparable across tasks\\
-    - Computed for: CL\\
-
-5. Performance Maintenance on Test Sets\\
-    - Purpose: Performance maintenance on test sets is calculated to determine whether an agent catastrophically forgets a previously learned task\\
-    - Calculated by: Comparing all computed metrics on the train set (saturation values, time to saturation, etc) on the test set and computing the difference in performance\\
-    - Compared to: N/A\\
-    - Computed for: CL, ANT\_A, ANT\_B\\
-
-6. Performance relative to STE (training) - Saturation Value, Time, Integral\\
-    - Purpose: STE Relative performance assesses whether a lifelong learner outperforms a traditional learner.\\
-    - Calculated by: Normalizing metrics computed on the lifelong learner by the same metrics computed on the traditional learner\\
-    - Compared to: N/A\\
-    - Computed for: CL, ANT\_A, ANT\_B\\
-
-7. Forward Transfer (cross tasks)
-    - Purpose: Forward transfer assesses whether an agent transfers knowledge from a learned task to a new task\\ 
-    - Calculated by:\\ 
-    - Compared to: STE performance\\
-    - Computed for: CL, ANT\_A, ANT\_B\\
+After these metrics are computed, the agent will receive a score for  each of these metrics for a Continual Learning syllabus, which will be aggregated to form its Continual Learning score. For now, an average of the scores achieved is reported in each phase/block, but more sophisticated methods may replace these in the future. See below for more details; more information is on its way.
     
-8. Forward Transfer (cross tasks)
-    - Purpose: Forward transfer assesses whether an agent transfers knowledge from a learned task to a new task\\
-    - Calculated by:\\
-    - Compared to: STE performance\\
-    - Computed for: CL, ANT\_A, ANT\_B\\
-
-9. Time to Learn (cross tasks)
-    - Purpose: Time to learn (cross tasks) assesses whether parametric variation in learning task 1 improve time to learn in task 2\\
-    - Calculated by: \\
-    - Compared to:\\
-    - Computed for: ANT-C\\
-    
-10. Time to Continually Learn (cross tasks)
-    - Purpose: Time to continually learn (cross tasks) assesses whether learning task 1 \\
-    - Calculated by: \\
-    - Compared to:\\
-    - Computed for: ANT-C\\
 
 
-\section{Example Syllabi}
+\subsection*{Formal Metric Definitions}
 
-Put up some JSON files here
+\textbf{1. Saturation Value}\\
+Purpose: The saturation value is computed to quantify the maximum maintained value by the agent.\\
+Calculated by: Since multiple rewards may be logged per episode, the mean is taken per episode. Then, the max of the rolling average is taken of the mean reward per episode with a smoothing parameter, s (default, 0.1)\\
+Compared to: Future or single task expert saturation values of the same task\\[0.1in]         
+
+
+\textbf{2. Time to Saturation}\\
+Purpose: Time to saturation is used to quantify how quickly, in number of episodes, the agent took to achieve the saturation value computed above.\\
+Calculated by: The first time the saturation value (or above) is seen, that episode number is recorded\\
+Compared to: Future times to saturation of the same task\\[0.1in]
+
+
+\textbf{3. Normalized Integral of Reward/Time}\\
+Purpose: Taking the Integral of Accumulated Reward over Time allows for a more robust comparison of the time to learn a particular task, taking into account both the shape and saturation of the learning for future comparison. Has limitations; must be normalized by length; only training phases can be compared to each other \\
+Calculated by: Integrating reward over time, then dividing by the number of episodes used to accumulate the reward\\
+Compared to: Future training instances of this metric\\[0.1in]
+
+
+\textbf{4. Recovery Time}\\
+Purpose: Recovery time is calculated to determine how quickly (if at all) an agent can "bounce back" after a change is introduced to its environment\\
+Calculated by: After some training phase achieves a saturation value, determine how many episodes, if any, it takes for the agent to regain the same performance on the same task\\
+Compared to: An agent's recovery time is comparable across tasks\\[0.1in]
+
+
+\textbf{5. Performance Maintenance on Test Sets}\\
+Purpose: Performance maintenance on test sets is calculated to determine whether an agent catastrophically forgets a previously learned task\\
+Calculated by: Comparing all computed metrics on the train set (saturation values, time to saturation, etc) on the test set and computing the difference in performance\\[0.1in]
+
+
+\textbf{6. Performance relative to STE (training)}\\
+Purpose: STE Relative performance assesses whether a lifelong learner outperforms a traditional learner.\\
+Calculated by: Normalizing metrics computed on the lifelong learner by the same metrics computed on the traditional learner\\

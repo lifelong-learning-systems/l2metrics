@@ -21,17 +21,25 @@ import numpy as np
 import l2metrics
 
 
-class CustomMetric1(l2metrics.AgentMetric):
+class MyCustomMetric(l2metrics.AgentMetric):
     capability = "continual_learning"
-    requires = {'syllabus_type': 'type2'}
-    description = "Custom metric - Calculates the performance across all tasks and phases"
+    requires = {'syllabus_type': 'agent'}
+    description = "A Custom Metric"
     
-    def calculate(self, dataframe):
-        return {'global_perf': np.mean(dataframe["perf"])}
+    def calculate(self, dataframe, phase_info, metrics_dict):
+        return {'global_perf': dataframe.loc[:,"reward"].mean()}, {'global_perf': dataframe.loc[:,"reward"].mean()}
+
+    def plot(self, result):
+        pass
+
+    def validate(self, phase_info):
+        # TODO: Add structure validation of phase_info
+        pass
 
 
-metrics = l2metrics.AgentMetricsReport(
-        log_dir="~/custom_log_location/", syllabus_subtype="CL")
+metrics_report = l2metrics.AgentMetricsReport(
+        log_dir="syllabus2_CL-1574713375784/", syllabus_subtype="CL")
 
-metrics.add([CustomMetric1])
-results = metrics.calculate()
+metrics_report.add(MyCustomMetric())
+metrics_report.calculate()
+metrics_report.report()

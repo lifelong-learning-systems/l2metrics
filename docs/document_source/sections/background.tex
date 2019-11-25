@@ -1,16 +1,57 @@
 \chapter{Background}\label{ch:background}
 
-In this document we introduce metrics for reinforcement learning tasks which...
+In this document we introduce the Metrics component of the Test and Evaluation Framework (TEF) for Agent-based evaluation \textit{only.} For this preliminary information release, we focus on a high level overview of the system, followed by a brief introduction to the types of syllabi and metrics which are expected, and end with how to get started with the code. Stay tuned for more details in each of these areas!
 
 \section{Core Capabilities}
 \label{sec:core_capabilities}
 
-We rely on the BAA to define the goal of the program and the metrics by which we can assess whether an algorith exhibits Lifelong Learning. Thus, we invite our audience to review the five core capabilities and their definitions below.\\
-1. Continual Learning\\
-2. Adapting to New Tasks\\
-3. Selective Plasticity\\
-4. Goal-Driven Perception\\
-5. Safety\\
+We remind readers that the purpose of the metrics discussed in this document are to determine whether a system exhibits the Core Capabilities of Lifelong Learning. We therefore invite our audience to review the five Core Capabilities whose definitions are below, and refer readers to the BAA for more details.\\%\footnote{DARPA L2M Broad Agency Announcement (April 12 2017)}
+\\
+\textbf{1. Continual Learning}\\
+
+Ability to handle, or adapt to, changing input distributions (or noise characteristics) within a single task. For an agent-based system, this means that the state transition matrix and reward function are substantively unchanged, while aspects of the environment may change.\\
+\\
+\textbf{2. Adapting to New Tasks}\\
+
+Ability to learn new tasks, without losing knowledge of already-learned tasks. If possible, system should exploit similarities between old and new tasks to improve its learning performance on new tasks. For an agent-based system, this means substantial changes to the state transition matrix or reward function.\\
+\\
+\textbf{3. Selective Plasticity}\\
+
+Ability to process the same input differently depending on task (or goal). Relatedly, the ability to be sensitive to different features of the input depending on task. Note the focus on processing rather than learning per se.\\
+\\
+\textbf{4. Goal-Driven Perception}\\
+
+Ability to incorporate system and task-level constraints (e.g., overall memory use, relative importance of tasks) into the training process.\\
+\\
+\textbf{5. Safety}\\
+
+Ability to incorporate explicit (failsafe) safety constraints into system performance; Ability to detect differences between training and test environments (e.g., anomalous inputs, distributional shifts), quantify the resulting uncertainty in system output, alert a human operator (with details of difference if possible), and safely handle the anomalous situation where possible.
+
+
+\section{This Document's Focus}
+
+For the purpose of this initial development, we choose to focus our attention on the first two Core Capabilities; Continual Learning and Adapting to New Tasks. 
+
+\subsection*{Terminology}
+
+\textit{Key Concepts}
+
+- Task
+    - A single abstract capability (or skill) that a performer system must learn\\
+- Episode
+    - A concrete instance of a task\\
+- Syllabus
+    - A sequence of episodes\\
+- Learning Lifetime
+    - One syllabus or multiple syllabi in sequence\\
+    
+\textit{Metric Specific Terms for Syllabus Design}
+    
+- Phase
+    - A phase is a subcomponent of a syllabus during which either training or evaluation takes place
+- Block
+    - A block is a unique combination of task and parameters. It is a subcomponent of phase that is automatically assigned by the logging code and does not need to be annotated by the syllabus designer.\\
+
 % footnote example : \footnote{\url{http://www.es.ele.tue.nl/cvpm18/}}
 % citation example : \cite{verkruysse2008remote} 
 %\subsection*{Example subsection}

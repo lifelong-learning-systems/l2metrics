@@ -34,7 +34,12 @@ def parse_blocks(data):
 
         # Extract information
         x = re.match(r'^(\d+)[.-_]*(\w+)', p)
-        phase_number = x.group(1)
+
+        if x.group(1) or x.group(2) is None:
+            raise Exception('Unsupported phase annotation: {:s}! Supported format is phase_number.'
+                            'phase_type, which must be (int).(string)'.format(p))
+        
+        phase_number = x.group(1)     
         phase_type = x.group(2)
 
         if str.lower(phase_type) not in ["train", "test"]:

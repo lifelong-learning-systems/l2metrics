@@ -4,4 +4,4 @@ To compile a new version of this pdf, "metrics_documentation.pdf" on a Linux sys
 
 2) Run `make` from the ./l2metrics/docs/document_source directory
 
-3) A newly compiled metrics_documentation.pdf will replace any previous version in ./l2metrics/docs directory
+3) A newly compiled metrics_documentation.pdf will *replace* any previous version in ./l2metrics/docs directory

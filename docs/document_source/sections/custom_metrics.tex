@@ -1,8 +1,8 @@
-\chapter{Metrics Design}\label{ch:metrics_design}
+\chapter{Creating Custom Metrics}\label{ch:custom_metrics}
 
-\section{Metrics Code Overview} 
+\section{Conceptual Overview} 
 
-\section{Write Your Own Custom Metric}
+\section{Sample Workflow}
 
 In l2metrics/core.py we introduce an abstract Metric class which describes the general format for any Metric you may use or write, whether for Agent or Classification Learners. The most relevant piece of the Metric class is the calculate method, which has the following required arguments: the log data, a phase\_info dataframe, and a metrics\_dict dataframe. The metrics\_dict starts blank and is filled by each metric in its turn, whereas the log data and the phase info are extracted in the MetricsReport constructor from the logs via two helper functions: \\[0.1in]
 

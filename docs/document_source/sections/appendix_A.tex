@@ -1,0 +1,39 @@
+\chapter{Appendix A: Terminology}\label{ch:appendix_a}
+\section*{Core Capabilities and Terminology References}
+\label{sec:core_capabilities}
+
+The Metrics Framework and Proposed Metrics rely on the Core Capabilities defined by the BAA to direct their purpose and intent. They are provided here for reference.\\[0.2in]%\footnote{DARPA L2M Broad Agency Announcement (April 12 2017)}
+
+\textbf{1. Continual Learning}\\
+
+Ability to handle, or adapt to, changing input distributions (or noise characteristics) within a single task. For an agent-based system, this means that the state transition matrix and reward function are substantively unchanged, while aspects of the environment may change.\\[0.1in]
+
+\textbf{2. Adapting to New Tasks}\\
+
+Ability to learn new tasks, without losing knowledge of already-learned tasks. If possible, system should exploit similarities between old and new tasks to improve its learning performance on new tasks. For an agent-based system, this means substantial changes to the state transition matrix or reward function.\\[0.1in]
+
+\textbf{3. Selective Plasticity}\\
+
+Ability to process the same input differently depending on task (or goal). Relatedly, the ability to be sensitive to different features of the input depending on task. Note the focus on processing rather than learning per se.\\[0.1in]
+
+\textbf{4. Goal-Driven Perception}\\
+
+Ability to incorporate system and task-level constraints (e.g., overall memory use, relative importance of tasks) into the training process.\\[0.1in]
+
+\textbf{5. Safety}\\
+
+Ability to incorporate explicit (failsafe) safety constraints into system performance; Ability to detect differences between training and test environments (e.g., anomalous inputs, distributional shifts), quantify the resulting uncertainty in system output, alert a human operator (with details of difference if possible), and safely handle the anomalous situation where possible.\\[0.2in]
+
+\begin{large}
+\textit{Terminology}\\[0.1in]
+\end{large}
+
+\textbf{Key Concepts}\\[0.1in]
+\textit{Task:} A single abstract capability (or skill) that a performer system must learn\\
+\textit{Episode:} A concrete instance of a task\\
+\textit{Syllabus:} A sequence of episodes\\
+\textit{Learning Lifetime:} One syllabus or multiple syllabi in sequence\\[0.2in]
+
+\textbf{Metric Specific Terms for Syllabus Design}\\[0.1in]
+\textit{Phase:} A subcomponent of a syllabus during which either training or evaluation takes place\\
+\textit{Block:} A unique combination of task and parameters. It is a subcomponent of phase that is automatically assigned by the logging code and does not need to be annotated by the syllabus designer.\\

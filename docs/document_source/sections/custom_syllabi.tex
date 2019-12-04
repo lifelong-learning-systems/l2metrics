@@ -1,19 +1,38 @@
 \chapter{Creating Custom Syllabi}\label{ch:custom_syllabi}
 
-As mentioned in previous sections, a semi-rigid structure is required for syllabi in the Metrics Framework.
+As mentioned in previous sections, a semi-rigid structure is required for syllabi in the Metrics Framework. 
 
-Syllabi used to generate the log files \textbf{must} include annotations with phase information in the following format: <phase\_number>.<phase\_type>, where phase\_number is an increasing integer beginning with 1, and phase\_type can be either "train" or "test"  \\[0.1in]
+\subsection*{Phase Annotations}
 
-\textit{Phase annotation format}:\\[0.1in]
- \begin{small}
+Syllabi used to generate the log files \textbf{must} include annotations with phase information in the following format: <phase\_number>.<phase\_type>, where phase\_number is an increasing integer beginning with 1, and phase\_type can be either "train" or "test". No other annotations are currently supported. Pleaase note that without these annotations, the Metrics Framework will not properly compute the Proposed Metrics. \\[0.1in]
+
+
+\textit{Valid Phase annotation format example}:\\[0.1in]
+\begin{small}
 \begin{verbatim}
-{"$phase":  "1.train"},
-{"$phase":  "1.test"},
-{"$phase":  "2.train"},
-{"$phase":  "2.test"}, ...
+Train: {"$phase":  "1.train"}, {"$phase":  "2.train"}, ..., {"$phase":  "n.train"}
+Test: {"$phase":  "1.test"}, {"$phase":  "2.test"}, ..., {"$phase":  "n.test"}
 \end{verbatim}
 \end{small}
 
+\subsection*{Train/Test Structure}
+
+\begin{enumerate}
+\item Expected
+\begin{itemize}
+\item Train phases (consisting of 1 or more blocks) followed by Test phases (consisting of 1 or more blocks)
+\end{itemize}
+
+\item Required
+\begin{itemize}
+\item First blocks must be Train blocks
+\end{itemize}
+
+\item Disallowed
+\begin{itemize}
+\item Continual Learning Syllabi are not allowed to exercise more than one task
+\end{itemize}
+\end{enumerate}
 
 \section{Continual Learning}
 \textit{Structure}\\[0.1in]

@@ -4,8 +4,37 @@ There are a variety of ways a system may demonstrate the BAA's defined Core Capa
 
 After some combination of these metrics are computed, the agent will receive a score for each \textit{lifetime}, which will be aggregated to form a score for each Core Capability. For this intial release an average of the scores achieved is reported, but in some cases, more sophisticated methods may replace these in the future.\\[0.2in]
 
-TALK ABOUT BLOCKS. DEFINE BLOCK LENGTH.
+As was introduced in Figure~\ref{fig:annotated_syllabus}, a syllabus is formatted as a JSON file and is divided into a sequence of episodes. Sequences of episodes with the same Task name and parameter values are known as blocks. As shown below, Task names are "Pong" and "Breakout" and parameter values - encoded here as "bot/paddle/width" - are a range of values: 0.15, 0.20, and 0.30. The syllabus shown below has 10 blocks, and the length of these blocks is encoded as the count parameter. Thus, the length of the first two blocks is 5000 episodes, the length of the next two blocks is 10 episodes, the length of the next two blocks is 5000 episodes, and the length of the last four blocks is 10 episodes.
 
+\begin{small}
+\begin{verbatim}
+"instructions": [    
+   {"$phase": "1.train"}, 
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 5000}, 
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.20}, "count": 5000}, 
+
+   {"$phase": "1.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 10},  
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.30}, "count": 10},  
+    {"$info": {}},
+   
+  {"$phase": "2.train"}, 
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.15}, "count": 5000},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.20}, "count": 5000}, 
+
+   {"$phase": "2.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 10},
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.30}, "count": 10},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.15}, "count": 10},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.30}, "count": 10},
+    {"$info": {}}
+]
+\end{verbatim}
+\end{small}
+
+The concept of blocks is critical for establishing computational boundaries within the Metrics Framework. Unless otherwise noted, these Proposed Metrics will be computed within a block, though often metrics will be computed and compared across these boundaries.
 
 \section{Continual Learning}
 

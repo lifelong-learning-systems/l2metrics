@@ -84,28 +84,65 @@ def parse_blocks(data):
     return test_task_nums, phases_df
 
 
-def moving_average(values, window):
-    if window:
-        weights = np.repeat(1.0, window)/window
-        sma = np.convolve(values, weights, 'valid')
+def smooth(x, window_len=11, window='hanning'):
+    # """smooth the data using a window with requested size.
+    # Code from https://scipy-cookbook.readthedocs.io/items/SignalSmooth.html
+    # This method is based on the convolution of a scaled window with the signal.
+    # The signal is prepared by introducing reflected copies of the signal
+    # (with the window size) in both ends so that transient parts are minimized
+    # in the beginning and end part of the output signal.
+    # input:
+    #    x: the input signal
+    #    window_len: the dimension of the smoothing window; should be an odd integer
+    #    window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+    #        flat window will produce a moving average smoothing.
+    # output:
+    #    the smoothed signal
+    # example:
+    # t=linspace(-2,2,0.1)
+    # x=sin(t)+randn(len(t))*0.1
+    # y=smooth(x)
+    # see also:
+    # numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+    # scipy.signal.lfilter
+    # NOTE: length(output) != length(input), to correct this: return
+    # y[(window_len/2-1):-(window_len/2)] instead of just y.
+
+    if x.ndim != 1:
+        raise(ValueError, "smooth only accepts 1 dimension arrays.")
+
+    if x.size < window_len:
+        raise(ValueError, "Input vector needs to be bigger than window size.")
+
+    if window_len < 3:
+        return x
+
+    if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise(ValueError, "Window is one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+
+    s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
+
+    if window == 'flat':  # moving average
+        w = np.ones(window_len, 'd')
     else:
-        sma = values
-    return sma
+        w = eval('np.' + window + '(window_len)')
+
+    y = np.convolve(w / w.sum(), s, mode='valid')
+    return y
 
 
 def get_block_saturation_performance(data, previous_saturation_value=None):
     # Calculate the "saturation" value
     # Calculate the number of episodes to "saturation"
-    smoothing_param = 0.1
 
     mean_reward_per_episode = data.loc[:, ['task', 'reward']].groupby('task').mean()
     mean_data = np.ravel(mean_reward_per_episode.values)
 
-    # Take the rolling average of the mean of the data
-    smoothed_data = moving_average(mean_data, int(round(smoothing_param*len(data))))
+    # Take the moving average of the mean of the per episode reward
+    smoothed_data = smooth(mean_data, window='flat')
     saturation_value = np.max(smoothed_data)
 
-    # Calculate the number of episodes to "saturation", which we define as the maximum of the rolling average
+    # Calculate the number of episodes to "saturation", which we define as the max of the moving average
     inds = np.where(smoothed_data == saturation_value)
     episodes_to_saturation = inds[0][0]
     episodes_to_recovery = np.nan

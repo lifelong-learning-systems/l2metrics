@@ -1,91 +1,192 @@
-\chapter{Overview}\label{ch:overview}
-
-In this document we introduce the Metrics component of the Test and Evaluation Framework (TEF) for Agent-based evaluation \textit{only.} For this preliminary information release, we focus on a high level overview of the system, followed by a brief introduction to the types of syllabi and metrics which are expected, and end with how to get started with the code. Stay tuned for more details in each of these areas!
-
-\section*{Core Capabilities Review}
-\label{sec:core_capabilities}
-
-We remind readers that the purpose of the metrics discussed in this document are to determine whether a system exhibits the Core Capabilities of Lifelong Learning. These metrics may be slightly different from those which might assess a traditional learner. We invite our audience to review the five Core Capabilities whose definitions are below, and refer readers to the BAA for more details.\\%\footnote{DARPA L2M Broad Agency Announcement (April 12 2017)}
-\\
-\textbf{1. Continual Learning}\\
-
-Ability to handle, or adapt to, changing input distributions (or noise characteristics) within a single task. For an agent-based system, this means that the state transition matrix and reward function are substantively unchanged, while aspects of the environment may change.\\
-\\
-\textbf{2. Adapting to New Tasks}\\
-
-Ability to learn new tasks, without losing knowledge of already-learned tasks. If possible, system should exploit similarities between old and new tasks to improve its learning performance on new tasks. For an agent-based system, this means substantial changes to the state transition matrix or reward function.\\
-\\
-\textbf{3. Selective Plasticity}\\
-
-Ability to process the same input differently depending on task (or goal). Relatedly, the ability to be sensitive to different features of the input depending on task. Note the focus on processing rather than learning per se.\\
-\\
-\textbf{4. Goal-Driven Perception}\\
-
-Ability to incorporate system and task-level constraints (e.g., overall memory use, relative importance of tasks) into the training process.\\
-\\
-\textbf{5. Safety}\\
-
-Ability to incorporate explicit (failsafe) safety constraints into system performance; Ability to detect differences between training and test environments (e.g., anomalous inputs, distributional shifts), quantify the resulting uncertainty in system output, alert a human operator (with details of difference if possible), and safely handle the anomalous situation where possible.
-
-\section*{Measurement Framework Architecture}
-
-\textit{Overview}
-\\
-
-The Test and Evaluation Framework (TEF) uses the information contained in a syllabus to produce a sequence of episodes for an agent learner. Figure~\ref{fig:systemlayout} depicts a high level overview of the TEF system. The syllabus passes the sequence of episodes to the TEF which sets up an environment and makes it available to the 
+\chapter{Introduction}\label{ch:overview}
+A crucial part of the T\&E Framework (TEF) is to log information during the operation of a lifelong learning system and use this to derive \textit{metrics of lifelong learning}, i.e., to characterize how well the system learns along the dimensions (Core Capabilities) set out in the DARPA L2M BAA, such as Continual Learning (CL) and Adaptation to New Tasks (ANT). This is termed the \textbf{Metrics Framework}.\\[0.2in]
 
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=0.85\columnwidth]{sections/figs/metrics_diagram.png}
-	\caption{This figure describes the production of Metrics from Log files outputted by the Core Test and Evaluation Framework.}
-	\label{fig:systemlayout}
+	\includegraphics[width=0.8\columnwidth]{sections/figs/metrics_diagram.png}
+	\caption{Depiction of the Metrics Framework}
+	\label{fig:framework}
 \end{figure}
 
-Figure~\ref{fig:syllabus} shows an example syllabus which would evaluate the Continual Learning Core Capability. You can see that only one task is exercised throughout the syllabus, but parameter variation - agent\_pos and agent\_dir are paramters for this task - is contained throughout the syllabus. Additionally, later Test phases contain previously trained parameters, allowing for a maintenance calculation. Unless otherwise noted, an instance of a syllabus is considered a Lifetime, and metrics are computed on an Agent's performance on episodes within a syllabus.
+\flushleft The Metrics Framework consists of three components:\\[0.2in]
+\begin{enumerate}
+\item \textit{Performance Logging.} As a learning algorithm goes through a syllabus, Learnkit automatically logs information about the performance of the learning algorithm. For Agent learning, the logged information consists of the total reward for each episode; for classification learning, the logged information consists of the performance error on each batch (the definition of “performance error” is task-specific).\\[0.1in]
+\item \textit{Metrics Calculation.} After the training is completed, the performance logs are read and processed by a separate L2M Python package. This package (the l2metrics repository) consists of a set of predefined metrics, and a Python class hierarchy for extending the predefined set with custom metrics.\\[0.1in]
+\item \textit{Syllabus Annotation.} The metrics calculation assumes that the Learnkit syllabus has specific annotations (e.g., to distinguish training vs. test phases, or different parts of a test phase); relatedly, different syllabi may exercise different aspects of lifelong learning, such as Continual Learning versus Adapting to New Tasks. Consequently, authoring correctly-annotated syllabi is a crucial component of the Metrics Framework.\\[0.2in]
+\end{enumerate}
+    
+The following table summarizes the different ways in which we anticipate performers will engage with the Metrics Framework. 
 
-\pagebreak
+\begin{table}[h]
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Goal:}                                                                              & \textbf{Relevant Section:} \\ \hline
+\begin{tabular}[c]{@{}l@{}}Generate metrics for a syllabus. Run a L2 algorithm\\ using a predefined syllabus, run the predefined metrics,\\ and view the results\end{tabular} & 3. Generating Metrics for a Syllabus\\\hline                                                                              
+\begin{tabular}[c]{@{}l@{}}Create a custom syllabus. Run a L2 algorithm with a\\custom syllabus, and run predefined metrics.\end{tabular} & 4. Creating Custom Syllabi\\\hline         
+\begin{tabular}[c]{@{}l@{}}Create a custom metric. Run a L2 algorithm with a\\predefined or custom syllabus, and run a custom metric.\end{tabular} & \begin{tabular}[c]{@{}l@{}}4. Creating Custom Syllabi\\5. Creating Custom Metrics\end{tabular}\\ \hline
+                                                                                  
+\end{tabular}
+\end{table}
+
+\section{Conceptual Overview}
+
+\subsection*{Agent Learning}
+
+The T\&E Framework uses the information contained in an annotated syllabusto produce a sequence of specific tasks, known as episodes, for an agent learner and automaticallly generates the performance logs from which metrics will be calculated. Figure~\ref{fig:workflow} depicts the workflow of the system as described below.\\[0.2in]
+
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=0.75\columnwidth]{sections/figs/syllabus.png}
-	\caption{An example syllabus.}
-	\label{fig:syllabus}
+	\includegraphics[width=0.9\columnwidth]{sections/figs/metrics_overview_1.png}
+	\caption{Workflow in the Metrics Framework}
+	\label{fig:workflow}
 \end{figure}
 
-
-
-When an Agent performs episodes from the syllabus, the TEF will automatically generate logs which are saved in a tab separated file like shown in Figure~\ref{fig:logfile}. Then, the Metrics code scrapes these logs and extracts the relevant information to produce a set of scores for each metric used to evaluate the Core Capabilty being tested.\\
-
-
+\begin{enumerate}
+\item The performance logging starts with an annotated syllabus (see Figure~\ref{fig:annotated_syllabus} for an example). The annotation consists of the “\$phase” instructions; the phase values (e.g., “1.train”) have a specific structure that is used during the metrics calculation.\\[0.4in]
 
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=0.75\textwidth]{sections/figs/log_file.png}
-	\caption{An example log file.}
-	\label{fig:logfile}
+	\includegraphics[width=0.8\columnwidth]{sections/figs/syllabus_annotated_blocks.png}
+	\caption{An Annotated Syllabus Example}
+	\label{fig:annotated_syllabus}
 \end{figure}
 
 
-\iffalse
+\item Tasks in the L2M environment (such as Pong L2Arcade, or L2StarCraft CollectThings) have a special method (
+\begin{small}
+\verb|get_episode_log_info| 
+\end{small}
+) that reports the total reward and related performance information for each episode. This is automatically called by Learnkit as the syllabus is processed; performer code does not need to do anything (and in particular, the performer algorithm should not call 
+\begin{small}
+\verb|get_episode_log_info| 
+\end{small}
+or use the information reported therein).\\[0.1in]
 
-For the purpose of this initial development, we chose to focus our attention on the first two Core Capabilities; Continual Learning and Adapting to New Tasks. 
+\item The performance logs from running the syllabus are automatically saved under the L2M logging directory (the default value of the top-level logging directory is OS-specific, and it can be overridden using the \$L2DATA environment variable). The logs for running a specific syllabus are saved under a unique directory name <syllabus\_name>-<timestamp>.The
+\begin{small}
+\verb|python -m learnkit.info|
+\end{small}
+command shows the location of the directory, along with the most recently created log directory:\\[0.1in]
 
-\section{Terminology}
+\begin{small}
+\begin{verbatim}
+bakermm1@bakermm1-ll2:~/L2M/l2metrics$ python -m learnkit.info
+Learnkit v0.5.0
+L2 data folder:
+   /home/bakermm1/l2data
+L2 logs folder:
+   /home/bakermm1/l2data/logs
+Most recent log folder:
+   /home/bakermm1/l2data/logs/syllabus_CL-1575473425723
+   created on 2019-12-04T10:30:25
+\end{verbatim}
+\end{small}
 
-\\
-Task: A single abstract capability (or skill) that a performer system must learn\\
-Episode: A concrete instance of a task\\
-Syllabus: A sequence of episodes\\
-Learning Lifetime: One syllabus or multiple syllabi in sequence\\
-\\
-\textit{Metric Specific Terms for Syllabus Design}\\
-Phase: A subcomponent of a syllabus during which either training or evaluation takes place\\
-Block: A unique combination of task and parameters. It is a subcomponent of phase that is automatically assigned by the logging code and does not need to be annotated by the syllabus designer.\\
+Under \$L2DATA/logs/<syllabus\_name>-<timestamp>/ the directory tree looks like this: <worker\_id>/<phase\_name>/<task\_name>/{block-report, data-log}.tsv. A few points worth noting about this logging structure:\\[0.2in]
+\begin{itemize}
+\item The worker ID is for distributed training. The ordering of episodes is maintained across workers, so an episode number is unique across the distributed training.\\[0.1in]
+\item The syllabus is notionally divided into a sequence of blocks; each block is a sequence of episodes with the same Task name and parameter values. See Figure~\ref{fig:annotated_syllabus} for an example.\\[0.1in]
+\item Each episode consists of one or more sub-episodes (each sub-episode is a reset, followed by one or more steps). This is the granularity for the performance logging – for each sub-episode, the logs record the total reward and whether that sub-episode as complete (i.e., continued until done) or incomplete. \\[0.1in]
+\item block-report.tsv contains metadata about each block. data-log.tsv contains the actual logged information about each episode and its sub-episodes. Note that in the logs, “task” and “sub\_task” specify the episode and sub-episode number, respectively.\\[0.1in]
+\end{itemize}
+\item Once the learning algorithm is done, the predefined metrics calculations can be invoked by specifying the directory of the log files, e.g.: \\[0.1in]
+\end{enumerate}
 
-\textit{Key Concepts}
+\begin{small}
+\begin{verbatim} python -m l2metrics  -log_dir syllabus1-1574883536 -syllabus_type agent \end{verbatim}
+\end{small}
 
-\fi
+Conceptually, the above command loads the log data into a single data table, hands it to each Metric (a Python class), collects the results and prints them out. It is also possible to write a custom script with custom metrics and with full control over which metrics are calculated.
 
-% footnote example : \footnote{\url{http://www.es.ele.tue.nl/cvpm18/}}
-% citation example : \cite{verkruysse2008remote} 
-%\subsection*{Example subsection}
-%Subsection related work.
+\subsection*{Classification Learning}
+
+The logging for classification learning is conceptually similar to that for agent learning. The main difference is in what gets logged and at what granularity (corresponding to Workflow steps 2 and 3 in Figure~\ref{fig:framework}).\\[0.1in]
+
+Recall that a Classification syllabus consists of a sequence of datasets; each dataset consists of one or batches; each batch is a sequence of examples; each example is one input to the learning agent, with an optional output or ground truth value. When performer code interacts a Classification Task (such as CIFAR100), the code looks something like this:
+
+\begin{small}
+\begin{verbatim} 
+for dataset in syllabus.datasets():       
+       dataset.reset()
+       done = False
+       while not done:
+           batch, done, info = dataset.next_batch()
+           y_hat = do_inference(batch['inputs'])  # performer code
+           y = dataset.get_labels(batch[id'], y_hat)
+           if y:
+               calculate_loss_and_update_model(y, y_hat)  # performer code 
+\end{verbatim}
+\end{small}
+
+Crucially, the performer code has to submit the estimated outputs
+\begin{small}
+\verb|y_hat|
+\end{small}via the
+\begin{small}
+\verb|get_labels|
+\end{small}method; this is done for both training and test data. The Classification Task uses this
+\begin{small}
+\verb|y_hat|
+\end{small}to calculate the error for the batch, and has a special method
+\begin{small}
+\verb|get_batch_log_info|
+\end{small}that reports the error information to Learnkit for logging. This method is automatically called by Learnkit as the syllabus is processed; performer code does not need to do anything, and in particular should not invoke
+\begin{small}
+\verb|get_batch_log_info.|
+\end{small}This information is only intended for Learnkit logging; performers should use their own loss functions as appropriate for their models.
+
+\section{Sample Workflow to Generate Metrics}
+
+Get started by generating some example log files using the Minigrid environment. You may do this by the following:\\[0.2in]
+
+\begin{enumerate}
+
+\item Clone the learnkit repository\\
+\begin{small}
+\verb|pip install -e learnkit\|\\[0.1in]
+\end{small}
+
+\item Clone the minigridkit repository\\
+\begin{small}
+\verb|pip install -e minigridkit\|\\[0.1in]
+\end{small}
+
+\item Clone the l2metrics repository\\
+\begin{small}
+\verb|pip install -e l2metrics\|\\[0.1in]
+\end{small}
+
+\item Train an agent in the Minigrid environment. This will take a few minutes. When it starts you should see an INFO level message showing the top level directory that logs are being written to.\\[0.1in]
+\begin{small}
+\verb|python minigrid_learnkit/examples/minigrid_train_ppo.py| \\
+\verb|2019-12-04 10:30:25,723 <22980> | \\
+\verb|[INFO    ] root - Logging to: /home/bakermm1/l2data/logs|\\[0.1in]
+\end{small}
+
+\item Store the last used logging directory in a temporary variable.\\
+\begin{small}
+\verb|log_dir =$(ls -t -1 `python -m learnkit.info -get logdir`| |\verb| head -1)|\\[0.1in]
+\end{small}
+\item Pass the variable just set as the 
+\begin{small}
+\verb|-log_dir|
+\end{small}parameter when you run calc\_metrics\\
+\begin{small}
+\verb|cd l2metrics/examples|
+\verb|python calc_metrics.py -syllabus_subtype=CL -log_dir=$log_dir|\\[0.2in]
+\end{small}
+\end{enumerate}
+The output should print to the screen and should look something like this:\\[0.2in]
+
+\begin{verbatim}
+
+Metric: Average Within Block Saturation Calculation
+Value: {'global_within_block_saturation': 0.875959925753812, 
+        'global_num_eps_to_saturation': 197.45454545454547}
+
+Metric: 
+Value: {'global_perf': 0.9217597535934293}
+
+Process finished with exit code 0
+
+\end{verbatim}

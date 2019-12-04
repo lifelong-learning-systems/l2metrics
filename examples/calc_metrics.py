@@ -32,7 +32,7 @@ def run():
     # Syllabus_subtype refers to the structure of the syllabus and will determine the default list of metrics calculated
     # where CL = Continual Learning; ANT_A = Adapting to New Tasks, type A; ANT_B = Adapting to New Tasks, type B; etc.
     # Please refer to the documentation for more details on the distinction between these types.
-    parser.add_argument('-syllabus_subtype', choices=["CL", "ANT_A", "ANT_B", "ANT_C"],  default="ANT_A",
+    parser.add_argument('-syllabus_subtype', choices=["CL", "ANT_A", "ANT_B", "ANT_C"],  default=None,
                         help='Subtype of syllabus')
 
     args = parser.parse_args()

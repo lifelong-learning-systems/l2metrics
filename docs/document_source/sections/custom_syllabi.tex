@@ -1,83 +1,77 @@
 \chapter{Creating Custom Syllabi}\label{ch:custom_syllabi}
 
-With the Core Capabilties in mind, we move on to intentional design of the syllabi. As a reminder, the calculation of these metrics seeks to answer a question that may differ from traditional reinforcement learning evaluation criteria, and thus, we enforce a semi-rigid structure to these evaluation tasks.
+As mentioned in previous sections, a semi-rigid structure is required for syllabi in the Metrics Framework.
 
-\section{Continual Learning}    
-\textit{Syllabus Structure Requirements}\\
-\noindent\rule{8cm}{0.4pt}
-\flushleft 1. This syllabus consists of a single task with parametric variations\\
+Syllabi used to generate the log files \textbf{must} include annotations with phase information in the following format: <phase\_number>.<phase\_type>, where phase\_number is an increasing integer beginning with 1, and phase\_type can be either "train" or "test"  \\[0.1in]
+
+\textit{Phase annotation format}:\\[0.1in]
+ \begin{small}
+\begin{verbatim}
+{"$phase":  "1.train"},
+{"$phase":  "1.test"},
+{"$phase":  "2.train"},
+{"$phase":  "2.test"}, ...
+\end{verbatim}
+\end{small}
+
+
+\section{Continual Learning}
+\textit{Structure}\\[0.1in]
+
+The purpose of this type of syllabus is to assess whether the agent can adjust to changes in the environment and maintain performance on the previous parameters when new ones are introduced. There is only one type of Continual Learning syllabus.
+
+\begin{itemize}
+\item A Continual Learning syllabus consists of a \textbf{single} task with parametric variations\\
 \textit{Can involve interpolation of parameters, noisy parameters, etc. but has only one task \\}
 
 
-\flushleft 2. Each phase consists of a training and optional but recommended evaluation block\\
-\textit{Training block is training on one or more parametric variations \\}
-\noindent\rule{8cm}{0.4pt}
-
-\flushleft\textit{Metric Evaluation Questions}\\[0.1in]
-
-Note that some of these are computed as a basis for comparison for future eval blocks, etc.\\[0.1in]
-
-\textbf{Question:} What level of performance does the agent achieve during training?\\
-\textit{Metric:} Saturation Value\\[0.1in]
-
-
-\textbf{Question:} How quickly does it achieve this saturation value?\\
-\textit{Metric:} Time to Saturation\\[0.1in]
-
-\textbf{Question:} How quickly does an agent learn during training?\\
-\textit{Metric:} Normalized Integral of Reward/Time\\[0.1in]
-
-
-\textbf{Question:} Can the agent adjust to changes in the environment? How quickly does it recover?\\
-\textit{Metric:} Recovery Time\\[0.1in]
-
-
-\textbf{Question:} Can the agent maintain performance on previously learned parameters after being trained with new ones?\\
-\textit{Metric:} Performance Maintenance\\[0.1in]
-
-
-\textbf{Question:} How does the lifelong learning agent's performance compare to a traditional agent?\\
-\textit{Metric:} Performance relative to STE \\[0.2in]
-            
-            
-
-After these metrics are computed, the agent will receive a score for  each of these metrics for a Continual Learning syllabus, which will be aggregated to form its Continual Learning score. For now, an average of the scores achieved is reported in each phase/block, but more sophisticated methods may replace these in the future. See below for more details; more information is on its way.
-    
+\item Each phase in a Continual Learning syllabus consists of a training and optional but recommended testing block\\
+\textit{Training block is training on one or more parametric variations}\\[0.1in]
+\end{itemize}
 
 \section{Adapting to New Tasks}
+\textit{Structure}\\[0.1in]
 
+The purpose of this type of syllabus is to assess whether the agent can adjust to changes in the environment and maintain performance on the previous tasks when new ones are introduced. Consists of multiple tasks, generally without parametric variations except in Subtype C. Testing phase is mandatory. There are three subtypes of an Adapting to New Tasks syllabus.
 
-\subsection*{Formal Metric Definitions}
+\begin{enumerate}
+    \item \textbf{Subtype A:} Assess Resistance to Catastrophic Interference\\
+        Consists of multiple tasks with testing blocks to compute performance maintenance after learning new tasks. Parametric variations within a task are not exercised.\\
+                    
+    \item \textbf{Subtype B:} Assess Basic skill transfer\\
+        Consists of multiple tasks with appropriate testing blocks to compute transfer matrix. Parametric variations within a task are not exercised.\\
+            
+    \item \textbf{Subtype C:} Assess Parametric skill transfer\\
+        Consists of parametric variation in Task 1 and appropriate testing block to evaluate parametric skill tranfers to task 2.\\
+        %L2Arcade Example: vary paddle width in Pong; does this transfer to varying paddle width in Breakout? \\
+        \textit{This can be formulated as both forward and reverse transfer.}\\
+\end{enumerate}
 
-\textbf{1. Saturation Value}\\
-Purpose: The saturation value is computed to quantify the maximum maintained value by the agent.\\
-Calculated by: Since multiple rewards may be logged per episode, the mean is taken per episode. Then, the max of the rolling average is taken of the mean reward per episode with a smoothing parameter, s (default, 0.1)\\
-Compared to: Future or single task expert saturation values of the same task\\[0.1in]         
+\iffalse
 
-
-\textbf{2. Time to Saturation}\\
-Purpose: Time to saturation is used to quantify how quickly, in number of episodes, the agent took to achieve the saturation value computed above.\\
-Calculated by: The first time the saturation value (or above) is seen, that episode number is recorded\\
-Compared to: Future times to saturation of the same task\\[0.1in]
-
-
-\textbf{3. Normalized Integral of Reward/Time}\\
-Purpose: Taking the Integral of Accumulated Reward over Time allows for a more robust comparison of the time to learn a particular task, taking into account both the shape and saturation of the learning for future comparison. Has limitations; must be normalized by length; only training phases can be compared to each other \\
-Calculated by: Integrating reward over time, then dividing by the number of episodes used to accumulate the reward\\
-Compared to: Future training instances of this metric\\[0.1in]
-
-
-\textbf{4. Recovery Time}\\
-Purpose: Recovery time is calculated to determine how quickly (if at all) an agent can "bounce back" after a change is introduced to its environment\\
-Calculated by: After some training phase achieves a saturation value, determine how many episodes, if any, it takes for the agent to regain the same performance on the same task\\
-Compared to: An agent's recovery time is comparable across tasks\\[0.1in]
-
-
-\textbf{5. Performance Maintenance on Test Sets}\\
-Purpose: Performance maintenance on test sets is calculated to determine whether an agent catastrophically forgets a previously learned task\\
-Calculated by: Comparing all computed metrics on the train set (saturation values, time to saturation, etc) on the test set and computing the difference in performance\\[0.1in]
-
-
-\textbf{6. Performance relative to STE (training)}\\
-Purpose: STE Relative performance assesses whether a lifelong learner outperforms a traditional learner.\\
-Calculated by: Normalizing metrics computed on the lifelong learner by the same metrics computed on the traditional learner\\
+Subtype A
+Question: Can the agent learn a new task without forgetting the old task?\\
+                Metric: Recovery time (relative to previous task baseline)\\
+                    Calculated within and across training blocks \\
+                    After a new task is introduced, does performance fall? Does it recover to the previous level? How quickly does it recover? \\
+                Metric: Performance (reward statistics) on previously learned tasks\\
+                    Calculated within testing blocks\\
+                    Note that this is not to assess forward or reverse transfer; transfer is assessed in ANT Subtype B\\
+Subtype B   
+Question: Does the agent transfer knowledge from a learned task to a new task?\\
+            Metric: Recovery time (relative to previous task baseline)\\
+                Calculated within and across training blocks \\
+                After a new task is introduced, does performance fall? Does it recover to the previous level? How quickly does it recover? \\
+            Metric: Performance (reward statistics) on previously learned tasks\\
+                Calculated within testing blocks\\
+                Note that this is not to assess forward or reverse transfer; transfer is assessed in ANT Subtype B\\
+        Metrics are:\\
+            Time (number of episodes) to achieve threshold performance on Task 2 after being trained on Task 1\\
+            Transfer matrix\\        
+Subtype C           
+        Questions\\
+            Transfer of general ability: does parametric variation in Pong improve Breakout time-to-learn at all\\
+            Transfer of continual learning: Does parametric variation (continual learning) in Pong improve continual learning in Breakout?\\
+        Metrics are:\\
+            Amount of time required to learn vs from scratch \\
+\fi

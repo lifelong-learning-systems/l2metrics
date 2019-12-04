@@ -74,7 +74,6 @@ class WithinBlockSaturation(AgentMetric):
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
-        base_query_str = 'block == '
         saturation_value = {}
         eps_to_saturation = {}
         all_sat_vals = []
@@ -83,8 +82,7 @@ class WithinBlockSaturation(AgentMetric):
         # Iterate over all of the blocks and compute the within block performance
         for idx in range(phase_info.loc[:, 'block'].max()+1):
             # Need to get the part of the data corresponding to the block
-            block_data = dataframe[dataframe["block"] == idx]
-
+            block_data = dataframe.loc[dataframe["block"] == idx]
             # Make within block calculations
             sat_value, eps_to_sat, _ = _localutil.get_block_saturation_performance(block_data)
 

@@ -18,12 +18,13 @@ A crucial part of the T\&E Framework (TEF) is to log information during the oper
 The following table summarizes the different ways in which we anticipate performers will engage with the Metrics Framework. 
 
 \begin{table}[h]
+\centering
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Goal:}                                                                              & \textbf{Relevant Section:} \\ \hline
-\begin{tabular}[c]{@{}l@{}}Generate metrics for a syllabus. Run an L2 algorithm\\ using a predefined syllabus, run the predefined metrics,\\ and view the results\end{tabular} & 3. Generating Metrics for a Syllabus\\\hline                                                                              
-\begin{tabular}[c]{@{}l@{}}Create a custom syllabus. Run an L2 algorithm with a\\custom syllabus, and run predefined metrics.\end{tabular} & 4. Creating Custom Syllabi\\\hline         
-\begin{tabular}[c]{@{}l@{}}Create a custom metric. Run an L2 algorithm with a\\predefined or custom syllabus, and run a custom metric.\end{tabular} & \begin{tabular}[c]{@{}l@{}}4. Creating Custom Syllabi\\5. Creating Custom Metrics\end{tabular}\\ \hline
+\begin{tabular}[c]{@{}l@{}}Generate metrics for a syllabus. Run an L2 algorithm\\ using a predefined syllabus, run the predefined metrics,\\ and view the results\end{tabular} & \begin{tabular}[c]{@{}l@{}}1.2 Sample Workflow to\\Generate Metrics\end{tabular}\\\hline                                                                              
+\begin{tabular}[c]{@{}l@{}}Create a custom syllabus. Run an L2 algorithm with a\\custom syllabus, and run predefined metrics.\end{tabular} & 3. Creating Custom Syllabi\\\hline         
+\begin{tabular}[c]{@{}l@{}}Create a custom metric. Run an L2 algorithm with a\\predefined or custom syllabus, and run a custom metric.\end{tabular} & \begin{tabular}[c]{@{}l@{}}3. Creating Custom Syllabi\\4. Creating Custom Metrics\end{tabular}\\ \hline
                                                                                   
 \end{tabular}
 \end{table}
@@ -82,7 +83,7 @@ Most recent log folder:
 \end{verbatim}
 \end{small}
 
-Under \$L2DATA/logs/<syllabus\_name>-<timestamp>/ the directory tree looks like this: <worker\_id>/<phase\_name>/<task\_name>/{block-report, data-log}.tsv. A few points worth noting about this logging structure:\\[0.2in]
+Under \$L2DATA/logs/<syllabus\_name>-<timestamp>/ the directory tree follows the format: <worker\_id>/<phase\_name>/<task\_name>/{block-report, data-log}.tsv. A few points are worth noting about this logging structure:\\[0.2in]
 \begin{itemize}
 \item The worker ID is for distributed training. The ordering of episodes is maintained across workers, so an episode number is unique across the distributed training.\\[0.1in]
 \item The syllabus is notionally divided into a sequence of blocks; each block is a sequence of episodes with the same Task name and parameter values. See Figure~\ref{fig:annotated_syllabus} for an example.\\[0.1in]
@@ -137,7 +138,7 @@ Crucially, the performer code has to submit the estimated outputs
 
 \section{Sample Workflow to Generate Metrics}
 
-The following instuctions illustrate how to operate in the Metrics Framework in a sample environment called Minigrid. Please note that while we have adapted this environment to work with Learnkit, it will not be used for the T\&E Framework but serves as a quick-to-train example to generate log files in the proper format. After setting up the python packages (steps 1-3), an agent should be trained using the minigridkit script (step 4). Behind the scenes, this script uses Learnkit to load a Continual Learning syllabus which queues up sequences of episodes in which the agent can learn. While the agent is being fed these episodes, Learnkit automatically logs the reward achieved at the end of each episode and saves it to TSV files. The location of these files must be passed (step 5) to the l2metrics code, which computes Metrics and prints out the results (step 6). \\[0.2in]
+The following instuctions illustrate how to operate in the Metrics Framework in a sample environment called Minigrid. Please note that while we have adapted this environment to work with Learnkit, it will not be used for the T\&E Framework but rather serves as a quick-to-train example to generate log files in the proper format. After setting up the python packages (steps 1-3), an agent should be trained using the minigridkit script (step 4). Behind the scenes, this script uses Learnkit to load a Continual Learning syllabus which queues up sequences of episodes which the agent can use to learn. While the agent is being fed these episodes, Learnkit automatically logs the reward achieved at the end of each episode and saves it to TSV files. The location of these files must be passed (step 5) to the l2metrics code, which computes Metrics and prints out the results (step 6). \\[0.2in]
 
 \begin{enumerate}
 
@@ -158,9 +159,10 @@ The following instuctions illustrate how to operate in the Metrics Framework in 
 
 \item Train an agent in the Minigrid environment. This will take a few minutes. When it starts you should see an INFO level message showing the top level directory where logs are being written.\\[0.1in]
 \begin{small}
-\verb|python minigrid_learnkit/examples/minigrid_train_ppo.py| \\
-\verb|2019-12-04 10:30:25,723 <22980> | \\
-\verb|[INFO    ] root - Logging to: /home/bakermm1/l2data/logs|\\[0.1in]
+\begin{verbatim}python minigrid_learnkit/examples/minigrid_train_ppo.py
+2019-12-04 10:30:25,723 <22980>
+[INFO    ] root - Logging to: /home/bakermm1/l2data/logs
+\end{verbatim}
 \end{small}
 
 \item Store the last used logging directory in a temporary variable.\\

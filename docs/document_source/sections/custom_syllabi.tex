@@ -4,7 +4,7 @@ As mentioned in previous sections, a semi-rigid structure is required for syllab
 
 \subsection*{Phase Annotations}
 
-Syllabi used to generate the log files \textbf{must} include annotations with phase information in the following format: <phase\_number>.<phase\_type>, where phase\_number is an increasing integer beginning with 1, and phase\_type can be either "train" or "test". No other annotations are currently supported. Pleaase note that without these annotations, the Metrics Framework will not properly compute the Proposed Metrics. \\[0.1in]
+Syllabi used to generate the log files \textbf{must} include annotations with phase information in the following format: <phase\_number>.<phase\_type>, where phase\_number is an increasing integer beginning with 1, and phase\_type can be either "train" or "test". No other annotations are currently supported. Please note that without these annotations, the Metrics Framework will not properly compute the Proposed Metrics. \\[0.1in]
 
 
 \textit{Valid Phase annotation format example}:\\[0.1in]
@@ -90,7 +90,7 @@ This syllabus has alternating Train and Test phases (note the phase annotations)
 \section{Adapting to New Tasks}
 \subsection*{Structure}
 
-The purpose of this type of syllabus is to assess whether the agent can adjust to changes in the environment and maintain performance on the previous tasks when new ones are introduced. It consists of multiple tasks, generally without parametric variations except in Subtype C. The Testing phase is mandatory. There are three subtypes of an Adapting to New Tasks syllabus.
+The purpose of this type of syllabus is to assess whether the agent can learn new tasks and maintain performance on the previous tasks after new ones are introduced. It consists of multiple, distinct tasks, generally without parametric variations (except in Subtype C). The Testing phase is mandatory. There are three subtypes of an Adapting to New Tasks syllabus.
 
 \begin{itemize}
     \item \textbf{Subtype A:} Assess Resistance to Catastrophic Interference\\
@@ -106,7 +106,7 @@ This syllabus has alternating Train and Test phases which contain blocks of diff
 , and
 \begin{small}
 \verb|"Breakout"|
-\end{small} but no paramter variation. This syllabus can be used to assess whether the system can overcome so-called "Catastrophic Forgetting" by assessing the system's ability to learn multiple tasks while maintaining performance on previously learned tasks.
+\end{small} but no parameter variation. This syllabus can be used to assess whether the system can overcome so-called "Catastrophic Forgetting" by assessing the system's ability to learn multiple tasks while maintaining performance on previously learned tasks.
 
 \begin{small}
 \begin{verbatim}
@@ -141,7 +141,7 @@ This syllabus has alternating Train and Test phases which contain blocks of diff
 
 \subsection*{ANT Subtype B Syllabus Example}
 
-This syllabus also contains multiple tasks but no parameter variation. However, these tasks are chosen intentionally for the purpose of assessing skill transfer. Tasks chosen for this syllabus type should have an expectation of shared knowledge or representation so that a sensible transfer matrix can be computed.
+This syllabus also contains multiple tasks but no parameter variation. However, these tasks are chosen intentionally for the purpose of assessing skill transfer. Tasks chosen for this syllabus type should have an expectation of shared knowledge or skill representation so that a sensible transfer matrix can be computed and evaluated.
 
 \begin{small}
 \begin{verbatim}

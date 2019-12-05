@@ -1,0 +1,59 @@
+%  A simple AAU report template.
+%  2015-05-08 v. 1.2.0
+%  Copyright 2010-2015 by Jesper Kjær Nielsen <jkn@es.aau.dk>
+%
+%  This is free software: you can redistribute it and/or modify
+%  it under the terms of the GNU General Public License as published by
+%  the Free Software Foundation, either version 3 of the License, or
+%  (at your option) any later version.
+%
+%  This is distributed in the hope that it will be useful,
+%  but WITHOUT ANY WARRANTY; without even the implied warranty of
+%  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%  GNU General Public License for more details.
+%
+%  You can find the GNU General Public License at <http://www.gnu.org/licenses/>.
+
+
+\input{sections/setup/preamble.tex}% package inclusion and set up of the document
+\input{sections/setup/hyphenations.tex}% 
+\input{sections/setup/macros.tex}% my new macros
+
+\usepackage{xspace}
+\usepackage{times}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{paralist}
+\usepackage{textcase}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{stackengine}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\geometry{a4paper, portrait, margin=1in}
+
+\input{sections/setup/definitions.tex}
+
+\begin{document}
+%frontmatter
+\pagestyle{empty} %disable headers and footers
+\pagenumbering{roman} %use roman page numbering in the frontmatter
+\input{sections/titlepages.tex}
+\cleardoublepage
+\pdfbookmark[0]{Contents}{label:contents}
+\pagestyle{fancy} %enable headers and footers again
+\tableofcontents
+%mainmatter
+\pagenumbering{arabic} %use arabic page numbering in the mainmatter
+\input{sections/overview.tex}
+\input{sections/syllabus_metrics.tex}
+\input{sections/custom_syllabi.tex}
+\input{sections/custom_metrics.tex}
+%\input{sections/task_design.tex}
+\input{sections/appendix_A.tex}
+%\input{sections/appendix_B.tex}
+\end{document}

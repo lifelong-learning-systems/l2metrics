@@ -1,0 +1,216 @@
+\chapter{Creating Custom Syllabi}\label{ch:custom_syllabi}
+
+As mentioned in previous sections, a semi-rigid structure is required for syllabi in the Metrics Framework. 
+
+\subsection*{Phase Annotations}
+
+Syllabi used to generate the log files \textbf{must} include annotations with phase information in the following format: <phase\_number>.<phase\_type>, where phase\_number is an increasing integer beginning with 1, and phase\_type can be either "train" or "test". No other annotations are currently supported. Pleaase note that without these annotations, the Metrics Framework will not properly compute the Proposed Metrics. \\[0.1in]
+
+
+\textit{Valid Phase annotation format example}:\\[0.1in]
+\begin{small}
+\begin{verbatim}
+Train: {"$phase":  "1.train"}, {"$phase":  "2.train"}, ..., {"$phase":  "n.train"}
+Test: {"$phase":  "1.test"}, {"$phase":  "2.test"}, ..., {"$phase":  "n.test"}
+\end{verbatim}
+\end{small}
+
+\subsection*{Train/Test Structure}
+
+\begin{enumerate}
+\item Required
+\begin{itemize}
+\item The first block in a syllabus must be a Train block
+\end{itemize}
+
+\item Expected
+\begin{itemize}
+\item Alternating Train phases (consisting of 1 or more blocks) followed by Test phases (consisting of 1 or more blocks)
+\end{itemize}
+
+\item Disallowed
+\begin{itemize}
+\item Continual Learning Syllabi may not exercise more than one task
+\item Adapting to New Tasks Syllabi may not neglect to include Testing phases
+\item Adapting to New Tasks Subtypes A and B may not exercise parameter variation
+\end{itemize}
+
+\end{enumerate}
+
+\section{Continual Learning}
+\subsection*{Structure}
+
+The purpose of this type of syllabus is to assess whether the agent can adjust to changes in the environment and maintain performance on the previous parameters when new ones are introduced. There is only one type of Continual Learning syllabus.
+
+\begin{itemize}
+\item A Continual Learning syllabus consists of a \textbf{single} task with parametric variations\\
+\textit{Can involve interpolation of parameters, noisy parameters, etc. but has only one task \\}
+
+
+\item Each phase in a Continual Learning syllabus consists of a training and optional but recommended testing block\\
+\textit{Training block is training on one or more parametric variations}\\[0.1in]
+\end{itemize}
+
+\subsection*{A Simple CL Syllabus}
+
+This syllabus has alternating Train and Test phases (note the phase annotations) which contain blocks of all the same Task (
+\begin{small}
+\verb|"Pong"|
+\end{small}), but the parameter values (
+\begin{small}
+\verb|"bot/paddle/width"| )
+\end{small}vary between 0.15, 0.20, 0.25
+
+\begin{small}
+\begin{verbatim}
+"instructions": [    
+   {"$phase": "1.train"}, 
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 5000}, 
+
+   {"$phase": "1.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.20}, "count": 100},  
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 100},  
+    {"$info": {}},
+   
+  {"$phase": "2.train"},  
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.20}, "count": 5000},
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.25}, "count": 5000},
+
+   {"$phase": "2.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 100},
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.20}, "count": 100},  
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.25}, "count": 100},  
+    {"$info": {}}
+]
+\end{verbatim}
+\end{small}
+
+\section{Adapting to New Tasks}
+\subsection*{Structure}
+
+The purpose of this type of syllabus is to assess whether the agent can adjust to changes in the environment and maintain performance on the previous tasks when new ones are introduced. It consists of multiple tasks, generally without parametric variations except in Subtype C. The Testing phase is mandatory. There are three subtypes of an Adapting to New Tasks syllabus.
+
+\begin{itemize}
+    \item \textbf{Subtype A:} Assess Resistance to Catastrophic Interference\\
+        Consists of multiple tasks with testing blocks to compute performance maintenance after learning new tasks. Parametric variations within a task are not exercised.\\
+\end{itemize}
+
+\subsection*{ANT Subtype A Syllabus Example}
+
+This syllabus has alternating Train and Test phases which contain blocks of different Tasks
+\begin{small}
+\verb|"Pong, Freeway"|
+\end{small}
+, and
+\begin{small}
+\verb|"Breakout"|
+\end{small} but no paramter variation. This syllabus can be used to assess whether the system can overcome so-called "Catastrophic Forgetting" by assessing the system's ability to learn multiple tasks while maintaining performance on previously learned tasks.
+
+\begin{small}
+\begin{verbatim}
+"instructions": [    
+   {"$phase": "1.train"}, 
+    {"$repeat": { "$episode": "Pong"}, "count": 5000}, 
+
+   {"$phase": "1.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong"}, "count": 100},  
+    {"$repeat": { "$episode": "Freeway"}, "count": 100},  
+    {"$info": {}},
+   
+  {"$phase": "2.train"},  
+    {"$repeat": { "$episode": "Freeway"}, "count": 5000},
+    {"$repeat": { "$episode": "Breakout"}, "count": 5000},
+
+   {"$phase": "2.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong"}, "count": 100},
+    {"$repeat": { "$episode": "Breakout"}, "count": 100}, 
+    {"$repeat": { "$episode": "Freeway"}, "count": 100}, 
+    {"$info": {}}
+]
+\end{verbatim}
+\end{small}
+
+\begin{itemize}                   
+    \item \textbf{Subtype B:} Assess Basic skill transfer\\
+        Consists of multiple tasks with appropriate testing blocks to compute transfer matrix. Parametric variations within a task are not exercised.\\
+\end{itemize}
+
+\subsection*{ANT Subtype B Syllabus Example}
+
+This syllabus also contains multiple tasks but no parameter variation. However, these tasks are chosen intentionally for the purpose of assessing skill transfer. Tasks chosen for this syllabus type should have an expectation of shared knowledge or representation so that a sensible transfer matrix can be computed.
+
+\begin{small}
+\begin{verbatim}
+"instructions": [    
+   {"$phase": "1.train"}, 
+    {"$repeat": { "$episode": "Pong"}, "count": 5000}, 
+
+   {"$phase": "1.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong"}, "count": 100},  
+    {"$repeat": { "$episode": "Breakout"}, "count": 100},  
+    {"$info": {}},
+   
+  {"$phase": "2.train"},  
+    {"$repeat": { "$episode": "Breakout"}, "count": 5000},
+
+   {"$phase": "2.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong"}, "count": 100},
+    {"$repeat": { "$episode": "Breakout"}, "count": 100}, 
+    {"$info": {}}
+]
+
+\end{verbatim}
+\end{small}
+
+\begin{itemize}            
+    \item \textbf{Subtype C:} Assess Parametric skill transfer\\
+        Consists of parametric variation in Task 1 and appropriate testing block to evaluate parametric skill tranfers to task 2.\\
+        %L2Arcade Example: vary paddle width in Pong; does this transfer to varying paddle width in Breakout? \\
+        \textit{This can be formulated as both forward and reverse transfer.}\\
+\end{itemize}
+
+\subsection*{ANT Subtype C Syllabus Example}
+
+This syllabus contains both task and parameter variation and enables more complicated evaluation metrics to be computed, including transfer of Continual Learning, improvement of time-to-learn, etc.
+
+\begin{small}
+\begin{verbatim}
+"instructions": [    
+   {"$phase": "1.train"}, 
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 5000}, 
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.20}, "count": 5000},
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.25}, "count": 5000},
+
+   {"$phase": "1.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 100}, 
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.20}, "count": 100},
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.25}, "count": 100},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.15}, "count": 100}, 
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.20}, "count": 100},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.25}, "count": 100},
+    {"$info": {}},
+   
+  {"$phase": "2.train"},  
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.15}, "count": 5000}, 
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.20}, "count": 5000},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.25}, "count": 5000},
+
+   {"$phase": "2.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 100}, 
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.20}, "count": 100},
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.25}, "count": 100},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.15}, "count": 100}, 
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.20}, "count": 100},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.25}, "count": 100}, 
+    {"$info": {}}
+]
+\end{verbatim}
+\end{small}

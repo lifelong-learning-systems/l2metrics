@@ -1,0 +1,157 @@
+\chapter{Proposed Metrics}\label{ch:metrics_syllabus}
+
+There are a variety of ways a system may demonstrate the BAA's defined Core Capabilities. With these proposed metrics, we hope to capture many dimensions of a system's demonstrated capability. The proposed metrics are framed as an evaluation questions as shown below; the answers to these questions can express the degree to which a system demonstrates the Core Capabilty in question. Please note that some of these metrics are computed as a basis for comparison for future evaluation blocks and are not all used as standalone metrics. \\[0.1in]
+
+After some combination of these metrics are computed, the agent will receive a score for each syllabus (i.e., an agent's \textit{lifetime}), which will be aggregated to form a score for each Core Capability. For this intial release an average of the scores achieved is reported, but in some cases, more sophisticated methods may replace these in the future.\\[0.2in]
+
+As was introduced in Figure~\ref{fig:annotated_syllabus}, a syllabus is formatted as a JSON file and is divided into a sequence of episodes. Sequences of episodes with the same Task name and parameter values are known as blocks. As shown below, Task names are "Pong" and "Breakout" and parameter values - encoded here as "bot/paddle/width" - are a range of values: 0.15, 0.20, and 0.30. The syllabus shown below has 10 blocks, and the length of these blocks is encoded as the count parameter. Thus, the length of the first two blocks is 5000 episodes, the length of the next two blocks is 10 episodes, the length of the next two blocks is 5000 episodes, and the length of the last four blocks is 10 episodes.
+
+\begin{small}
+\begin{verbatim}
+"instructions": [    
+   {"$phase": "1.train"}, 
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 5000}, 
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.20}, "count": 5000}, 
+
+   {"$phase": "1.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 10},  
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.30}, "count": 10},  
+    {"$info": {}},
+   
+  {"$phase": "2.train"}, 
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.15}, "count": 5000},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.20}, "count": 5000}, 
+
+   {"$phase": "2.test"},   
+    {"$info": {"disable_updates": true} },
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.15}, "count": 10},
+    {"$repeat": { "$episode": "Pong", "bot/paddle/width": 0.30}, "count": 10},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.15}, "count": 10},
+    {"$repeat": { "$episode": "Breakout", "bot/paddle/width": 0.30}, "count": 10},
+    {"$info": {}}
+]
+\end{verbatim}
+\end{small}
+
+The concept of blocks is critical for establishing computational boundaries within the Metrics Framework. Unless otherwise noted, these Proposed Metrics will be computed within a block, though metrics will often be compared across these boundaries.
+
+\section{Continual Learning}
+
+\begin{large}
+\textit{Proposed Evaluation Metrics}\\[0.1in]
+\end{large}
+
+
+\begin{table}[h]
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Evaluation Question:}                                                                              & \textbf{Relevant Metric:} \\ \hline
+\begin{tabular}[c]{@{}l@{}}What level of performance does the agent achieve\\during training?\end{tabular} & Saturation Value\\\hline                                                                              
+\begin{tabular}[c]{@{}l@{}}How quickly does it achieve this saturation value?\end{tabular} & Time to Saturation\\\hline     
+
+\begin{tabular}[c]{@{}l@{}}How quickly does an agent learn during training?\end{tabular} & \begin{tabular}[c]{@{}l@{}}Normalized Integral of Reward \\over Number Episodes\end{tabular}\\ \hline   
+\begin{tabular}[c]{@{}l@{}}Can the agent adjust to changes in the environment?\\How quickly does it recover?\end{tabular} & Recovery Time\\\hline     
+\begin{tabular}[c]{@{}l@{}}Can the agent maintain performance on previously\\learned parameters after being trained with new ones?\end{tabular} & Performance Maintenance\\\hline     
+\begin{tabular}[c]{@{}l@{}}How does the lifelong learning agent's performance\\compare to a traditional agent?\end{tabular} & \begin{tabular}[c]{@{}l@{}}Performance relative to\\Single Task Expert\end{tabular}\\\hline                                                                               
+\end{tabular}
+\end{table}
+
+
+\iffalse
+
+Subtype A
+Question: Can the agent learn a new task without forgetting the old task?\\
+                Metric: Recovery time (relative to previous task baseline)\\
+                    Calculated within and across training blocks \\
+                    After a new task is introduced, does performance fall? Does it recover to the previous level? How quickly does it recover? \\
+                Metric: Performance (reward statistics) on previously learned tasks\\
+                    Calculated within testing blocks\\
+                    Note that this is not to assess forward or reverse transfer; transfer is assessed in ANT Subtype B\\
+Subtype B   
+Question: Does the agent transfer knowledge from a learned task to a new task?\\
+            Metric: Recovery time (relative to previous task baseline)\\
+                Calculated within and across training blocks \\
+                After a new task is introduced, does performance fall? Does it recover to the previous level? How quickly does it recover? \\
+            Metric: Performance (reward statistics) on previously learned tasks\\
+                Calculated within testing blocks\\
+                Note that this is not to assess forward or reverse transfer; transfer is assessed in ANT Subtype B\\
+        Metrics are:\\
+            Time (number of episodes) to achieve threshold performance on Task 2 after being trained on Task 1\\
+            Transfer matrix\\        
+Subtype C           
+        Questions\\
+            Transfer of general ability: does parametric variation in Pong improve Breakout time-to-learn at all\\
+            Transfer of continual learning: Does parametric variation (continual learning) in Pong improve continual learning in Breakout?\\
+        Metrics are:\\
+            Amount of time required to learn vs from scratch \\
+\fi
+
+
+\begin{large}
+\textit{Proposed Metric Definitions}\\[0.1in]
+\end{large}
+
+\textbf{1. Saturation Value}\\
+Purpose: A saturation value is computed to quantify the maximum maintained reward value by the system, within a block.\\
+Calculated by: Since multiple reward values may be logged per episode (via sub-episodes), the mean reward is taken over all sub-episodes of each episode, giving one aggregate reward value per episode. Then, an unweighted moving average with \begin{math}\alpha\end{math} \verb|=| 11 is computed over the reward values, returning a smoothed reward signal. Non-overlapping edge values are discarded. The max of the smoothed reward is the system's achieved saturation value.\\
+Compared to: Future or single task expert saturation values of the same task\\        
+\textit{This Metric is Under Development}\\[0.1in]
+
+Formally:\\[0.1in]
+
+Given the per episode reward sequence \begin{math}X_n = x_1, x_2, ... , x_n\end{math}, let \begin{math}S_n = s_1, s_2, ... , s_n\end{math} be the new sequence produced when an unweighted moving average with window size \begin{math}\alpha\end{math} is applied to \begin{math}X_n\end{math}. Let \begin{math}\alpha\end{math} be any odd integer \verb|>| 0. Thus:
+
+
+\[ s_i = \frac{1}{\alpha}\sum_{j=i}^{i+\alpha-1} {x_j} \]
+
+
+\[saturation\_value = max(S_n)\]
+
+\textbf{2. Time to Saturation}\\
+Purpose: Time to saturation is used to quantify how quickly, in number of episodes, the agent took to achieve the saturation value computed above.\\
+Calculated by: The first time the saturation value (or above) is seen in the smoothed reward signal \begin{math}S_n\end{math}, the number of episodes it took to achieve that performance is recorded as the Time to Saturation\\
+Compared to: Future Times to Saturation of the same task\\
+\textit{This Metric is Under Development}\\[0.1in]
+
+\textbf{3. Area Under the Reward "Curve" Per Number of Episodes}\\
+Purpose: Taking the Sum of Accumulated Reward allows for a more robust comparison of the time to learn a particular task, taking into account both the shape and saturation of the learning for future comparison. Two systems given the same number of episodes may achieve the same saturation value, but one may achieve the value faster and this metric can reflect that advantage. However,  this metric has limitations and must be normalized by length; additionally, only training phases can be compared to each other\\
+Calculated by: Integrating reward over episodes, then dividing by the number of episodes used to accumulate the reward\\
+Compared to: Future from scratch training instances of this metric\\
+\textit{This Metric is Not Yet Implemented}\\[0.1in]
+
+We take the sum of the smoothed series \begin{math}S_n\end{math}, where n is the integer block length (in number of episodes), normalized by the block length:\\[0.1in]
+
+\[\frac{1}{n}\sum_{i=0}^{n} {S_i}\]
+
+\textbf{4. Recovery Time}\\
+Purpose: Recovery time is calculated to determine how quickly (if at all) an agent can "bounce back" after a change is introduced to its environment\\
+Calculated by: After some training phase achieves a saturation value, determine how many episodes, if any, it takes for the agent to regain the same performance (within 2\%) that it was previously attaining on the same task before the change\\
+Compared to: An agent's recovery time is comparable across tasks\\
+\textit{This Metric is Under Development}\\[0.1in]
+
+\textbf{5. Performance Maintenance on Test Sets}\\
+Purpose: Performance maintenance on test sets is calculated to determine whether an agent catastrophically forgets a previously learned task\\
+Calculated by: Comparing all commonly computed metrics on the train set (saturation values, time to saturation, etc) on the test set and computing the difference in performance\\
+\textit{This Metric is Under Development}\\[0.1in]
+
+\textbf{6. Performance relative to Single Task Expert}\\
+Purpose: Single Task Expert (STE) Relative performance assesses whether a lifelong learner outperforms a traditional learner.\\
+\textit{Note:} Single Task Expert Saturation values for each task \textbf{must} be included in a JSON file found in \$L2DATA/taskinfo/info.json and without this file, this metric cannot be calculated. Further, the task names contained in the JSON file must match the names in the log files \textit{exactly}. The format for this file must be: \\[0.1in]
+
+\begin{small}
+\begin{verbatim}
+{
+    "task_name_1" : 0.8746,
+    "task_name_2" : 0.9315,
+    ...,
+    "task_name_n" : 0.8089
+}
+\end{verbatim}
+\end{small}
+Calculated by: Normalizing metrics computed on the lifelong learner by the same metrics computed on the traditional learner. No assumptions are made about what is found in the STE file in terms of the type of algorithm used; this metric will simply assume that the numbers found in this file are the saturation values achieved by the STE and will do a direct comparison. This will be used in particular for the computation of transfer matrices.\\
+\textit{This Metric is Under Development}\\[0.1in]
+
+\section{Adapting To New Tasks}
+
+\textit{Evaluation Questions and Definitions Coming Soon}

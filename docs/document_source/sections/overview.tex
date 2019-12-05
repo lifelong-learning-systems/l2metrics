@@ -21,9 +21,9 @@ The following table summarizes the different ways in which we anticipate perform
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Goal:}                                                                              & \textbf{Relevant Section:} \\ \hline
-\begin{tabular}[c]{@{}l@{}}Generate metrics for a syllabus. Run a L2 algorithm\\ using a predefined syllabus, run the predefined metrics,\\ and view the results\end{tabular} & 3. Generating Metrics for a Syllabus\\\hline                                                                              
-\begin{tabular}[c]{@{}l@{}}Create a custom syllabus. Run a L2 algorithm with a\\custom syllabus, and run predefined metrics.\end{tabular} & 4. Creating Custom Syllabi\\\hline         
-\begin{tabular}[c]{@{}l@{}}Create a custom metric. Run a L2 algorithm with a\\predefined or custom syllabus, and run a custom metric.\end{tabular} & \begin{tabular}[c]{@{}l@{}}4. Creating Custom Syllabi\\5. Creating Custom Metrics\end{tabular}\\ \hline
+\begin{tabular}[c]{@{}l@{}}Generate metrics for a syllabus. Run an L2 algorithm\\ using a predefined syllabus, run the predefined metrics,\\ and view the results\end{tabular} & 3. Generating Metrics for a Syllabus\\\hline                                                                              
+\begin{tabular}[c]{@{}l@{}}Create a custom syllabus. Run an L2 algorithm with a\\custom syllabus, and run predefined metrics.\end{tabular} & 4. Creating Custom Syllabi\\\hline         
+\begin{tabular}[c]{@{}l@{}}Create a custom metric. Run an L2 algorithm with a\\predefined or custom syllabus, and run a custom metric.\end{tabular} & \begin{tabular}[c]{@{}l@{}}4. Creating Custom Syllabi\\5. Creating Custom Metrics\end{tabular}\\ \hline
                                                                                   
 \end{tabular}
 \end{table}
@@ -137,7 +137,7 @@ Crucially, the performer code has to submit the estimated outputs
 
 \section{Sample Workflow to Generate Metrics}
 
-Get started by generating some example log files using the Minigrid environment. You may do this by the following:\\[0.2in]
+The following instuctions illustrate how to operate in the Metrics Framework in a sample environment called Minigrid. Please note that while we have adapted this environment to work with Learnkit, it will not be used for the T\&E Framework but serves as a quick-to-train example to generate log files in the proper format. After setting up the python packages (steps 1-3), an agent should be trained using the minigridkit script (step 4). Behind the scenes, this script uses Learnkit to load a Continual Learning syllabus which queues up sequences of episodes in which the agent can learn. While the agent is being fed these episodes, Learnkit automatically logs the reward achieved at the end of each episode and saves it to TSV files. The location of these files must be passed (step 5) to the l2metrics code, which computes Metrics and prints out the results (step 6). \\[0.2in]
 
 \begin{enumerate}
 
@@ -156,7 +156,7 @@ Get started by generating some example log files using the Minigrid environment.
 \verb|pip install -e l2metrics\|\\[0.1in]
 \end{small}
 
-\item Train an agent in the Minigrid environment. This will take a few minutes. When it starts you should see an INFO level message showing the top level directory that logs are being written to.\\[0.1in]
+\item Train an agent in the Minigrid environment. This will take a few minutes. When it starts you should see an INFO level message showing the top level directory where logs are being written.\\[0.1in]
 \begin{small}
 \verb|python minigrid_learnkit/examples/minigrid_train_ppo.py| \\
 \verb|2019-12-04 10:30:25,723 <22980> | \\
@@ -181,11 +181,22 @@ The output should print to the screen and should look something like this:\\[0.2
 \begin{verbatim}
 
 Metric: Average Within Block Saturation Calculation
-Value: {'global_within_block_saturation': 0.875959925753812, 
-        'global_num_eps_to_saturation': 197.45454545454547}
 
-Metric: 
-Value: {'global_perf': 0.9217597535934293}
+Averaged Value: {'global_within_block_saturation': 0.875959925753812, 
+                'global_num_eps_to_saturation': 197.45454545454547}
+                
+Per Block Values: {
+'saturation_value': {0: 0.8488624196510561, 1: 0.822495598845599, 
+2: 0.8413838383838385, 3: 0.9651983081298474, 4: 0.8791413586413588, 
+5: 0.8132655122655124, 6: 0.8654549980322708, 7: 0.9549258642961517, 
+8: 0.9681967251617378, 9: 0.8410522366522368, 10: 0.8355823232323233},
+
+'eps_to_saturation': {0: 185, 1: 30, 2: 81, 3: 107, 4: 610, 5: 83, 
+6: 84, 7: 100, 8: 739, 9: 103, 10: 50}}
+
+Metric: An Example Custom Metric
+Averaged Value: {'global_perf': 0.9217597535934293}
+Per Block Values: {'global_perf': 0.9217597535934293}
 
 Process finished with exit code 0
 

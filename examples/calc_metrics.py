@@ -3,6 +3,7 @@ import l2metrics
 
 
 class MyCustomMetric(l2metrics.AgentMetric):
+    name = "An Example Custom Metric"
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent'}
     description = "A Custom Metric"

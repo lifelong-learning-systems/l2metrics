@@ -2,7 +2,7 @@
 
 There are a variety of ways a system may demonstrate the BAA's defined Core Capabilities. With these proposed metrics, we hope to capture many dimensions of a system's demonstrated capability. The proposed metrics are framed as an evaluation questions as shown below; the answers to these questions can express the degree to which a system demonstrates the Core Capabilty in question. Please note that some of these metrics are computed as a basis for comparison for future evaluation blocks and are not all used as standalone metrics. \\[0.1in]
 
-After some combination of these metrics are computed, the agent will receive a score for each \textit{lifetime}, which will be aggregated to form a score for each Core Capability. For this intial release an average of the scores achieved is reported, but in some cases, more sophisticated methods may replace these in the future.\\[0.2in]
+After some combination of these metrics are computed, the agent will receive a score for each syllabus (i.e., an agent's \textit{lifetime}), which will be aggregated to form a score for each Core Capability. For this intial release an average of the scores achieved is reported, but in some cases, more sophisticated methods may replace these in the future.\\[0.2in]
 
 As was introduced in Figure~\ref{fig:annotated_syllabus}, a syllabus is formatted as a JSON file and is divided into a sequence of episodes. Sequences of episodes with the same Task name and parameter values are known as blocks. As shown below, Task names are "Pong" and "Breakout" and parameter values - encoded here as "bot/paddle/width" - are a range of values: 0.15, 0.20, and 0.30. The syllabus shown below has 10 blocks, and the length of these blocks is encoded as the count parameter. Thus, the length of the first two blocks is 5000 episodes, the length of the next two blocks is 10 episodes, the length of the next two blocks is 5000 episodes, and the length of the last four blocks is 10 episodes.
 
@@ -34,7 +34,7 @@ As was introduced in Figure~\ref{fig:annotated_syllabus}, a syllabus is formatte
 \end{verbatim}
 \end{small}
 
-The concept of blocks is critical for establishing computational boundaries within the Metrics Framework. Unless otherwise noted, these Proposed Metrics will be computed within a block, though often metrics will be computed and compared across these boundaries.
+The concept of blocks is critical for establishing computational boundaries within the Metrics Framework. Unless otherwise noted, these Proposed Metrics will be computed within a block, though metrics will often be compared across these boundaries.
 
 \section{Continual Learning}
 
@@ -58,13 +58,43 @@ The concept of blocks is critical for establishing computational boundaries with
 \end{table}
 
 
+\iffalse
+
+Subtype A
+Question: Can the agent learn a new task without forgetting the old task?\\
+                Metric: Recovery time (relative to previous task baseline)\\
+                    Calculated within and across training blocks \\
+                    After a new task is introduced, does performance fall? Does it recover to the previous level? How quickly does it recover? \\
+                Metric: Performance (reward statistics) on previously learned tasks\\
+                    Calculated within testing blocks\\
+                    Note that this is not to assess forward or reverse transfer; transfer is assessed in ANT Subtype B\\
+Subtype B   
+Question: Does the agent transfer knowledge from a learned task to a new task?\\
+            Metric: Recovery time (relative to previous task baseline)\\
+                Calculated within and across training blocks \\
+                After a new task is introduced, does performance fall? Does it recover to the previous level? How quickly does it recover? \\
+            Metric: Performance (reward statistics) on previously learned tasks\\
+                Calculated within testing blocks\\
+                Note that this is not to assess forward or reverse transfer; transfer is assessed in ANT Subtype B\\
+        Metrics are:\\
+            Time (number of episodes) to achieve threshold performance on Task 2 after being trained on Task 1\\
+            Transfer matrix\\        
+Subtype C           
+        Questions\\
+            Transfer of general ability: does parametric variation in Pong improve Breakout time-to-learn at all\\
+            Transfer of continual learning: Does parametric variation (continual learning) in Pong improve continual learning in Breakout?\\
+        Metrics are:\\
+            Amount of time required to learn vs from scratch \\
+\fi
+
+
 \begin{large}
 \textit{Proposed Metric Definitions}\\[0.1in]
 \end{large}
 
 \textbf{1. Saturation Value}\\
 Purpose: A saturation value is computed to quantify the maximum maintained reward value by the system, within a block.\\
-Calculated by: Since multiple reward values may be logged per episode, the mean reward is taken per sub-episode of each episode, giving one reward value per episode. Then, an unweighted moving average with \begin{math}\alpha\end{math} \verb|=| 11 is computed over the reward values, returning a smoothed reward signal. Non-overlapping edge values are discarded. The max of the smoothed reward is the system's achieved saturation value.\\
+Calculated by: Since multiple reward values may be logged per episode (via sub-episodes), the mean reward is taken over all sub-episodes of each episode, giving one aggregate reward value per episode. Then, an unweighted moving average with \begin{math}\alpha\end{math} \verb|=| 11 is computed over the reward values, returning a smoothed reward signal. Non-overlapping edge values are discarded. The max of the smoothed reward is the system's achieved saturation value.\\
 Compared to: Future or single task expert saturation values of the same task\\        
 \textit{This Metric is Under Development}\\[0.1in]
 
@@ -90,7 +120,7 @@ Calculated by: Integrating reward over episodes, then dividing by the number of 
 Compared to: Future from scratch training instances of this metric\\
 \textit{This Metric is Not Yet Implemented}\\[0.1in]
 
-We take the sum of the smoothed series \begin{math}S_n\end{math}, where n is the integer block length (in number of episodes):\\[0.1in]
+We take the sum of the smoothed series \begin{math}S_n\end{math}, where n is the integer block length (in number of episodes), normalized by the block length:\\[0.1in]
 
 \[\frac{1}{n}\sum_{i=0}^{n} {S_i}\]
 

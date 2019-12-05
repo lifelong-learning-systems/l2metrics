@@ -273,14 +273,16 @@ class AgentMetricsReport(core.MetricsReport):
 
     def calculate(self):
         for metric in self._metrics:
-            this_result, self._metrics_dict = metric.calculate(self._log_data, self.phase_info, self._metrics_dict)
+            this_result, this_metrics_dict = metric.calculate(self._log_data, self.phase_info, self._metrics_dict)
             self._results[metric.name] = this_result
+            self._metrics_dict[metric.name] = this_metrics_dict
 
     def report(self):
         # Call a describe method to inform printing
         for r_key in self._results:
             print('\nMetric: {:s}'.format(r_key))
-            print('Value: {:s}'.format(str(self._results[r_key])))
+            print('Averaged Value: {:s}'.format(str(self._results[r_key])))
+            print('Per Block Values: {:s}'.format(str(self._metrics_dict[r_key])))
 
     def plot(self):
         # TODO: Actually, you know, implement plotting

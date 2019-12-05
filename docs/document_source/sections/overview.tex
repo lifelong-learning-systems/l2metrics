@@ -33,7 +33,7 @@ The following table summarizes the different ways in which we anticipate perform
 
 \subsection*{Agent Learning}
 
-The T\&E Framework uses the information contained in an annotated syllabusto produce a sequence of specific tasks, known as episodes, for an agent learner and automaticallly generates the performance logs from which metrics will be calculated. Figure~\ref{fig:workflow} depicts the workflow of the system as described below.\\[0.2in]
+The T\&E Framework uses the information contained in an annotated syllabus to produce a sequence of specific tasks, known as episodes, for an agent learner and automatically generates the performance logs from which metrics will be calculated. Figure~\ref{fig:workflow} depicts the workflow of the system as described below.\\[0.2in]
 
 \begin{figure}[h]
 	\centering
@@ -167,7 +167,7 @@ The following instuctions illustrate how to operate in the Metrics Framework in 
 
 \item Store the last used logging directory in a temporary variable.\\
 \begin{small}
-\verb|log_dir =$(ls -t -1 `python -m learnkit.info -get logdir`| |\verb| head -1)|\\[0.1in]
+\verb|log_dir=$(ls -t -1 `python -m learnkit.info -get logdir`| |\verb| head -1)|\\[0.1in]
 \end{small}
 \item Pass the variable just set as the 
 \begin{small}

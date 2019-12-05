@@ -79,7 +79,7 @@ def parse_blocks(data):
 
     # Quick check to make sure the block numbers (zero indexed) aren't a mismatch on the length of the block nums array
     if (max(all_block_nums)+1)/len(all_block_nums) != 1:
-        raise Warning("Phase number: {:d} and length {:d} mismatch!".format(max(all_block_nums), len(all_block_nums)))
+        Warning("Phase number: {:f} and length {:d} mismatch!".format(max(all_block_nums), len(all_block_nums)))
 
     return test_task_nums, phases_df
 

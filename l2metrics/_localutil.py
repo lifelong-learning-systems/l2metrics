@@ -112,7 +112,8 @@ def smooth(x, window_len=11, window='hanning'):
         raise(ValueError, "smooth only accepts 1 dimension arrays.")
 
     if x.size < window_len:
-        raise(ValueError, "Input vector needs to be bigger than window size.")
+        # raise(ValueError, "Input vector needs to be bigger than window size.")
+        window_len = int(np.floor(x.size / 2))
 
     if window_len < 3:
         return x
@@ -131,11 +132,11 @@ def smooth(x, window_len=11, window='hanning'):
     return y
 
 
-def get_block_saturation_performance(data, previous_saturation_value=None):
+def get_block_saturation_performance(data, column_to_use=None, previous_saturation_value=None):
     # Calculate the "saturation" value
     # Calculate the number of episodes to "saturation"
 
-    mean_reward_per_episode = data.loc[:, ['task', 'reward']].groupby('task').mean()
+    mean_reward_per_episode = data.loc[:, ['task', column_to_use]].groupby('task').mean()
     mean_data = np.ravel(mean_reward_per_episode.values)
 
     # Take the moving average of the mean of the per episode reward
@@ -155,3 +156,13 @@ def get_block_saturation_performance(data, previous_saturation_value=None):
             episodes_to_recovery = -999
 
     return saturation_value, episodes_to_saturation, episodes_to_recovery
+
+
+def extract_relevant_columns(dataframe, keyword):
+    relevant_cols = []
+
+    for col in dataframe.columns:
+        if col.startswith(keyword):
+            relevant_cols.append(col)
+
+    return relevant_cols, len(relevant_cols)

@@ -41,10 +41,18 @@ def run():
     if args.log_dir is None:
         raise Exception('Log directory must be specified!')
 
-    metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+    if args.syllabus_type == "class":
+        metrics_report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+    else:
+        metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
 
-    metrics_report.add(MyCustomMetric())
+    # metrics_report.add(MyCustomMetric())
+
     metrics_report.calculate()
+
+    # Uncomment this for a very basic reward over episode plot:
+    #metrics_report.plot()
+
     metrics_report.report()
 
 

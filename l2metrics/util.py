@@ -20,6 +20,7 @@ import pandas as pd
 import os
 import json
 from learnkit.data_util.utils import get_l2data_root
+import matplotlib.pyplot as plt
 
 
 def get_l2root_base_dirs(directory_to_append, sub_to_get=None):
@@ -36,6 +37,18 @@ def get_l2root_base_dirs(directory_to_append, sub_to_get=None):
     return file_info_to_return
 
 
+def load_chance_data():
+    # This function will return a dictionary of "chance" definitions for all of the available classification tasks
+    # stored in this JSON file, located at $L2DATA/taskinfo/chance.json
+    json_file = get_l2root_base_dirs('taskinfo', 'chance.json')
+
+    # Load the defaults from the json file, return them as a dictionary
+    with open(json_file) as f:
+        chance_dict = json.load(f)
+
+    return chance_dict
+
+
 def load_default_ste_data():
     # This function will return a dictionary of the Single-Task-Expert data from all of the available single task
     # baselines that have been stored in this JSON file, located at $L2DATA/taskinfo/info.json
@@ -46,6 +59,26 @@ def load_default_ste_data():
         ste_dict = json.load(f)
 
     return ste_dict
+
+
+def plot_performance(dataframe, col_to_plot='reward', x_axis_col='task', input_title='Title', do_save_fig=False,
+                     plot_filename='plot.png', input_xlabel='Task Number', input_ylabel='Reward'):
+    # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
+    # directory and/or customize the title, axes labeling, filename, etc
+    data = dataframe[col_to_plot]
+    x_axis = dataframe[x_axis_col]
+
+    fig, ax = plt.subplots()
+    ax.plot(x_axis, data)
+
+    ax.set(xlabel=input_xlabel, ylabel=input_ylabel,
+           title=input_title)
+    ax.grid()
+
+    if do_save_fig:
+        fig.savefig(plot_filename)
+
+    plt.show()
 
 
 def read_log_data(input_dir, analysis_variables=None):

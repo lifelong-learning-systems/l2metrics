@@ -15,6 +15,7 @@
 # USER OF THE MATERIAL FOR ANY ACTUAL, INDIRECT, CONSEQUENTIAL, SPECIAL OR OTHER
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
+from abc import ABC
 
 from . import core, util, _localutil
 import numpy as np
@@ -24,7 +25,7 @@ Standard metrics for Agent Learning (RL tasks)
 """
 
 
-class AgentMetric(core.Metric):
+class AgentMetric(core.Metric, ABC):
     """
     A single metric for an Agent (aka. Reinforcement Learning) learner
     """
@@ -80,11 +81,11 @@ class WithinBlockSaturation(AgentMetric):
         all_eps_to_sat = []
 
         # Iterate over all of the blocks and compute the within block performance
-        for idx in range(phase_info.loc[:, 'block'].max()+1):
+        for idx in range(phase_info.loc[:, 'block'].max() + 1):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe.loc[dataframe["block"] == idx]
             # Make within block calculations
-            sat_value, eps_to_sat, _ = _localutil.get_block_saturation_performance(block_data)
+            sat_value, eps_to_sat, _ = _localutil.get_block_saturation_performance(block_data, column_to_use='reward')
 
             # Record them
             saturation_value[idx] = sat_value
@@ -102,7 +103,7 @@ class WithinBlockSaturation(AgentMetric):
 class STERelativePerf(AgentMetric):
     name = "Performance relative to S.T.E"
     capability = "adapt_to_new_tasks"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_B'}
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
     description = "Calculates the performance of each task relative to it's corresponding single task expert"
 
     def __init__(self):
@@ -179,7 +180,7 @@ class PerfMaintenanceANT(AgentMetric):
             trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
                                           (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
-            # Validation will have ensured that the training phase has exactly one training phase
+            # Validation will have ensured that the training phase has exactly one training block
             previously_trained_tasks = np.append(previously_trained_tasks, trained_tasks)
             previously_trained_task_ids = np.append(previously_trained_task_ids, trained_task_ids)
 
@@ -222,6 +223,53 @@ class PerfMaintenanceANT(AgentMetric):
         return metric_to_return, metrics_dict
 
 
+class TransferMatrix(AgentMetric):
+    name = "Transfer Matrix - only for ANT syllabi"
+    capability = "adapt_to_new_tasks"
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT'}
+    description = "Calculates a transfer matrix for all trained tasks"
+
+    def __init__(self):
+        super().__init__()
+        # self.validate()
+
+    def validate(self, phase_info):
+        # Load the single task experts and compare them to the ones in the logs
+        ste_dict = util.load_default_ste_data()
+        unique_tasks = phase_info.loc[:, 'task_name'].unique()
+
+        # Return tasks which have STE baselines
+        tasks_with_ste = [t for t in ste_dict.keys() if t in unique_tasks]
+        tasks_for_transfer_matrix = {}
+        tasks_for_transfer_matrix['forward'] = []
+        tasks_for_transfer_matrix['reverse'] = []
+
+        for task in tasks_with_ste:
+            types_per_this_task = phase_info[phase_info['task_name'] == task]
+            phase_types = types_per_this_task.loc[:, 'phase_type'].to_numpy()
+            phase_nums = types_per_this_task.loc[:, 'phase_number'].to_numpy(dtype=int)
+            if 'train' in phase_types and 'test' in phase_types:
+                # Check eligibility for both forward and reverse transfer
+                train_phase_nums = phase_nums[phase_types == 'train']
+                test_phase_nums = phase_nums[phase_types == 'test']
+                if len(train_phase_nums) > 1:
+                    raise Exception('Too many training instances of task: {:s}'.format(task))
+
+                if any(test_phase_nums < train_phase_nums):
+                    tasks_for_transfer_matrix['forward'].append(task)
+
+                if any(test_phase_nums > train_phase_nums):
+                    tasks_for_transfer_matrix['reverse'].append(task)
+
+        return ste_dict, tasks_for_transfer_matrix
+
+    def calculate(self, data, metadata, metrics_dict):
+
+        ste_dict, tasks_to_compute = self.validate(metadata)
+
+        pass
+
+
 class AgentMetricsReport(core.MetricsReport):
     """
     Aggregates a list of metrics for an Agent learner
@@ -245,6 +293,7 @@ class AgentMetricsReport(core.MetricsReport):
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
         self._results = {}
+        self._collated_metrics_dict = {}
         self._metrics_dict = {}
         self._phase_info = None
 
@@ -257,6 +306,7 @@ class AgentMetricsReport(core.MetricsReport):
             self.add(WithinBlockSaturation())
             self.add(STERelativePerf())
             self.add(PerfMaintenanceANT())
+            # self.add(TransferMatrix()) # This metric is under construction
 
         elif self.syllabus_subtype == "ANT_B":
             self.add(WithinBlockSaturation())
@@ -272,10 +322,19 @@ class AgentMetricsReport(core.MetricsReport):
                             .format(self.syllabus_subtype))
 
     def calculate(self):
+        previously_calculated_metric_keys = []
+        this_metrics_dict = {}
         for metric in self._metrics:
-            this_result, this_metrics_dict = metric.calculate(self._log_data, self.phase_info, self._metrics_dict)
+            this_result, this_metrics_dict = metric.calculate(self._log_data, self.phase_info, this_metrics_dict)
             self._results[metric.name] = this_result
-            self._metrics_dict[metric.name] = this_metrics_dict
+
+            this_metrics_dict_subset = {k: this_metrics_dict[k] for k in this_metrics_dict
+                                        if k not in previously_calculated_metric_keys}  # Only get the new keys
+
+            self._metrics_dict[metric.name] = this_metrics_dict_subset
+
+            previously_calculated_metric_keys.extend([k for k in this_metrics_dict
+                                                      if k not in previously_calculated_metric_keys])
 
     def report(self):
         # Call a describe method to inform printing
@@ -285,8 +344,7 @@ class AgentMetricsReport(core.MetricsReport):
             print('Per Block Values: {:s}'.format(str(self._metrics_dict[r_key])))
 
     def plot(self):
-        # TODO: Actually, you know, implement plotting
-        pass
+        util.plot_performance(self._log_data)
 
     def add(self, metrics_list):
         self._metrics.append(metrics_list)

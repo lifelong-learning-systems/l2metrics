@@ -224,7 +224,7 @@ class PerfMaintenanceANT(AgentMetric):
 
 
 class TransferMatrix(AgentMetric):
-    name = "Transfer Matrix - only for ANT syllabi"
+    name = "Transfer Matrix - both forward and reverse transfer"
     capability = "adapt_to_new_tasks"
     requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT'}
     description = "Calculates a transfer matrix for all trained tasks"
@@ -254,20 +254,60 @@ class TransferMatrix(AgentMetric):
                 test_phase_nums = phase_nums[phase_types == 'test']
                 if len(train_phase_nums) > 1:
                     raise Exception('Too many training instances of task: {:s}'.format(task))
+                train_phase_num = train_phase_nums[0]
 
-                if any(test_phase_nums < train_phase_nums):
-                    tasks_for_transfer_matrix['forward'].append(task)
+                if any(test_phase_nums < train_phase_num):
+                    phase_nums_to_add = test_phase_nums[np.where(test_phase_nums < train_phase_num)]
+                    for num in phase_nums_to_add:
+                        tmp = types_per_this_task.loc[types_per_this_task['phase_type'] == 'test']
+                        blocks_to_add = tmp.loc[tmp['phase_number'] == str(num), 'block']
+                        if len(blocks_to_add) > 1:
+                            raise Exception('Too many eval instances of task: {:s}'.format(task))
+                        block_to_add = blocks_to_add.values[0]
+                        tasks_for_transfer_matrix['forward'].append((task, block_to_add))
 
-                if any(test_phase_nums > train_phase_nums):
-                    tasks_for_transfer_matrix['reverse'].append(task)
+                if any(test_phase_nums > train_phase_num):
+                    phase_nums_to_add = test_phase_nums[np.where(test_phase_nums > train_phase_num)]
+                    for num in phase_nums_to_add:
+                        tmp = types_per_this_task.loc[types_per_this_task['phase_type'] == 'test']
+                        blocks_to_add = tmp.loc[tmp['phase_number'] == str(num), 'block']
+                        if len(blocks_to_add) > 1:
+                            raise Exception('Too many eval instances of task: {:s}'.format(task))
+                        block_to_add = blocks_to_add.values[0]
+                        tasks_for_transfer_matrix['reverse'].append((task, block_to_add))
 
         return ste_dict, tasks_for_transfer_matrix
 
     def calculate(self, data, metadata, metrics_dict):
-
+        # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
         ste_dict, tasks_to_compute = self.validate(metadata)
 
-        pass
+        metric_to_return = {}
+        reverse_transfer = {}
+        reverse_vals = []
+        forward_transfer = {}
+        forward_vals = []
+
+        # Calculate, for each task, (task eval saturation / ste saturation)
+        for task, block in tasks_to_compute['forward']:
+            print('Computing forward transfer for {:s}'.format(task))
+            this_transfer_val = metrics_dict['saturation_value'][block] / ste_dict[task]
+            forward_transfer[(task, block)] = this_transfer_val
+            forward_vals.append(this_transfer_val)
+
+        for task, block in tasks_to_compute['reverse']:
+            print('Computing reverse transfer for {:s}'.format(task))
+            this_transfer_val = metrics_dict['saturation_value'][block] / ste_dict[task]
+            reverse_transfer[(task, block)] = this_transfer_val
+            reverse_vals.append(this_transfer_val)
+
+        metrics_dict['forward_transfer'] = forward_transfer
+        metrics_dict['reverse_transfer'] = reverse_transfer
+
+        metric_to_return = {'forward_transfer': np.mean(forward_vals),
+                            'reverse_transfer': np.mean(reverse_vals)}
+
+        return metric_to_return, metrics_dict
 
 
 class AgentMetricsReport(core.MetricsReport):
@@ -281,6 +321,7 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(util.get_l2root_base_dirs('logs', self.log_dir))
+        self._log_data = self._log_data.sort_values(by=['block', 'task']).set_index("block", drop=False)
         _, self.phase_info = _localutil.parse_blocks(self._log_data)
 
         # Adds default metrics to list based on passed syllabus subtype
@@ -306,7 +347,7 @@ class AgentMetricsReport(core.MetricsReport):
             self.add(WithinBlockSaturation())
             self.add(STERelativePerf())
             self.add(PerfMaintenanceANT())
-            # self.add(TransferMatrix()) # This metric is under construction
+            self.add(TransferMatrix()) # This metric is under construction
 
         elif self.syllabus_subtype == "ANT_B":
             self.add(WithinBlockSaturation())
@@ -344,7 +385,8 @@ class AgentMetricsReport(core.MetricsReport):
             print('Per Block Values: {:s}'.format(str(self._metrics_dict[r_key])))
 
     def plot(self):
-        util.plot_performance(self._log_data)
+        print('Plotting a smoothed reward curve:')
+        util.plot_performance(self._log_data, do_smoothing=True)
 
     def add(self, metrics_list):
         self._metrics.append(metrics_list)

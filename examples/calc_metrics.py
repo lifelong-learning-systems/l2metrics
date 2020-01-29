@@ -51,7 +51,7 @@ def run():
     metrics_report.calculate()
 
     # Uncomment this for a very basic reward over episode plot:
-    #metrics_report.plot()
+    metrics_report.plot()
 
     metrics_report.report()
 

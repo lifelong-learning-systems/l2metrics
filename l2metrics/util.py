@@ -21,7 +21,7 @@ import os
 import json
 from learnkit.data_util.utils import get_l2data_root
 import matplotlib.pyplot as plt
-
+from . import _localutil
 
 def get_l2root_base_dirs(directory_to_append, sub_to_get=None):
     # This function uses a learnkit utility function to get the base $L2DATA path and goes one level down, with the
@@ -61,15 +61,17 @@ def load_default_ste_data():
     return ste_dict
 
 
-def plot_performance(dataframe, col_to_plot='reward', x_axis_col='task', input_title='Title', do_save_fig=False,
+def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_col='task', input_title='Title', do_save_fig=False,
                      plot_filename='plot.png', input_xlabel='Task Number', input_ylabel='Reward'):
     # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
     # directory and/or customize the title, axes labeling, filename, etc
     data = dataframe[col_to_plot]
+    if do_smoothing:
+        data = _localutil.smooth(data)
     x_axis = dataframe[x_axis_col]
 
     fig, ax = plt.subplots()
-    ax.plot(x_axis, data)
+    ax.plot(x_axis, data, '*')
 
     ax.set(xlabel=input_xlabel, ylabel=input_ylabel,
            title=input_title)
@@ -78,6 +80,9 @@ def plot_performance(dataframe, col_to_plot='reward', x_axis_col='task', input_t
     if do_save_fig:
         fig.savefig(plot_filename)
 
+    # plt.draw()
+    # plt.show(block=False)
+    # This is a blocking call. perhaps better to just save.
     plt.show()
 
 

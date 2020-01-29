@@ -129,7 +129,11 @@ def smooth(x, window_len=11, window='hanning'):
         w = eval('np.' + window + '(window_len)')
 
     y = np.convolve(w / w.sum(), s, mode='valid')
-    return y
+
+    # Changed to return output of same length as input
+    start_ind = int(np.floor(window_len/2-1))
+    end_ind = -int(np.ceil(window_len/2))
+    return y[start_ind:end_ind]
 
 
 def get_block_saturation_performance(data, column_to_use=None, previous_saturation_value=None):
@@ -166,3 +170,37 @@ def extract_relevant_columns(dataframe, keyword):
             relevant_cols.append(col)
 
     return relevant_cols, len(relevant_cols)
+
+
+def simplify_task_names(unique_task_names, phase_info):
+    name_map = {}
+    task_map = {}
+    type_map = {}
+    block_list = {}
+
+    # First find the blocks for each task
+    for t in unique_task_names:
+        this_instance_blocks = phase_info.loc[phase_info['task_name'] == t, 'block']
+
+        # Then get the base class name by finding the phase/task type annotation
+        x = re.search(r'(train|test)(\w+)', t)
+        if x.re.groups != 2:
+            pass
+
+        task_type = x.group(1)
+        task_name = x.group(2)
+        if task_type == 'train':
+            name_map[task_name] = t
+
+        # And add to the task map
+        if task_name not in task_map.keys():
+            task_map[task_name] = this_instance_blocks.values
+        else:
+            existing_blocks = task_map.get(task_name)
+            tmp = {task_name: np.append(existing_blocks, this_instance_blocks.values)}
+            task_map.update(tmp)
+
+        block_list.update({v: task_name for v in this_instance_blocks.values})
+        type_map.update({v: task_type for v in this_instance_blocks.values})
+
+    return task_map, block_list, name_map, type_map

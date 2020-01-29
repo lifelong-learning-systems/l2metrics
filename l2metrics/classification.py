@@ -157,6 +157,84 @@ class STERelativePerf(ClassificationMetric):
         return metric_to_return, metrics_dict
 
 
+class TransferMatrix(ClassificationMetric):
+    name = "Transfer Matrix - both forward and reverse transfer"
+    capability = "adapt_to_new_tasks"
+    requires = {'syllabus_type': 'class', 'syllabus_subtype': 'ANT'}
+    description = "Calculates a transfer matrix for all trained tasks"
+
+    def __init__(self):
+        super().__init__()
+        # self.validate()
+
+    def validate(self, phase_info):
+        # Load the single task experts and compare them to the ones in the logs
+        ste_dict = util.load_default_ste_data()
+        unique_tasks = phase_info.loc[:, 'task_name'].unique()
+
+        # Return tasks which have STE baselines
+        tasks_with_ste = [t for t in ste_dict.keys() if t in unique_tasks]
+        tasks_for_transfer_matrix = {'forward': [], 'reverse': []}
+
+        task_map, block_list, name_map, type_map = _localutil.simplify_task_names(unique_tasks, phase_info)
+
+        for task in task_map.keys():
+            task_blocks = task_map[task]
+            types_per_this_task = [type_map[blk] for blk in task_blocks]
+
+            if 'train' in types_per_this_task and 'test' in types_per_this_task:
+                # Check eligibility for both forward and reverse transfer
+                train_block_nums = np.array(task_blocks[np.isin(types_per_this_task, 'train')])
+                test_block_nums = np.array(task_blocks[np.isin(types_per_this_task, 'test')])
+
+                train_phase_nums = np.array([int(phase_info.loc[b, 'phase_number']) for b in train_block_nums])
+                test_phase_nums = np.array([int(phase_info.loc[b, 'phase_number']) for b in test_block_nums])
+
+                if len(train_phase_nums) > 1:
+                    raise Exception('Too many training instances of task: {:s}'.format(task))
+                train_phase_num = train_phase_nums[0]
+
+                if any(test_phase_nums < train_phase_num):
+                    block_nums_to_add = test_block_nums[np.where(test_phase_nums < train_phase_num)]
+                    [tasks_for_transfer_matrix['forward'].append((task, f)) for f in block_nums_to_add]
+
+                if any(test_phase_nums > train_phase_num):
+                    block_nums_to_add = test_block_nums[np.where(test_phase_nums > train_phase_num)]
+                    [tasks_for_transfer_matrix['reverse'].append((task, f)) for f in block_nums_to_add]
+
+        return ste_dict, tasks_for_transfer_matrix, name_map
+
+    def calculate(self, data, metadata, metrics_dict):
+        # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
+        ste_dict, tasks_to_compute, task_name_map = self.validate(metadata)
+
+        reverse_transfer = {}
+        reverse_vals = []
+        forward_transfer = {}
+        forward_vals = []
+
+        # Calculate, for each task, (task eval saturation / ste saturation)
+        for task, block in tasks_to_compute['forward']:
+            print('Computing forward transfer for {:s}'.format(task))
+            this_transfer_val = metrics_dict['saturation_value'][block] / ste_dict[task_name_map[task]]
+            forward_transfer[(task, block)] = this_transfer_val
+            forward_vals.append(this_transfer_val)
+
+        for task, block in tasks_to_compute['reverse']:
+            print('Computing reverse transfer for {:s}'.format(task))
+            this_transfer_val = metrics_dict['saturation_value'][block] / ste_dict[task_name_map[task]]
+            reverse_transfer[(task, block)] = this_transfer_val
+            reverse_vals.append(this_transfer_val)
+
+        metrics_dict['forward_transfer'] = forward_transfer
+        metrics_dict['reverse_transfer'] = reverse_transfer
+
+        metric_to_return = {'global_forward_transfer': np.mean(forward_vals),
+                            'global_reverse_transfer': np.mean(reverse_vals)}
+
+        return metric_to_return, metrics_dict
+
+
 class ClassificationMetricsReport(core.MetricsReport):
 
     def __init__(self, **kwargs):
@@ -183,6 +261,7 @@ class ClassificationMetricsReport(core.MetricsReport):
         elif self.syllabus_subtype == "ANT_A":
             self.add(WithinBlockSaturation())
             self.add(STERelativePerf())
+            self.add(TransferMatrix())
 
         elif self.syllabus_subtype == "ANT_B":
             self.add(WithinBlockSaturation())
@@ -213,7 +292,12 @@ class ClassificationMetricsReport(core.MetricsReport):
                                                       if k not in previously_calculated_metric_keys])
 
     def plot(self):
-        pass
+        # Ignore the rows indicating that a new batch was requested; only get evaluation rows
+        relevant_dataframe = self._log_data[self._log_data['source'] == 'GET_LABELS']
+        relevant_columns, _ = _localutil.extract_relevant_columns(relevant_dataframe, keyword='score')
+        print('Plotting a smoothed performance curve for each score column:')
+        for col in relevant_columns:
+            util.plot_performance(relevant_dataframe, col_to_plot=col, do_smoothing=True)
 
     def report(self):
         # Call a describe method to inform printing

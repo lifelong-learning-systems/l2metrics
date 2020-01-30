@@ -307,6 +307,7 @@ class TransferMatrix(AgentMetric):
         metric_to_return = {'forward_transfer': np.mean(forward_vals),
                             'reverse_transfer': np.mean(reverse_vals)}
 
+        # _localutil.plot_transfer_matrix(metadata, forward_transfer, reverse_transfer)
         return metric_to_return, metrics_dict
 
 
@@ -386,7 +387,7 @@ class AgentMetricsReport(core.MetricsReport):
 
     def plot(self):
         print('Plotting a smoothed reward curve:')
-        util.plot_performance(self._log_data, do_smoothing=True)
+        util.plot_performance(self._log_data, do_smoothing=True, do_task_colors=True)
 
     def add(self, metrics_list):
         self._metrics.append(metrics_list)

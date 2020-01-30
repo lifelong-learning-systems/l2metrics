@@ -22,6 +22,7 @@ import json
 from learnkit.data_util.utils import get_l2data_root
 import matplotlib.pyplot as plt
 from . import _localutil
+import numpy as np
 
 def get_l2root_base_dirs(directory_to_append, sub_to_get=None):
     # This function uses a learnkit utility function to get the base $L2DATA path and goes one level down, with the
@@ -62,26 +63,46 @@ def load_default_ste_data():
 
 
 def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_col='task', input_title='Title', do_save_fig=False,
-                     plot_filename='plot.png', input_xlabel='Task Number', input_ylabel='Reward'):
+                     plot_filename='plot.png', input_xlabel='Task Number', input_ylabel='Reward', show_block_boundary=False,
+                     do_task_colors=False):
     # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
-    # directory and/or customize the title, axes labeling, filename, etc
-    data = dataframe[col_to_plot]
-    if do_smoothing:
-        data = _localutil.smooth(data)
-    x_axis = dataframe[x_axis_col]
+    # directory and/or customize the title, axes labeling, filename, etc. Color is supported for agent tasks only.
 
-    fig, ax = plt.subplots()
-    ax.plot(x_axis, data, '*')
+    if do_task_colors:
+        color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'yellow', 'cyan', 'orange', 'purple']
+        unique_tasks = dataframe.loc[:, 'class_name'].unique()
+        task_colors = color_selection[:len(unique_tasks)]
+        fig, ax = plt.subplots()
+
+        for c, t in zip(task_colors, unique_tasks):
+            data = dataframe.loc[dataframe['class_name'] == t, col_to_plot]
+            x_axis = dataframe.loc[dataframe['class_name'] == t, x_axis_col]
+            if do_smoothing:
+                data = _localutil.smooth(data)
+            ax.plot(x_axis, data, color=c, marker='*', linestyle='None')
+    else:
+        data = dataframe[col_to_plot]
+        if do_smoothing:
+            data = _localutil.smooth(data)
+        x_axis = dataframe[x_axis_col]
+
+        fig, ax = plt.subplots()
+        ax.plot(x_axis, data, '*')
+
+    if show_block_boundary:
+        unique_blocks = dataframe.loc[:, 'block'].unique()
+        df2 = dataframe.set_index("task", drop=False)
+        for b in unique_blocks:
+            idx = df2[df2['block'] == b].index[0]
+            ax.axes.axvline(idx)
 
     ax.set(xlabel=input_xlabel, ylabel=input_ylabel,
-           title=input_title)
+               title=input_title)
     ax.grid()
 
     if do_save_fig:
         fig.savefig(plot_filename)
 
-    # plt.draw()
-    # plt.show(block=False)
     # This is a blocking call. perhaps better to just save.
     plt.show()
 

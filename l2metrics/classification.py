@@ -255,8 +255,11 @@ class ClassificationMetricsReport(core.MetricsReport):
         self._phase_info = None
 
     def _add_default_metrics(self):
-        if self.syllabus_subtype == "CL":
-            self.add(GlobalMean())
+        if self.syllabus_subtype == "STE":
+            self.add(WithinBlockSaturation())
+
+        elif self.syllabus_subtype == "CL":
+            self.add(WithinBlockSaturation())
 
         elif self.syllabus_subtype == "ANT_A":
             self.add(WithinBlockSaturation())
@@ -303,7 +306,8 @@ class ClassificationMetricsReport(core.MetricsReport):
         # Call a describe method to inform printing
         for r_key in self._results:
             print('\nMetric: {:s}'.format(r_key))
-            print('Value: {:s}'.format(str(self._results[r_key])))
+            print('Averaged Value: {:s}'.format(str(self._results[r_key])))
+            print('Per Block Values: {:s}'.format(str(self._metrics_dict[r_key])))
 
     def add(self, metrics_lst):
         self._metrics.append(metrics_lst)

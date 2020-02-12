@@ -1,8 +1,9 @@
 import argparse
 import l2metrics
+from l2metrics import _localutil
 
 
-class MyCustomMetric(l2metrics.AgentMetric):
+class MyCustomAgentMetric(l2metrics.AgentMetric):
     name = "An Example Custom Metric"
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent'}
@@ -10,6 +11,36 @@ class MyCustomMetric(l2metrics.AgentMetric):
     
     def calculate(self, dataframe, phase_info, metrics_dict):
         return {'global_perf': dataframe.loc[:, "reward"].mean()}, {'global_perf': dataframe.loc[:, "reward"].mean()}
+
+    def plot(self, result):
+        pass
+
+    def validate(self, phase_info):
+        # TODO: Add structure validation of phase_info
+        pass
+
+
+class MyCustomClassMetric(l2metrics.AgentMetric):
+    name = "An Example Custom Metric"
+    capability = "continual_learning"
+    requires = {'syllabus_type': 'class'}
+    description = "A Custom Metric"
+
+    def calculate(self, dataframe, phase_info, metrics_dict):
+        source_column = "GET_LABELS"
+
+        # This could be moved to the validate method in the future
+        relevant_columns, num_cols = _localutil.extract_relevant_columns(dataframe, keyword='score')
+        if num_cols != 1:
+            raise Exception('Wrong number of performance columns!')
+
+        col = relevant_columns[0]
+
+        data_rows = dataframe.loc[dataframe["source"] == source_column]
+        global_perf_cross_blocks = data_rows[col].mean()
+        metrics_dict = {"global_perf": global_perf_cross_blocks}
+
+        return {'global_perf': global_perf_cross_blocks}, metrics_dict
 
     def plot(self, result):
         pass
@@ -33,7 +64,7 @@ def run():
     # Syllabus_subtype refers to the structure of the syllabus and will determine the default list of metrics calculated
     # where CL = Continual Learning; ANT_A = Adapting to New Tasks, type A; ANT_B = Adapting to New Tasks, type B; etc.
     # Please refer to the documentation for more details on the distinction between these types.
-    parser.add_argument('-syllabus_subtype', choices=["CL", "ANT_A", "ANT_B", "ANT_C"],  default=None,
+    parser.add_argument('-syllabus_subtype', choices=["STE", "CL", "ANT_A", "ANT_B", "ANT_C"],  default=None,
                         help='Subtype of syllabus')
 
     args = parser.parse_args()
@@ -43,10 +74,10 @@ def run():
 
     if args.syllabus_type == "class":
         metrics_report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+        metrics_report.add(MyCustomClassMetric())
     else:
         metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
-
-    # metrics_report.add(MyCustomMetric())
+        metrics_report.add(MyCustomAgentMetric())
 
     metrics_report.calculate()
 

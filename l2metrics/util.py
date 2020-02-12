@@ -22,7 +22,7 @@ import json
 from learnkit.data_util.utils import get_l2data_root
 import matplotlib.pyplot as plt
 from . import _localutil
-import numpy as np
+
 
 def get_l2root_base_dirs(directory_to_append, sub_to_get=None):
     # This function uses a learnkit utility function to get the base $L2DATA path and goes one level down, with the
@@ -62,48 +62,61 @@ def load_default_ste_data():
     return ste_dict
 
 
-def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_col='task', input_title='Title', do_save_fig=False,
-                     plot_filename='plot.png', input_xlabel='Task Number', input_ylabel='Reward', show_block_boundary=False,
-                     do_task_colors=False):
+def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_col='task', input_title=None,
+                     do_save_fig=False, plot_filename=None, input_xlabel='Episodes', input_ylabel='Performance',
+                     show_block_boundary=False, do_task_colors=False, new_smoothing_value=None):
     # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
     # directory and/or customize the title, axes labeling, filename, etc. Color is supported for agent tasks only.
 
     if do_task_colors:
-        color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'yellow', 'cyan', 'orange', 'purple']
+        color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'cyan', 'orange', 'purple']
         unique_tasks = dataframe.loc[:, 'class_name'].unique()
-        task_colors = color_selection[:len(unique_tasks)]
+        if len(unique_tasks) < len(color_selection):
+            task_colors = color_selection[:len(unique_tasks)]
+        else:
+            task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
         fig, ax = plt.subplots()
 
         for c, t in zip(task_colors, unique_tasks):
-            data = dataframe.loc[dataframe['class_name'] == t, col_to_plot]
-            x_axis = dataframe.loc[dataframe['class_name'] == t, x_axis_col]
+            data = dataframe.loc[dataframe['class_name'] == t, col_to_plot].values
+            x_axis = dataframe.loc[dataframe['class_name'] == t, x_axis_col].values
             if do_smoothing:
-                data = _localutil.smooth(data)
-            ax.plot(x_axis, data, color=c, marker='*', linestyle='None')
+                if new_smoothing_value:
+                    data = _localutil.smooth(data, window_len=new_smoothing_value)
+                else:
+                    data = _localutil.smooth(data)
+            ax.scatter(x_axis, data, color=c, marker='*', linestyle='None')
     else:
-        data = dataframe[col_to_plot]
+        data = dataframe[col_to_plot].values
         if do_smoothing:
-            data = _localutil.smooth(data)
-        x_axis = dataframe[x_axis_col]
+            if new_smoothing_value:
+                data = _localutil.smooth(data, window_len=new_smoothing_value)
+            else:
+                data = _localutil.smooth(data)
+        x_axis = dataframe[x_axis_col].values
 
         fig, ax = plt.subplots()
-        ax.plot(x_axis, data, '*')
+        ax.scatter(x_axis, data, marker='*', linestyle='None')
 
     if show_block_boundary:
         unique_blocks = dataframe.loc[:, 'block'].unique()
         df2 = dataframe.set_index("task", drop=False)
         for b in unique_blocks:
             idx = df2[df2['block'] == b].index[0]
-            ax.axes.axvline(idx)
-
-    ax.set(xlabel=input_xlabel, ylabel=input_ylabel,
-               title=input_title)
-    ax.grid()
+            ax.axes.axvline(idx, linewidth=1, linestyle=':')
 
     if do_save_fig:
+        if not plot_filename:
+            if not input_title:
+                plot_filename = 'plot.png'
+            else:
+                plot_filename = input_title
+
         fig.savefig(plot_filename)
 
-    # This is a blocking call. perhaps better to just save.
+    # TODO: This is a blocking call. Perhaps better to just save by default?
+    ax.set(xlabel=input_xlabel, ylabel=input_ylabel, title=input_title)
+    ax.grid()
     plt.show()
 
 
@@ -115,6 +128,7 @@ def read_log_data(input_dir, analysis_variables=None):
     for root, dirs, files in os.walk(input_dir):
         for file in files:
             if file == 'data-log.tsv':
+                has_data = True
                 task = os.path.split(root)[-1]
                 if analysis_variables is not None:
                     df = pd.read_csv(os.path.join(root, file), sep='\t')[

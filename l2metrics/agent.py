@@ -19,7 +19,7 @@ from abc import ABC
 
 from . import core, util, _localutil
 import numpy as np
-
+import scipy.integrate as integrate
 """
 Standard metrics for Agent Learning (RL tasks)
 """
@@ -57,7 +57,8 @@ class GlobalMean(AgentMetric):
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
-        return {'global_perf': np.mean(dataframe.loc[:, "reward"])}
+        metrics_dict['global_perf'] = np.mean(dataframe.loc[:, "reward"])
+        return {'global_perf': np.mean(dataframe.loc[:, "reward"])}, metrics_dict
 
 
 class WithinBlockSaturation(AgentMetric):
@@ -223,6 +224,34 @@ class PerfMaintenanceANT(AgentMetric):
         return metric_to_return, metrics_dict
 
 
+class RewardPerStep(AgentMetric):
+    name = "Reward per Step"
+    capability = "continual_learning"
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'all'}
+    description = "Calculates the performance across all tasks and phases"
+
+    def __init__(self):
+        super().__init__()
+        # self.validate()
+
+    def validate(self, phase_info):
+        # TODO: Add structure validation of phase_info
+        pass
+
+    def calculate(self, dataframe, phase_info, metrics_dict):
+        reward = np.array(dataframe.loc[:, "reward"].values)
+        steps = np.array(dataframe.loc[:, 'steps'].values)
+
+        summed_reward = np.sum(reward)
+        #summed_steps = np.cumsum(steps)
+
+        res = summed_reward / np.sum(steps)
+        metric_to_return = {'reward_per_step': res}
+        metrics_dict['reward_per_step'] = res
+
+        return metric_to_return, metrics_dict
+
+
 class TransferMatrix(AgentMetric):
     name = "Transfer Matrix - both forward and reverse transfer"
     capability = "adapt_to_new_tasks"
@@ -240,9 +269,7 @@ class TransferMatrix(AgentMetric):
 
         # Return tasks which have STE baselines
         tasks_with_ste = [t for t in ste_dict.keys() if t in unique_tasks]
-        tasks_for_transfer_matrix = {}
-        tasks_for_transfer_matrix['forward'] = []
-        tasks_for_transfer_matrix['reverse'] = []
+        tasks_for_transfer_matrix = {'forward': [], 'reverse': []}
 
         for task in tasks_with_ste:
             types_per_this_task = phase_info[phase_info['task_name'] == task]
@@ -282,7 +309,6 @@ class TransferMatrix(AgentMetric):
         # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
         ste_dict, tasks_to_compute = self.validate(metadata)
 
-        metric_to_return = {}
         reverse_transfer = {}
         reverse_vals = []
         forward_transfer = {}
@@ -340,8 +366,12 @@ class AgentMetricsReport(core.MetricsReport):
         self._phase_info = None
 
     def _add_default_metrics(self):
-        # TODO: Add validation in the constructors to make sure syllabus has expected structure?
-        if self.syllabus_subtype == "CL":
+        if self.syllabus_subtype == "STE":
+            self.add(GlobalMean())
+            self.add(RewardPerStep())
+            self.add(WithinBlockSaturation())
+
+        elif self.syllabus_subtype == "CL":
             self.add(WithinBlockSaturation())
 
         elif self.syllabus_subtype == "ANT_A":
@@ -387,7 +417,16 @@ class AgentMetricsReport(core.MetricsReport):
 
     def plot(self):
         print('Plotting a smoothed reward curve:')
-        util.plot_performance(self._log_data, do_smoothing=True, do_task_colors=True)
+        #window = int(np.floor(len(self._log_data)*0.02))
+        #custom_window = min(window, 50)
+        custom_window = 500
+        save = True
+
+        # util.plot_performance(self._log_data, do_smoothing=True, new_smoothing_value=custom_window, x_axis_col='steps',
+        #                       do_task_colors=True, show_block_boundary=False, do_save_fig=save,
+        #                       input_title=self.log_dir, input_xlabel='Steps')
+        util.plot_performance(self._log_data, do_smoothing=True, do_task_colors=True, do_save_fig=save,
+                              new_smoothing_value=custom_window, input_title=self.log_dir)
 
     def add(self, metrics_list):
         self._metrics.append(metrics_list)

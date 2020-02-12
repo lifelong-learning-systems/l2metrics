@@ -34,8 +34,12 @@ def parse_blocks(data):
         # Extract information
         x = re.match(r'^(\d+)[.-_]*(\w+)', p)
 
-        if x.re.groups != 2:
-            raise Exception('Unsupported phase annotation: {:s}! Supported format is phase_number.'
+        if x is not None:
+            if x.re.groups != 2:
+                raise Exception('Unsupported phase annotation: "{:s}"! Supported format is phase_number.'
+                                'phase_type, which must be (int).(string)'.format(p))
+        else:
+            raise Exception('Unsupported phase annotation: "{:s}"! Supported format is phase_number.'
                             'phase_type, which must be (int).(string)'.format(p))
         
         phase_number = x.group(1)     
@@ -163,6 +167,7 @@ def get_block_saturation_performance(data, column_to_use=None, previous_saturati
 
 
 def extract_relevant_columns(dataframe, keyword):
+    # Parse the dataframe and get out the appropriate column names for Classification performance assessment
     relevant_cols = []
 
     for col in dataframe.columns:
@@ -173,6 +178,7 @@ def extract_relevant_columns(dataframe, keyword):
 
 
 def simplify_task_names(unique_task_names, phase_info):
+    # Capture the correspondence between the Classification Train/Test tasks
     name_map = {}
     task_map = {}
     type_map = {}
@@ -182,17 +188,20 @@ def simplify_task_names(unique_task_names, phase_info):
     for t in unique_task_names:
         this_instance_blocks = phase_info.loc[phase_info['task_name'] == t, 'block']
 
-        # Then get the base class name by finding the phase/task type annotation
+        # Then get the base class name by finding the phase/task type annotation and getting the string that comes after
         x = re.search(r'(train|test)(\w+)', t)
         if x.re.groups != 2:
-            pass
+            raise Exception('Improperly formatted task names! Classification tasks should include '
+                            '"train" or "test," but this one was: {:s}'.format(t))
 
         task_type = x.group(1)
         task_name = x.group(2)
+
+        # Record which tasks were used for training for future metric computation
         if task_type == 'train':
             name_map[task_name] = t
 
-        # And add to the task map
+        # Add to the task map
         if task_name not in task_map.keys():
             task_map[task_name] = this_instance_blocks.values
         else:
@@ -200,6 +209,7 @@ def simplify_task_names(unique_task_names, phase_info):
             tmp = {task_name: np.append(existing_blocks, this_instance_blocks.values)}
             task_map.update(tmp)
 
+        # And update the block and type lists
         block_list.update({v: task_name for v in this_instance_blocks.values})
         type_map.update({v: task_type for v in this_instance_blocks.values})
 

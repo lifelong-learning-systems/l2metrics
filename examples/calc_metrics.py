@@ -1,6 +1,7 @@
 import argparse
 import l2metrics
 from l2metrics import _localutil
+import numpy as np
 
 
 class MyCustomAgentMetric(l2metrics.AgentMetric):
@@ -20,7 +21,7 @@ class MyCustomAgentMetric(l2metrics.AgentMetric):
         pass
 
 
-class MyCustomClassMetric(l2metrics.AgentMetric):
+class MyCustomClassMetric(l2metrics.ClassificationMetric):
     name = "An Example Custom Metric"
     capability = "continual_learning"
     requires = {'syllabus_type': 'class'}
@@ -30,23 +31,25 @@ class MyCustomClassMetric(l2metrics.AgentMetric):
         source_column = "GET_LABELS"
 
         # This could be moved to the validate method in the future
-        relevant_columns, num_cols = _localutil.extract_relevant_columns(dataframe, keyword='score')
-        if num_cols != 1:
-            raise Exception('Wrong number of performance columns!')
+        relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
+        if len(relevant_columns) < 1:
+            raise Exception('Not enough performance columns!')
 
-        col = relevant_columns[0]
+        metrics_dict['avg_across_blocks'] = {}
 
-        data_rows = dataframe.loc[dataframe["source"] == source_column]
-        global_perf_cross_blocks = data_rows[col].mean()
-        metrics_dict = {"global_perf": global_perf_cross_blocks}
+        for col in relevant_columns:
+            data_rows = dataframe.loc[dataframe["source"] == source_column]
+            global_perf_cross_blocks = data_rows[col].mean()
+            metrics_dict['avg_across_blocks'][col] = global_perf_cross_blocks
 
-        return {'global_perf': global_perf_cross_blocks}, metrics_dict
+        metric_to_return = {c: metrics_dict['avg_across_blocks'][c] for c in relevant_columns}
+
+        return {'global_perf_per_column': metric_to_return}, metrics_dict
 
     def plot(self, result):
         pass
 
     def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
         pass
 
 
@@ -81,7 +84,7 @@ def run():
 
     metrics_report.calculate()
 
-    # Uncomment this for a very basic reward over episode plot:
+    # Uncomment this for a plot of performance:
     metrics_report.plot()
 
     metrics_report.report()

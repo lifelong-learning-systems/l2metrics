@@ -140,7 +140,7 @@ def smooth(x, window_len=11, window='hanning'):
     return y[start_ind:end_ind]
 
 
-def get_block_saturation_performance(data, column_to_use=None, previous_saturation_value=None):
+def get_block_saturation_perf(data, column_to_use=None, previous_saturation_value=None):
     # Calculate the "saturation" value
     # Calculate the number of episodes to "saturation"
 
@@ -161,7 +161,7 @@ def get_block_saturation_performance(data, column_to_use=None, previous_saturati
         if len(inds[0]):
             episodes_to_recovery = inds[0][0]
         else:
-            episodes_to_recovery = -999
+            episodes_to_recovery = np.NAN
 
     return saturation_value, episodes_to_saturation, episodes_to_recovery
 
@@ -174,12 +174,12 @@ def extract_relevant_columns(dataframe, keyword):
         if col.startswith(keyword):
             relevant_cols.append(col)
 
-    return relevant_cols, len(relevant_cols)
+    return relevant_cols
 
 
 def simplify_task_names(unique_task_names, phase_info):
     # Capture the correspondence between the Classification Train/Test tasks
-    name_map = {}
+    name_map = {'full_name_map': {}}
     task_map = {}
     type_map = {}
     block_list = {}
@@ -200,6 +200,8 @@ def simplify_task_names(unique_task_names, phase_info):
         # Record which tasks were used for training for future metric computation
         if task_type == 'train':
             name_map[task_name] = t
+
+        name_map['full_name_map'][t] = task_name
 
         # Add to the task map
         if task_name not in task_map.keys():
@@ -237,8 +239,5 @@ def plot_transfer_matrix(phase_info, forward, reverse):
         for task_name, block_num in reverse.keys():
             # Fill in the table,
             table_data[n, block_num] = reverse.get((task_name, block_num))
-
-
-    print('hello')
 
     pass

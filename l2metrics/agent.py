@@ -16,10 +16,8 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 from abc import ABC
-
 from . import core, util, _localutil
 import numpy as np
-import scipy.integrate as integrate
 """
 Standard metrics for Agent Learning (RL tasks)
 """
@@ -42,8 +40,8 @@ class AgentMetric(core.Metric, ABC):
         pass
 
 
-class GlobalMean(AgentMetric):
-    name = "Global Mean Performance"
+class MeanRewardPerEpisodes(AgentMetric):
+    name = "Achieved Reward, Averaged Per Episodes within a Block"
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'all'}
     description = "Calculates the performance across all tasks and phases"
@@ -53,12 +51,22 @@ class GlobalMean(AgentMetric):
         # self.validate()
 
     def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
-        metrics_dict['global_perf'] = np.mean(dataframe.loc[:, "reward"])
-        return {'global_perf': np.mean(dataframe.loc[:, "reward"])}, metrics_dict
+        avg_reward = {}
+
+        # Iterate over all of the blocks and compute the within block performance
+        for idx in range(phase_info.loc[:, 'block'].max() + 1):
+            # Need to get the part of the data corresponding to the block
+            block_data = dataframe.loc[dataframe["block"] == idx]
+
+            avg_reward[idx] = block_data['reward'].mean()
+
+        metrics_dict["avg_achieved_reward"] =  avg_reward
+        metric_to_return = {'global_avg_achieved_reward': np.mean(list(avg_reward.values()))}
+
+        return metric_to_return, metrics_dict
 
 
 class WithinBlockSaturation(AgentMetric):
@@ -72,7 +80,6 @@ class WithinBlockSaturation(AgentMetric):
         # self.validate()
 
     def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
@@ -86,7 +93,7 @@ class WithinBlockSaturation(AgentMetric):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe.loc[dataframe["block"] == idx]
             # Make within block calculations
-            sat_value, eps_to_sat, _ = _localutil.get_block_saturation_performance(block_data, column_to_use='reward')
+            sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(block_data, column_to_use='reward')
 
             # Record them
             saturation_value[idx] = sat_value
@@ -99,6 +106,58 @@ class WithinBlockSaturation(AgentMetric):
                             'global_num_eps_to_saturation': np.mean(all_eps_to_sat)}
 
         return metric_to_return, metrics_dict
+
+
+class RecoveryTime(AgentMetric):
+    name = "Recovery Time"
+    capability = "adapt_to_new_tasks"
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
+    description = "Calculates whether the system recovers after a change of task or parameters"
+
+    def __init__(self):
+        super().__init__()
+        # self.validate()
+
+    def validate(self, phase_info):
+        # Determine where we need to assess recovery time
+        tr_bl_inds_to_use = []
+        tr_bl_inds_to_assess = []
+
+        # Get train blocks, in order of appearance
+        tr_bl_info = phase_info.sort_index().loc[phase_info['phase_type'] == 'train', ['block', 'task_name',
+                                                                                         'param_set']]
+        tb_inds = tr_bl_info.index
+
+        # Blocks are defined as new combinations of task + params, but can repeat, so check for changes across blocks
+        first = True
+        for idx, block_idx in enumerate(tb_inds):
+            if first:
+                first = False
+                continue
+            # Either the task name or the param set must be different
+            if tr_bl_info.loc[block_idx, 'task_name'] != tr_bl_info.loc[tb_inds[idx-1], 'task_name'] or \
+                    tr_bl_info.loc[block_idx, 'param_set'] != tr_bl_info.loc[tb_inds[idx-1], 'param_set']:
+                tr_bl_inds_to_assess.append(block_idx)
+                tr_bl_inds_to_use.append(tb_inds[idx-1])
+
+        if tr_bl_inds_to_assess is None:
+            raise Exception('No changes across training blocks to assess recovery time!')
+
+        return tr_bl_inds_to_use, tr_bl_inds_to_assess
+
+    def calculate(self, dataframe, phase_info, metrics_dict):
+        # Get the places where we should calculate recovery time
+        metrics_dict['recovery_time'] = {}
+        tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
+
+        for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
+            prev_val = metrics_dict['saturation_value'][use_ind]
+            block_data = dataframe.loc[assess_ind]
+            _, _, eps_to_rec = _localutil.get_block_saturation_perf(block_data,
+                                                                    column_to_use='reward',
+                                                                    previous_saturation_value=prev_val)
+            metrics_dict['recovery_time'][assess_ind] = eps_to_rec
+        return {'global_avg_recovery_time': np.mean(list(metrics_dict['recovery_time'].values()))}, metrics_dict
 
 
 class STERelativePerf(AgentMetric):
@@ -147,8 +206,8 @@ class STERelativePerf(AgentMetric):
 
 
 class PerfMaintenanceANT(AgentMetric):
-    name = "Performance Maintenance relative to previously trained task - only for ANT syllabi"
-    capability = "continual_learning"
+    name = "Performance Maintenance relative to previously trained task"
+    capability = "adapting_to_new_tasks"
     requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT'}
     description = "Calculates the performance of each task, in each evaluation block, " \
                   "relative to the previously trained task"
@@ -228,7 +287,7 @@ class RewardPerStep(AgentMetric):
     name = "Reward per Step"
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'all'}
-    description = "Calculates the performance across all tasks and phases"
+    description = "Calculates the reward achieved per steps used to achieve it"
 
     def __init__(self):
         super().__init__()
@@ -243,7 +302,8 @@ class RewardPerStep(AgentMetric):
         steps = np.array(dataframe.loc[:, 'steps'].values)
 
         summed_reward = np.sum(reward)
-        #summed_steps = np.cumsum(steps)
+        # cumsum_reward = np.cumsum(reward)
+        # cumsum_steps = np.cumsum(steps)
 
         res = summed_reward / np.sum(steps)
         metric_to_return = {'reward_per_step': res}
@@ -333,7 +393,6 @@ class TransferMatrix(AgentMetric):
         metric_to_return = {'forward_transfer': np.mean(forward_vals),
                             'reverse_transfer': np.mean(reverse_vals)}
 
-        # _localutil.plot_transfer_matrix(metadata, forward_transfer, reverse_transfer)
         return metric_to_return, metrics_dict
 
 
@@ -366,23 +425,24 @@ class AgentMetricsReport(core.MetricsReport):
         self._phase_info = None
 
     def _add_default_metrics(self):
+
+        self.add(WithinBlockSaturation())
+
         if self.syllabus_subtype == "STE":
-            self.add(GlobalMean())
+            self.add(MeanRewardPerEpisodes())
             self.add(RewardPerStep())
-            self.add(WithinBlockSaturation())
 
         elif self.syllabus_subtype == "CL":
             self.add(WithinBlockSaturation())
 
         elif self.syllabus_subtype == "ANT_A":
-            self.add(WithinBlockSaturation())
+            self.add(RecoveryTime())
             self.add(STERelativePerf())
             self.add(PerfMaintenanceANT())
-            self.add(TransferMatrix()) # This metric is under construction
 
         elif self.syllabus_subtype == "ANT_B":
-            self.add(WithinBlockSaturation())
             self.add(STERelativePerf())
+            self.add(TransferMatrix())  # This metric is under construction
 
         # This is an unhandled syllabus type as of right now
         elif self.syllabus_subtype == "ANT_C":
@@ -417,14 +477,10 @@ class AgentMetricsReport(core.MetricsReport):
 
     def plot(self):
         print('Plotting a smoothed reward curve:')
-        #window = int(np.floor(len(self._log_data)*0.02))
-        #custom_window = min(window, 50)
-        custom_window = 500
+        window = int(np.floor(len(self._log_data)*0.02))
+        custom_window = min(window, 100)
         save = True
 
-        # util.plot_performance(self._log_data, do_smoothing=True, new_smoothing_value=custom_window, x_axis_col='steps',
-        #                       do_task_colors=True, show_block_boundary=False, do_save_fig=save,
-        #                       input_title=self.log_dir, input_xlabel='Steps')
         util.plot_performance(self._log_data, do_smoothing=True, do_task_colors=True, do_save_fig=save,
                               new_smoothing_value=custom_window, input_title=self.log_dir)
 

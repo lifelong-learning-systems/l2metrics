@@ -34,12 +34,11 @@ class ClassificationMetric(core.Metric, ABC):
         pass
 
     def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
         pass
 
 
-class GlobalMean(ClassificationMetric):
-    name = "Global Mean Classification Performance"
+class AveragedScorePerBatch(ClassificationMetric):
+    name = "Average Score per block"
     capability = "continual_learning"
     requires = {'syllabus_type': 'type2'}
     description = "Calculates the performance across all tasks and phases"
@@ -48,24 +47,29 @@ class GlobalMean(ClassificationMetric):
         super().__init__()
         # self.validate()
 
-    def validate(self):
+    def validate(self, phase_info):
+        # TODO: validate that the proper columns are present here rather than in calculate?
+        # relevant_columns = _localutil.extract_relevant_columns(block_data, keyword='score')
+        # Check that len(relevant_columns) >= 1 and return it if so
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
-        source_column = "GET_LABELS"
+        average_scores = {}
 
-        # This could be moved to the validate method in the future
-        relevant_columns, num_cols = _localutil.extract_relevant_columns(dataframe, keyword='score')
-        if num_cols != 1:
-            raise Exception('Wrong number of performance columns!')
+        # Iterate over all of the blocks and compute the within block performance
+        for idx in range(phase_info.loc[:, 'block'].max() + 1):
+            # Need to get the part of the data corresponding to the block
+            block_data = dataframe.loc[dataframe["block"] == idx]
+            # Make within block calculations
+            relevant_columns = _localutil.extract_relevant_columns(block_data, keyword='score')
 
-        col = relevant_columns[0]
+            for col in relevant_columns:
+                average_scores[(idx, col)] = block_data.loc[block_data['source'] == 'GET_LABELS', col].mean()
 
-        data_rows = dataframe.loc[dataframe["source"] == source_column]
-        global_perf_cross_blocks = data_rows[col].mean()
-        metrics_dict = {"global_perf": global_perf_cross_blocks}
+        metrics_dict["average_score_per_block"] = average_scores
+        metric_to_return = {'global_average_score_per_block': np.mean(list(average_scores.values()))}
 
-        return {'global_perf': global_perf_cross_blocks}, metrics_dict
+        return metric_to_return, metrics_dict
 
 
 class WithinBlockSaturation(ClassificationMetric):
@@ -79,7 +83,8 @@ class WithinBlockSaturation(ClassificationMetric):
         # self.validate()
 
     def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
+        # TODO: validate that the proper columns are present here rather than in calculate?
+        # Since I'm getting relevant columns per block that might not make as much sense.
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
@@ -90,12 +95,12 @@ class WithinBlockSaturation(ClassificationMetric):
 
         # Iterate over all of the blocks and compute the within block performance
         for idx in range(phase_info.loc[:, 'block'].max() + 1):
-            # Need to get the part of the data corresponding to the block
+            # Get the part of the data corresponding to the relevant block
             block_data = dataframe.loc[dataframe["block"] == idx]
             # Make within block calculations
-            relevant_columns, num_cols = _localutil.extract_relevant_columns(block_data, keyword='score')
-            # TODO: Put in a validation/check of relevant columns
-            sat_value, eps_to_sat, _ = _localutil.get_block_saturation_performance(block_data, column_to_use=relevant_columns[0])
+            relevant_columns = _localutil.extract_relevant_columns(block_data, keyword='score')
+            sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(block_data,
+                                                                            column_to_use=relevant_columns[0])
 
             # Record them
             saturation_value[idx] = sat_value
@@ -103,9 +108,97 @@ class WithinBlockSaturation(ClassificationMetric):
             eps_to_saturation[idx] = eps_to_sat
             all_eps_to_sat.append(eps_to_sat)
 
-        metrics_dict = {"saturation_value": saturation_value, "eps_to_saturation": eps_to_saturation}
+        metrics_dict["saturation_value"] = saturation_value
+        metrics_dict["eps_to_saturation"] = eps_to_saturation
         metric_to_return = {'global_within_block_saturation': np.mean(all_sat_vals),
                             'global_num_eps_to_saturation': np.mean(all_eps_to_sat)}
+
+        return metric_to_return, metrics_dict
+
+
+class PerfMaintenanceANT(ClassificationMetric):
+    name = "Performance Maintenance relative to previously trained task"
+    capability = "adapting_to_new_tasks"
+    requires = {'syllabus_type': 'class', 'syllabus_subtype': 'ANT'}
+    description = "Calculates the performance of each task, in each evaluation block, " \
+                  "relative to the previously trained task"
+
+    def __init__(self):
+        super().__init__()
+        # self.validate()
+
+    def validate(self, phase_info):
+        # TODO: Add structure validation of phase_info
+        # Must ensure that the training phase has only one block or else handle multiple
+        pass
+
+    def calculate(self, data, phase_info, metrics_dict):
+        # This metric must compute in each evaluation block the performance of the tasks
+        # relative to the previously trained ones
+
+        # Initialize some variables
+        previously_trained_tasks = np.array([])
+        previously_trained_task_ids = np.array([])
+        this_metric = {}
+        all_sat_diff_vals = []
+        all_eps_to_sat_diff_vals = []
+        this_sat_val_comparison = np.nan
+        this_num_eps_to_sat_comparison = np.nan
+
+        # Get the simplified version of task names in classification logs
+        unique_tasks = phase_info.loc[:, 'task_name'].unique()
+        task_map, block_list, name_map, type_map = _localutil.simplify_task_names(unique_tasks, phase_info)
+
+        # Iterate over the phases, just the evaluation portion. We need to do this in order.
+        for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
+            # Get the task names that were used for the train portion of the phase
+            trained_tasks_full_name = phase_info[(phase_info.phase_type == 'train') &
+                                                 (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+            trained_tasks = np.array(name_map['full_name_map'][trained_tasks_full_name[0]])
+            trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
+                                          (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
+
+            # Validation will have ensured that the training phase has exactly one training block
+            previously_trained_tasks = np.append(previously_trained_tasks, trained_tasks)
+            previously_trained_task_ids = np.append(previously_trained_task_ids, trained_task_ids)
+
+            this_phase_test_task_names = phase_info[(phase_info.phase_type == 'test') &
+                                                    (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+            this_phase_test_tasks = np.array([name_map['full_name_map'][task_name]
+                                              for task_name in this_phase_test_task_names])
+            this_phase_test_task_ids = phase_info[(phase_info.phase_type == 'test') &
+                                                  (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
+
+            for idx, task in enumerate(this_phase_test_tasks):
+                if task in previously_trained_tasks:
+                    # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
+                    inds_where_task = np.where(previously_trained_tasks == task)
+
+                    # TODO: Handle multiple comparison points
+                    block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
+                    previously_trained_sat_values = metrics_dict['saturation_value'][block_ids_for_comparison[0]]
+                    previously_trained_num_eps_to_sat = metrics_dict['eps_to_saturation'][block_ids_for_comparison[0]]
+
+                    new_sat_value = metrics_dict['saturation_value'][this_phase_test_task_ids[idx]]
+                    new_num_eps_to_sat = metrics_dict['eps_to_saturation'][this_phase_test_task_ids[idx]]
+
+                    this_sat_val_comparison = previously_trained_sat_values - new_sat_value
+                    this_num_eps_to_sat_comparison = previously_trained_num_eps_to_sat - new_num_eps_to_sat
+
+                    key_str_1 = task + '_phase_' + str(phase) + '_sat_value_maintenance'
+                    key_str_2 = task + '_phase_' + str(phase) + '_num_eps_maintenance'
+
+                    this_metric[key_str_1] = this_sat_val_comparison
+                    this_metric[key_str_2] = this_num_eps_to_sat_comparison
+
+                    all_sat_diff_vals.append(this_sat_val_comparison)
+                    all_eps_to_sat_diff_vals.append(this_num_eps_to_sat_comparison)
+
+        metric_to_return = {'mean_saturation_value_diff': np.mean(all_sat_diff_vals),
+                            'mean_num_eps_to_saturation_diff': np.mean(all_eps_to_sat_diff_vals)}
+
+        metrics_dict['saturation_maintenance'] = this_sat_val_comparison
+        metrics_dict['num_eps_maintenance'] = this_num_eps_to_sat_comparison
 
         return metric_to_return, metrics_dict
 
@@ -190,7 +283,8 @@ class TransferMatrix(ClassificationMetric):
                 train_phase_nums = np.array([int(phase_info.loc[b, 'phase_number']) for b in train_block_nums])
                 test_phase_nums = np.array([int(phase_info.loc[b, 'phase_number']) for b in test_block_nums])
 
-                if len(train_phase_nums) > 1:
+                # TODO: Are multiple training blocks of the same task ok for transfer matrix calculation?
+                if len(train_block_nums) > 1:
                     raise Exception('Too many training instances of task: {:s}'.format(task))
                 train_phase_num = train_phase_nums[0]
 
@@ -205,7 +299,8 @@ class TransferMatrix(ClassificationMetric):
         return ste_dict, tasks_for_transfer_matrix, name_map
 
     def calculate(self, data, metadata, metrics_dict):
-        # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
+        # Load Single Task Expert performance, and figure out where we should calculate transfer
+        # based on what STEs we have. Can only calculate forward/reverse transfer for tasks which have an STE
         ste_dict, tasks_to_compute, task_name_map = self.validate(metadata)
 
         reverse_transfer = {}
@@ -256,19 +351,24 @@ class ClassificationMetricsReport(core.MetricsReport):
 
     def _add_default_metrics(self):
         if self.syllabus_subtype == "STE":
+            self.add(AveragedScorePerBatch())
             self.add(WithinBlockSaturation())
 
         elif self.syllabus_subtype == "CL":
+            self.add(AveragedScorePerBatch())
             self.add(WithinBlockSaturation())
 
         elif self.syllabus_subtype == "ANT_A":
+            self.add(AveragedScorePerBatch())
             self.add(WithinBlockSaturation())
+            self.add(PerfMaintenanceANT())
             self.add(STERelativePerf())
-            self.add(TransferMatrix())
 
         elif self.syllabus_subtype == "ANT_B":
             self.add(WithinBlockSaturation())
             self.add(STERelativePerf())
+            self.add(PerfMaintenanceANT())
+            self.add(TransferMatrix())
 
         # This is an unhandled syllabus type as of right now
         elif self.syllabus_subtype == "ANT_C":
@@ -276,7 +376,7 @@ class ClassificationMetricsReport(core.MetricsReport):
                             .format(self.syllabus_subtype))
 
         else:
-            raise Exception('Unhandled syllabus type {:s}! Supported syllabus types are: CL, ANT_A, and ANT_B'
+            raise Exception('Unhandled syllabus type {:s}! Supported syllabus types are: CL, ANT_A, and ANT_B, and STE'
                             .format(self.syllabus_subtype))
 
     def calculate(self):
@@ -297,10 +397,11 @@ class ClassificationMetricsReport(core.MetricsReport):
     def plot(self):
         # Ignore the rows indicating that a new batch was requested; only get evaluation rows
         relevant_dataframe = self._log_data[self._log_data['source'] == 'GET_LABELS']
-        relevant_columns, _ = _localutil.extract_relevant_columns(relevant_dataframe, keyword='score')
-        print('Plotting a smoothed performance curve for each score column:')
+        relevant_columns = _localutil.extract_relevant_columns(relevant_dataframe, keyword='score')
+        print('Plotting a performance curve for each score column:')
         for col in relevant_columns:
-            util.plot_performance(relevant_dataframe, col_to_plot=col, do_smoothing=True)
+            util.plot_performance(relevant_dataframe, col_to_plot=col, do_smoothing=True, input_xlabel='Batches',
+                                  input_title=self.log_dir)
 
     def report(self):
         # Call a describe method to inform printing

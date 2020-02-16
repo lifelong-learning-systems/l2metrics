@@ -93,31 +93,128 @@ class WithinBlockSaturation(ClassificationMetric):
         all_sat_vals = []
         all_eps_to_sat = []
 
-        # Iterate over all of the blocks and compute the within block performance
-        for idx in range(phase_info.loc[:, 'block'].max() + 1):
-            # Get the part of the data corresponding to the relevant block
-            block_data = dataframe.loc[dataframe["block"] == idx]
-            # Make within block calculations
-            relevant_columns = _localutil.extract_relevant_columns(block_data, keyword='score')
-            sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(block_data,
-                                                                            column_to_use=relevant_columns[0])
+        relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
 
-            # Record them
-            saturation_value[idx] = sat_value
-            all_sat_vals.append(sat_value)
-            eps_to_saturation[idx] = eps_to_sat
-            all_eps_to_sat.append(eps_to_sat)
+        for col in relevant_columns:
+            # Iterate over all of the blocks and compute the within block performance
+            for idx in range(phase_info.loc[:, 'block'].max() + 1):
+                # Get the part of the data corresponding to the relevant block
+                block_data = dataframe.loc[dataframe["block"] == idx]
+                # Make within block calculations
+                sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(block_data, column_to_use=col)
+
+                # Record them
+                saturation_value[(col, idx)] = sat_value
+                eps_to_saturation[(col, idx)] = eps_to_sat
 
         metrics_dict["saturation_value"] = saturation_value
         metrics_dict["eps_to_saturation"] = eps_to_saturation
-        metric_to_return = {'global_within_block_saturation': np.mean(all_sat_vals),
-                            'global_num_eps_to_saturation': np.mean(all_eps_to_sat)}
+        metric_to_return = {'global_within_block_saturation': np.mean(list(saturation_value.values())),
+                            'global_num_eps_to_saturation': np.mean(list(eps_to_saturation.values()))}
 
         return metric_to_return, metrics_dict
 
 
+class LearningRate(ClassificationMetric):
+    name = "Learning Rate"
+    capability = "adapt_to_new_tasks"
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
+    description = "Calculates the average reward accumulated until the system achieves saturation"
+
+    def __init__(self):
+        super().__init__()
+
+    def validate(self, phase_info):
+        pass
+
+    def calculate(self, dataframe, phase_info, metrics_dict):
+        metrics_dict['learning_rate'] = {}
+        train_block_ids = phase_info.loc[phase_info['phase_type'] == 'train', 'block'].values
+        relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
+
+        for col in relevant_columns:
+            for tr_block in train_block_ids:
+                num_episodes = metrics_dict['eps_to_saturation'][(col, tr_block)]
+
+                if num_episodes is np.NaN:
+                    score_until_saturation = 0
+
+                else:
+                    block_data = dataframe.loc[dataframe['block'] == tr_block]
+                    first_episode_num = block_data.iloc[0]['task']
+                    saturation_task_num = num_episodes + first_episode_num
+
+                    score_until_saturation = block_data.loc[block_data['task'] <= saturation_task_num, col].sum()
+
+                metrics_dict['learning_rate'][(col, tr_block)] = score_until_saturation / num_episodes
+
+        return {'global_learning_rate': np.mean(list(metrics_dict['learning_rate'].values()))}, metrics_dict
+
+
+class RecoveryTime(ClassificationMetric):
+    name = "Recovery Time"
+    capability = "adapt_to_new_tasks"
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
+    description = "Calculates whether the system recovers after a change of task or parameters"
+
+    def __init__(self):
+        super().__init__()
+        # self.validate()
+
+    def validate(self, phase_info):
+        # Determine where we need to assess recovery time
+        tr_bl_inds_to_use = []
+        tr_bl_inds_to_assess = []
+
+        # Get train blocks, in order of appearance
+        tr_bl_info = phase_info.sort_index().loc[phase_info['phase_type'] == 'train', ['block', 'task_name',
+                                                                                       'param_set']]
+        tb_inds = tr_bl_info.index
+
+        # Grab the map of names in logs vs high level task names
+        unique_tasks = phase_info.loc[:, 'task_name'].unique()
+        task_map, block_list, name_map, type_map = _localutil.simplify_task_names(unique_tasks, phase_info)
+
+        # Blocks are defined as new combinations of task + params, but can repeat, so check for changes across blocks
+        first = True
+        for idx, block_idx in enumerate(tb_inds):
+            if first:
+                first = False
+                continue
+            # Either the task name or the param set must be different
+            this_task_name = tr_bl_info.loc[block_idx, 'task_name']
+            next_task_name = tr_bl_info.loc[tb_inds[idx - 1], 'task_name']
+            this_simple_task_name = name_map['full_name_map'][this_task_name]
+            this_simple_next_task_name = name_map['full_name_map'][next_task_name]
+            if this_simple_task_name != this_simple_next_task_name or \
+                    tr_bl_info.loc[block_idx, 'param_set'] != tr_bl_info.loc[tb_inds[idx - 1], 'param_set']:
+                tr_bl_inds_to_assess.append(block_idx)
+                tr_bl_inds_to_use.append(tb_inds[idx - 1])
+
+        if tr_bl_inds_to_assess is None:
+            raise Exception('No changes across training blocks to assess recovery time!')
+
+        return tr_bl_inds_to_use, tr_bl_inds_to_assess
+
+    def calculate(self, dataframe, phase_info, metrics_dict):
+        # Get the places where we should calculate recovery time
+        metrics_dict['recovery_time'] = {}
+        tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
+        relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
+
+        for col in relevant_columns:
+            for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
+                prev_val = metrics_dict['saturation_value'][(col, use_ind)]
+                block_data = dataframe.loc[dataframe['block'] == assess_ind]
+                _, _, eps_to_rec = _localutil.get_block_saturation_perf(block_data,
+                                                                        column_to_use=col,
+                                                                        previous_saturation_value=prev_val)
+                metrics_dict['recovery_time'][(col, assess_ind)] = eps_to_rec
+        return {'global_avg_recovery_time': np.mean(list(metrics_dict['recovery_time'].values()))}, metrics_dict
+
+
 class PerfMaintenanceANT(ClassificationMetric):
-    name = "Performance Maintenance relative to previously trained task"
+    name = "Performance Maintenance on Previously Trained Task"
     capability = "adapting_to_new_tasks"
     requires = {'syllabus_type': 'class', 'syllabus_subtype': 'ANT'}
     description = "Calculates the performance of each task, in each evaluation block, " \
@@ -137,17 +234,19 @@ class PerfMaintenanceANT(ClassificationMetric):
         # relative to the previously trained ones
 
         # Initialize some variables
+        metrics_dict['saturation_maintenance'] = {}
+        metrics_dict['num_eps_maintenance'] = {}
         previously_trained_tasks = np.array([])
         previously_trained_task_ids = np.array([])
-        this_metric = {}
         all_sat_diff_vals = []
         all_eps_to_sat_diff_vals = []
-        this_sat_val_comparison = np.nan
-        this_num_eps_to_sat_comparison = np.nan
 
         # Get the simplified version of task names in classification logs
         unique_tasks = phase_info.loc[:, 'task_name'].unique()
         task_map, block_list, name_map, type_map = _localutil.simplify_task_names(unique_tasks, phase_info)
+
+        # Get relevant columns for this dataframe
+        relevant_columns = _localutil.extract_relevant_columns(data, keyword='score')
 
         # Iterate over the phases, just the evaluation portion. We need to do this in order.
         for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
@@ -169,30 +268,30 @@ class PerfMaintenanceANT(ClassificationMetric):
             this_phase_test_task_ids = phase_info[(phase_info.phase_type == 'test') &
                                                   (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
-            for idx, task in enumerate(this_phase_test_tasks):
-                if task in previously_trained_tasks:
-                    # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
-                    inds_where_task = np.where(previously_trained_tasks == task)
+            for col in relevant_columns:
+                for idx, task in enumerate(this_phase_test_tasks):
+                    if task in previously_trained_tasks:
+                        # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
+                        inds_where_task = np.where(previously_trained_tasks == task)
 
-                    # TODO: Handle multiple comparison points
-                    block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
-                    previously_trained_sat_values = metrics_dict['saturation_value'][block_ids_for_comparison[0]]
-                    previously_trained_num_eps_to_sat = metrics_dict['eps_to_saturation'][block_ids_for_comparison[0]]
+                        # TODO: Handle multiple comparison points
+                        block_ids_to_compare = previously_trained_task_ids[inds_where_task]
+                        previously_trained_sat_values = metrics_dict['saturation_value'][(col, block_ids_to_compare[0])]
+                        previously_trained_num_eps_to_sat = metrics_dict['eps_to_saturation'][(col, block_ids_to_compare[0])]
 
-                    new_sat_value = metrics_dict['saturation_value'][this_phase_test_task_ids[idx]]
-                    new_num_eps_to_sat = metrics_dict['eps_to_saturation'][this_phase_test_task_ids[idx]]
+                        new_sat_value = metrics_dict['saturation_value'][(col, this_phase_test_task_ids[idx])]
+                        new_num_eps_to_sat = metrics_dict['eps_to_saturation'][(col, this_phase_test_task_ids[idx])]
 
-                    this_sat_val_comparison = previously_trained_sat_values - new_sat_value
-                    this_num_eps_to_sat_comparison = previously_trained_num_eps_to_sat - new_num_eps_to_sat
+                        this_sat_val_comparison = previously_trained_sat_values - new_sat_value
+                        this_num_eps_to_sat_comparison = previously_trained_num_eps_to_sat - new_num_eps_to_sat
 
-                    key_str_1 = task + '_phase_' + str(phase) + '_sat_value_maintenance'
-                    key_str_2 = task + '_phase_' + str(phase) + '_num_eps_maintenance'
+                        key = (task, phase)
 
-                    this_metric[key_str_1] = this_sat_val_comparison
-                    this_metric[key_str_2] = this_num_eps_to_sat_comparison
+                        metrics_dict['saturation_maintenance'][key] = this_sat_val_comparison
+                        metrics_dict['num_eps_maintenance'][key] = this_num_eps_to_sat_comparison
 
-                    all_sat_diff_vals.append(this_sat_val_comparison)
-                    all_eps_to_sat_diff_vals.append(this_num_eps_to_sat_comparison)
+                        all_sat_diff_vals.append(this_sat_val_comparison)
+                        all_eps_to_sat_diff_vals.append(this_num_eps_to_sat_comparison)
 
         metric_to_return = {'mean_saturation_value_diff': np.mean(all_sat_diff_vals),
                             'mean_num_eps_to_saturation_diff': np.mean(all_eps_to_sat_diff_vals)}
@@ -231,21 +330,24 @@ class STERelativePerf(ClassificationMetric):
         ste_dict = self.validate(phase_info)
         STE_normalized_saturation = {}
         all_STE_normalized_saturations = []
+        relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
 
-        for idx in range(phase_info.loc[:, 'block'].max()):
-            if phase_info.loc[idx, 'phase_type'] != 'train':
-                continue
-            # Get which task this block is and grab the STE performance for that task
-            this_task = phase_info.loc[idx, "task_name"]
-            this_ste_comparison = ste_dict[this_task]
+        for col in relevant_columns:
+            for idx in range(phase_info.loc[:, 'block'].max()):
+                if phase_info.loc[idx, 'phase_type'] != 'train':
+                    continue
+                # Get which task this block is and grab the STE performance for that task
+                this_task = phase_info.loc[idx, "task_name"]
+                this_ste_comparison = ste_dict[this_task]
 
-            # Compare the saturation value of this block to the STE performance and store it
+                # Compare the saturation value of this block to the STE performance and store it
 
-            STE_normalized_saturation[idx] = metrics_dict["saturation_value"][idx] / this_ste_comparison
-            all_STE_normalized_saturations.append(STE_normalized_saturation[idx])
+                STE_normalized_saturation[(col, idx)] = metrics_dict["saturation_value"][(col, idx)] / \
+                                                        this_ste_comparison
+                all_STE_normalized_saturations.append(STE_normalized_saturation[(col, idx)])
 
-        metrics_dict["STE_normalized_saturation"] = STE_normalized_saturation
-        metric_to_return = {'global_STE_normalized_saturation': np.mean(all_STE_normalized_saturations)}
+            metrics_dict["STE_normalized_saturation"] = STE_normalized_saturation
+            metric_to_return = {'global_STE_normalized_saturation': np.mean(all_STE_normalized_saturations)}
 
         return metric_to_return, metrics_dict
 
@@ -350,22 +452,21 @@ class ClassificationMetricsReport(core.MetricsReport):
         self._phase_info = None
 
     def _add_default_metrics(self):
-        if self.syllabus_subtype == "STE":
-            self.add(AveragedScorePerBatch())
-            self.add(WithinBlockSaturation())
+        self.add(AveragedScorePerBatch())
+        self.add(WithinBlockSaturation())
+        self.add(LearningRate())
 
-        elif self.syllabus_subtype == "CL":
-            self.add(AveragedScorePerBatch())
-            self.add(WithinBlockSaturation())
+        if self.syllabus_subtype == "CL":
+            self.add(RecoveryTime()) # This metric is under construction
+            pass
 
         elif self.syllabus_subtype == "ANT_A":
-            self.add(AveragedScorePerBatch())
-            self.add(WithinBlockSaturation())
+            self.add(RecoveryTime())
             self.add(PerfMaintenanceANT())
             self.add(STERelativePerf())
 
         elif self.syllabus_subtype == "ANT_B":
-            self.add(WithinBlockSaturation())
+            self.add(RecoveryTime())
             self.add(STERelativePerf())
             self.add(PerfMaintenanceANT())
             self.add(TransferMatrix())
@@ -393,6 +494,8 @@ class ClassificationMetricsReport(core.MetricsReport):
 
             previously_calculated_metric_keys.extend([k for k in this_metrics_dict
                                                       if k not in previously_calculated_metric_keys])
+
+            print(previously_calculated_metric_keys)
 
     def plot(self):
         # Ignore the rows indicating that a new batch was requested; only get evaluation rows

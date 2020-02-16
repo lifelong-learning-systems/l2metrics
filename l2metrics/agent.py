@@ -18,6 +18,7 @@
 from abc import ABC
 from . import core, util, _localutil
 import numpy as np
+
 """
 Standard metrics for Agent Learning (RL tasks)
 """
@@ -63,7 +64,7 @@ class MeanRewardPerEpisodes(AgentMetric):
 
             avg_reward[idx] = block_data['reward'].mean()
 
-        metrics_dict["avg_achieved_reward"] =  avg_reward
+        metrics_dict["avg_achieved_reward"] = avg_reward
         metric_to_return = {'global_avg_achieved_reward': np.mean(list(avg_reward.values()))}
 
         return metric_to_return, metrics_dict
@@ -108,6 +109,40 @@ class WithinBlockSaturation(AgentMetric):
         return metric_to_return, metrics_dict
 
 
+class LearningRate(AgentMetric):
+    name = "Learning Rate"
+    capability = "adapt_to_new_tasks"
+    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
+    description = "Calculates the average reward accumulated until the system achieves saturation"
+
+    def __init__(self):
+        super().__init__()
+
+    def validate(self, phase_info):
+        pass
+
+    def calculate(self, dataframe, phase_info, metrics_dict):
+        metrics_dict['learning_rate'] = {}
+        train_block_ids = phase_info.loc[phase_info['phase_type'] == 'train', 'block'].values
+
+        for tr_block in train_block_ids:
+            num_episodes = metrics_dict['eps_to_saturation'][tr_block]
+
+            if num_episodes is np.NaN:
+                reward_until_saturation = 0
+
+            else:
+                block_data = dataframe.loc[dataframe['block'] == tr_block]
+                first_episode_num = block_data.iloc[0]['task']
+                saturation_task_num = num_episodes + first_episode_num
+
+                reward_until_saturation = block_data.loc[block_data['task'] <= saturation_task_num, 'reward'].sum()
+
+            metrics_dict['learning_rate'][tr_block] = reward_until_saturation / num_episodes
+
+        return {'global_learning_rate': np.mean(list(metrics_dict['learning_rate'].values()))}, metrics_dict
+
+
 class RecoveryTime(AgentMetric):
     name = "Recovery Time"
     capability = "adapt_to_new_tasks"
@@ -125,7 +160,7 @@ class RecoveryTime(AgentMetric):
 
         # Get train blocks, in order of appearance
         tr_bl_info = phase_info.sort_index().loc[phase_info['phase_type'] == 'train', ['block', 'task_name',
-                                                                                         'param_set']]
+                                                                                       'param_set']]
         tb_inds = tr_bl_info.index
 
         # Blocks are defined as new combinations of task + params, but can repeat, so check for changes across blocks
@@ -135,10 +170,10 @@ class RecoveryTime(AgentMetric):
                 first = False
                 continue
             # Either the task name or the param set must be different
-            if tr_bl_info.loc[block_idx, 'task_name'] != tr_bl_info.loc[tb_inds[idx-1], 'task_name'] or \
-                    tr_bl_info.loc[block_idx, 'param_set'] != tr_bl_info.loc[tb_inds[idx-1], 'param_set']:
+            if tr_bl_info.loc[block_idx, 'task_name'] != tr_bl_info.loc[tb_inds[idx - 1], 'task_name'] or \
+                    tr_bl_info.loc[block_idx, 'param_set'] != tr_bl_info.loc[tb_inds[idx - 1], 'param_set']:
                 tr_bl_inds_to_assess.append(block_idx)
-                tr_bl_inds_to_use.append(tb_inds[idx-1])
+                tr_bl_inds_to_use.append(tb_inds[idx - 1])
 
         if tr_bl_inds_to_assess is None:
             raise Exception('No changes across training blocks to assess recovery time!')
@@ -206,7 +241,7 @@ class STERelativePerf(AgentMetric):
 
 
 class PerfMaintenanceANT(AgentMetric):
-    name = "Performance Maintenance relative to previously trained task"
+    name = "Performance Maintenance on Previously Trained Task"
     capability = "adapting_to_new_tasks"
     requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT'}
     description = "Calculates the performance of each task, in each evaluation block, " \
@@ -224,24 +259,24 @@ class PerfMaintenanceANT(AgentMetric):
     def calculate(self, dataframe, phase_info, metrics_dict):
         # This metric must compute in each evaluation block the performance of the tasks
         # relative to the previously trained ones
+        metrics_dict['saturation_maintenance'] = {}
+        metrics_dict['num_eps_maintenance'] = {}
         previously_trained_tasks = np.array([])
         previously_trained_task_ids = np.array([])
-        this_metric = {}
         all_sat_diff_vals = []
         all_eps_to_sat_diff_vals = []
-        this_sat_val_comparison = np.nan
-        this_num_eps_to_sat_comparison = np.nan
 
         # Iterate over the phases, just the evaluation portion. We need to do this in order.
         for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
             # Get the task names that were used for the train portion of the phase
-            trained_tasks = phase_info[(phase_info.phase_type == 'train') &
-                                       (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+            trained_task = phase_info[(phase_info.phase_type == 'train') &
+                                      (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+            trained_task = trained_task[0]
             trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
                                           (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
             # Validation will have ensured that the training phase has exactly one training block
-            previously_trained_tasks = np.append(previously_trained_tasks, trained_tasks)
+            previously_trained_tasks = np.append(previously_trained_tasks, trained_task)
             previously_trained_task_ids = np.append(previously_trained_task_ids, trained_task_ids)
 
             this_phase_test_tasks = phase_info[(phase_info.phase_type == 'test') &
@@ -250,35 +285,34 @@ class PerfMaintenanceANT(AgentMetric):
                                                   (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
             for idx, task in enumerate(this_phase_test_tasks):
+                # Skip the evaluation block immediately following a train task
+                if task == trained_task:
+                    continue
                 if task in previously_trained_tasks:
                     # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
                     inds_where_task = np.where(previously_trained_tasks == task)
 
                     # TODO: Handle multiple comparison points
                     block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
-                    previously_trained_sat_values = metrics_dict['saturation_value'][block_ids_for_comparison[0]]
+                    previously_trained_sat_value = metrics_dict['saturation_value'][block_ids_for_comparison[0]]
                     previously_trained_num_eps_to_sat = metrics_dict['eps_to_saturation'][block_ids_for_comparison[0]]
 
                     new_sat_value = metrics_dict['saturation_value'][this_phase_test_task_ids[idx]]
                     new_num_eps_to_sat = metrics_dict['eps_to_saturation'][this_phase_test_task_ids[idx]]
 
-                    this_sat_val_comparison = previously_trained_sat_values - new_sat_value
+                    this_sat_val_comparison = previously_trained_sat_value - new_sat_value
                     this_num_eps_to_sat_comparison = previously_trained_num_eps_to_sat - new_num_eps_to_sat
 
-                    key_str_1 = task + '_phase_' + str(phase) + '_sat_value_maintenance'
-                    key_str_2 = task + '_phase_' + str(phase) + '_num_eps_maintenance'
+                    key = (task, phase)
 
-                    this_metric[key_str_1] = this_sat_val_comparison
-                    this_metric[key_str_2] = this_num_eps_to_sat_comparison
+                    metrics_dict['saturation_maintenance'][key] = this_sat_val_comparison
+                    metrics_dict['num_eps_maintenance'][key] = this_num_eps_to_sat_comparison
 
                     all_sat_diff_vals.append(this_sat_val_comparison)
                     all_eps_to_sat_diff_vals.append(this_num_eps_to_sat_comparison)
 
         metric_to_return = {'mean_saturation_value_diff': np.mean(all_sat_diff_vals),
                             'mean_num_eps_to_saturation_diff': np.mean(all_eps_to_sat_diff_vals)}
-
-        metrics_dict['saturation_maintenance'] = this_sat_val_comparison
-        metrics_dict['num_eps_maintenance'] = this_num_eps_to_sat_comparison
 
         return metric_to_return, metrics_dict
 
@@ -298,18 +332,22 @@ class RewardPerStep(AgentMetric):
         pass
 
     def calculate(self, dataframe, phase_info, metrics_dict):
-        reward = np.array(dataframe.loc[:, "reward"].values)
-        steps = np.array(dataframe.loc[:, 'steps'].values)
+        metrics_dict['reward_per_step'] = {}
 
-        summed_reward = np.sum(reward)
-        # cumsum_reward = np.cumsum(reward)
-        # cumsum_steps = np.cumsum(steps)
+        for idx in range(phase_info.loc[:, 'block'].max()):
+            block_data = dataframe.loc[dataframe['block'] == idx]
 
-        res = summed_reward / np.sum(steps)
-        metric_to_return = {'reward_per_step': res}
-        metrics_dict['reward_per_step'] = res
+            reward = np.array(block_data.loc[:, "reward"].values)
+            steps = np.array(block_data.loc[:, 'steps'].values)
 
-        return metric_to_return, metrics_dict
+            summed_reward = np.sum(reward)
+            # cumsum_reward = np.cumsum(reward)
+            # cumsum_steps = np.cumsum(steps)
+
+            res = summed_reward / np.sum(steps)
+            metrics_dict['reward_per_step'][idx] = res
+
+        return {'global_reward_per_step': np.mean(list(metrics_dict['reward_per_step'].values()))}, metrics_dict
 
 
 class TransferMatrix(AgentMetric):
@@ -425,15 +463,14 @@ class AgentMetricsReport(core.MetricsReport):
         self._phase_info = None
 
     def _add_default_metrics(self):
-
+        # Default metrics no matter the syllabus type
         self.add(WithinBlockSaturation())
+        self.add(RewardPerStep())
+        self.add(LearningRate())
+        self.add(MeanRewardPerEpisodes())
 
-        if self.syllabus_subtype == "STE":
-            self.add(MeanRewardPerEpisodes())
-            self.add(RewardPerStep())
-
-        elif self.syllabus_subtype == "CL":
-            self.add(WithinBlockSaturation())
+        if self.syllabus_subtype == "CL":
+            self.add(RecoveryTime())
 
         elif self.syllabus_subtype == "ANT_A":
             self.add(RecoveryTime())
@@ -441,8 +478,10 @@ class AgentMetricsReport(core.MetricsReport):
             self.add(PerfMaintenanceANT())
 
         elif self.syllabus_subtype == "ANT_B":
+            self.add(RecoveryTime())
             self.add(STERelativePerf())
-            self.add(TransferMatrix())  # This metric is under construction
+            self.add(PerfMaintenanceANT())
+            self.add(TransferMatrix())
 
         # This is an unhandled syllabus type as of right now
         elif self.syllabus_subtype == "ANT_C":
@@ -477,7 +516,7 @@ class AgentMetricsReport(core.MetricsReport):
 
     def plot(self):
         print('Plotting a smoothed reward curve:')
-        window = int(np.floor(len(self._log_data)*0.02))
+        window = int(np.floor(len(self._log_data) * 0.02))
         custom_window = min(window, 100)
         save = True
 

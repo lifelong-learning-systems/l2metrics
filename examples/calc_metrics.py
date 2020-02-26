@@ -26,7 +26,6 @@ class MyCustomAgentMetric(l2metrics.AgentMetric):
     description = "Records the maximum value per block in the dataframe"
     
     def calculate(self, dataframe, phase_info, metrics_df):
-        metrics_df['max_value'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         max_values = {}
 
         for idx in range(phase_info.loc[:, 'block'].max() + 1):
@@ -49,7 +48,6 @@ class MyCustomClassMetric(l2metrics.ClassificationMetric):
     description = "Records the maximum value per block in the dataframe"
 
     def calculate(self, dataframe, phase_info, metrics_df):
-        metrics_df['max_value'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         max_values = {}
 
         # This could be moved to the validate method in the future
@@ -61,10 +59,11 @@ class MyCustomClassMetric(l2metrics.ClassificationMetric):
         for col in relevant_columns:
             data_rows = dataframe.loc[dataframe["source"] == source_column]
             for idx in range(phase_info.loc[:, 'block'].max() + 1):
-                max_block_val = data_rows.loc[dataframe['block'] == idx, col]
-                max_values[col, idx] = max_block_val
+                max_values[idx] = data_rows.loc[dataframe['block'] == idx, col].max()
 
-        return _localutil.fill_metrics_df(max_values, 'max_value', metrics_df)
+            metrics_df = _localutil.fill_metrics_df(max_values, 'max_value', metrics_df, dict_key=col)
+
+        return metrics_df
 
     def plot(self, result):
         pass

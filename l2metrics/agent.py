@@ -19,6 +19,7 @@ from abc import ABC
 from . import core, util, _localutil
 import numpy as np
 from tabulate import tabulate
+
 """
 Standard metrics for Agent Learning (RL tasks)
 """
@@ -177,6 +178,9 @@ class RecoveryTime(AgentMetric):
     def calculate(self, dataframe, phase_info, metrics_df):
         # Get the places where we should calculate recovery time
         tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
+        if len(tr_inds_to_use) == 0:
+            return metrics_df
+
         metrics_df['recovery_time'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         recovery_time = {}
 
@@ -220,7 +224,7 @@ class STERelativePerf(AgentMetric):
         metrics_df['STE_normalized_saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         ste_normalized_saturation = {}
 
-        for idx in range(phase_info.loc[:, 'block'].max()):
+        for idx in range(phase_info.loc[:, 'block'].max() + 1):
             # Get which task this block is and grab the STE performance for that task
             this_task = phase_info.loc[idx, "task_name"]
             this_ste_comparison = ste_dict[this_task]
@@ -231,11 +235,11 @@ class STERelativePerf(AgentMetric):
         return _localutil.fill_metrics_df(ste_normalized_saturation, 'STE_normalized_saturation', metrics_df)
 
 
-class PerfMaintenanceANT(AgentMetric):
-    name = "Performance Maintenance on Previously Trained Task"
+class PerfDifferenceANT(AgentMetric):
+    name = "Performance Difference from Previously Trained Task Performance"
     capability = "adapting_to_new_tasks"
     requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT'}
-    description = "Calculates the performance of each task, in each evaluation block, " \
+    description = "Calculates the difference in performance of each task, in each evaluation block, " \
                   "relative to the previously trained task"
 
     def __init__(self):
@@ -250,12 +254,10 @@ class PerfMaintenanceANT(AgentMetric):
     def calculate(self, dataframe, phase_info, metrics_df):
         # This metric must compute in each evaluation block the performance of the tasks
         # relative to the previously trained ones
-        metrics_df['saturation_maintenance'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-        metrics_df['num_eps_maintenance'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         previously_trained_tasks = np.array([])
         previously_trained_task_ids = np.array([])
-        saturation_maintenance = {}
-        num_eps_maintenance = {}
+        saturation_difference = {}
+        eps_to_sat_dif = {}
 
         # Iterate over the phases, just the evaluation portion. We need to do this in order.
         for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
@@ -296,12 +298,12 @@ class PerfMaintenanceANT(AgentMetric):
 
                     block_id = this_phase_test_task_ids[idx]
 
-                    saturation_maintenance[block_id] = this_sat_val_comparison
-                    num_eps_maintenance[block_id] = this_num_eps_to_sat_comparison
+                    saturation_difference[block_id] = this_sat_val_comparison
+                    eps_to_sat_dif[block_id] = this_num_eps_to_sat_comparison
 
-        metrics_df = _localutil.fill_metrics_df(saturation_maintenance, 'saturation_maintenance', metrics_df)
+        metrics_df = _localutil.fill_metrics_df(saturation_difference, 'saturation_difference', metrics_df)
 
-        return _localutil.fill_metrics_df(num_eps_maintenance, 'num_eps_maintenance', metrics_df)
+        return _localutil.fill_metrics_df(eps_to_sat_dif, 'eps_to_sat_dif', metrics_df)
 
 
 class RewardPerStep(AgentMetric):
@@ -322,7 +324,7 @@ class RewardPerStep(AgentMetric):
         metrics_df['reward_per_step'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         reward_per_step = {}
 
-        for idx in range(phase_info.loc[:, 'block'].max()+1):
+        for idx in range(phase_info.loc[:, 'block'].max() + 1):
             block_data = dataframe.loc[dataframe['block'] == idx]
 
             reward = np.array(block_data.loc[:, "reward"].values)
@@ -442,11 +444,7 @@ class AgentMetricsReport(core.MetricsReport):
             phase_info_keys_to_include.append('param_set')
 
         self._metrics_df = self.phase_info[phase_info_keys_to_include].copy()
-
-        self._results = {}
-        self._collated_metrics_dict = {}
-        self._metrics_dict = {}
-        self._phase_info = None
+        self._metrics_df['task_name'] = _localutil.simplify_rl_task_names(self._metrics_df.loc[:, 'task_name'].values)
 
     def _add_default_metrics(self):
         # Default metrics no matter the syllabus type
@@ -461,12 +459,12 @@ class AgentMetricsReport(core.MetricsReport):
         elif self.syllabus_subtype == "ANT_A":
             self.add(RecoveryTime())
             self.add(STERelativePerf())
-            self.add(PerfMaintenanceANT())
+            self.add(PerfDifferenceANT())
 
         elif self.syllabus_subtype == "ANT_B":
             self.add(RecoveryTime())
             self.add(STERelativePerf())
-            self.add(PerfMaintenanceANT())
+            self.add(PerfDifferenceANT())
             self.add(TransferMatrix())
 
         # This is an unhandled syllabus type as of right now
@@ -479,19 +477,8 @@ class AgentMetricsReport(core.MetricsReport):
                             .format(self.syllabus_subtype))
 
     def calculate(self):
-        previously_calculated_metric_keys = []
-        this_metrics_df = self._metrics_df
         for metric in self._metrics:
-            this_metrics_df = metric.calculate(self._log_data, self.phase_info, this_metrics_df)
-            # self._results[metric.name] = this_metrics_df
-
-            this_metrics_dict_subset = {col: this_metrics_df[col] for col in this_metrics_df.columns
-                                        if col not in previously_calculated_metric_keys}  # Only get the new keys
-
-            self._metrics_dict[metric.name] = this_metrics_dict_subset
-
-            previously_calculated_metric_keys.extend([col for col in this_metrics_df
-                                                      if col not in previously_calculated_metric_keys])
+            self._metrics_df = metric.calculate(self._log_data, self.phase_info, self._metrics_df)
 
     def report(self):
         # Call a describe method to inform printing

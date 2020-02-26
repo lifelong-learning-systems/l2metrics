@@ -177,14 +177,20 @@ def extract_relevant_columns(dataframe, keyword):
     return relevant_cols
 
 
-def fill_metrics_df(metric, metric_string_name, metrics_df):
-    for idx in metric.keys():
-        metrics_df.loc[idx, metric_string_name] = metric[idx]
+def fill_metrics_df(metric, metric_string_name, metrics_df, dict_key=None):
+    if not dict_key:
+        metrics_df[metric_string_name] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        for idx in metric.keys():
+            metrics_df.loc[idx, metric_string_name] = metric[idx]
+    else:
+        metrics_df[dict_key][metric_string_name] = np.full_like(metrics_df[dict_key]['block'], np.nan, dtype=np.double)
+        for idx in metric.keys():
+            metrics_df[dict_key].loc[idx, metric_string_name] = metric[idx]
 
     return metrics_df
 
 
-def simplify_task_names(unique_task_names, phase_info):
+def simplify_classification_task_names(unique_task_names, phase_info):
     # Capture the correspondence between the Classification Train/Test tasks
     name_map = {'full_name_map': {}}
     task_map = {}
@@ -225,26 +231,11 @@ def simplify_task_names(unique_task_names, phase_info):
     return task_map, block_list, name_map, type_map
 
 
-# def plot_transfer_matrix(phase_info, forward, reverse):
-#     # Want to build a table of data showing the forward/reverse transfer from one task to another. Phases are rows,
-#     # Tasks are columns.
-#     train_blocks = phase_info.loc[phase_info['phase_type'] == 'train', 'block'].to_numpy()
-#     test_blocks = phase_info.loc[phase_info['phase_type'] == 'test', 'block'].to_numpy()
-#
-#     # We'll produce a table with unique_phase_nums rows and unique_test_blocks columns.
-#     unique_phase_nums = phase_info.loc[:, 'phase_number'].unique()
-#     unique_test_blocks = phase_info.loc[phase_info['phase_type'] == 'test', 'task_name'].unique()
-#
-#     table_data = np.empty((len(unique_phase_nums), len(unique_test_blocks)))
-#
-#     for n in unique_phase_nums:
-#         blocks_within_phase = phase_info.loc[phase_info['phase_number'] == n, 'block'].to_numpy()
-#         this_phase_test_blocks = [b for b in blocks_within_phase if b in test_blocks]
-#
-#         # Now check the forward and reverse transfer dicts for a key with these blocks
-#
-#         for task_name, block_num in reverse.keys():
-#             # Fill in the table,
-#             table_data[n, block_num] = reverse.get((task_name, block_num))
-#
-#     pass
+def simplify_rl_task_names(task_names):
+    simple_names = []
+
+    for t in task_names:
+        splits = str.split(t, '_')
+        simple_names.append(splits[-1])
+
+    return simple_names

@@ -196,6 +196,7 @@ def simplify_classification_task_names(unique_task_names, phase_info):
     task_map = {}
     type_map = {}
     block_list = {}
+    all_name_list = []
 
     # First find the blocks for each task
     for t in unique_task_names:
@@ -209,6 +210,7 @@ def simplify_classification_task_names(unique_task_names, phase_info):
 
         task_type = x.group(1)
         task_name = x.group(2)
+        all_name_list.append(task_name)
 
         # Record which tasks were used for training for future metric computation
         if task_type == 'train':
@@ -231,7 +233,24 @@ def simplify_classification_task_names(unique_task_names, phase_info):
     return task_map, block_list, name_map, type_map
 
 
-def simplify_rl_task_names(task_names):
+def get_simple_class_task_names(task_names):
+    all_name_list = {}
+
+    for idx, t in enumerate(task_names):
+
+        # Get the base class name by finding the phase/task type annotation and getting the string that comes after
+        x = re.search(r'(train|test)(\w+)', t)
+        if x.re.groups != 2:
+            raise Exception('Improperly formatted task names! Classification tasks should include '
+                            '"train" or "test," but this one was: {:s}'.format(t))
+
+        task_name = x.group(2)
+        all_name_list[idx] = task_name
+
+    return all_name_list
+
+
+def get_simple_rl_task_names(task_names):
     simple_names = []
 
     for t in task_names:

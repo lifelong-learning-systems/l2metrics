@@ -441,10 +441,8 @@ class ClassificationMetricsReport(core.MetricsReport):
 
         for col in cols:
             self._metrics_df[col] = self.phase_info[phase_info_keys_to_include].copy()
-
-        # simple_names, _, _, _ = _localutil.simplify_rl_task_names(self._metrics_df.loc[:, 'task_name'].unique(),
-        # self.phase_info)
-        # self._metrics_df['task_name'] = simple_names.values
+            simple_names = _localutil.get_simple_class_task_names(self._metrics_df[col].loc[:, 'task_name'])
+            self._metrics_df[col]['task_name'] = simple_names.values()
 
     def _add_default_metrics(self):
         self.add(AveragedScorePerBatch())

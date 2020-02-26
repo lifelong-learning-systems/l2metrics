@@ -444,7 +444,7 @@ class AgentMetricsReport(core.MetricsReport):
             phase_info_keys_to_include.append('param_set')
 
         self._metrics_df = self.phase_info[phase_info_keys_to_include].copy()
-        self._metrics_df['task_name'] = _localutil.simplify_rl_task_names(self._metrics_df.loc[:, 'task_name'].values)
+        self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(self._metrics_df.loc[:, 'task_name'].values)
 
     def _add_default_metrics(self):
         # Default metrics no matter the syllabus type

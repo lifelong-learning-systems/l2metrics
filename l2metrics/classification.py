@@ -492,7 +492,7 @@ class ClassificationMetricsReport(core.MetricsReport):
         print('Plotting a performance curve for each score column:')
         for col in relevant_columns:
             util.plot_performance(relevant_dataframe, col_to_plot=col, do_smoothing=True, input_xlabel='Batches',
-                                  input_title=self.log_dir)
+                                  do_save_fig=True, input_title=self.log_dir)
 
     def add(self, metrics_lst):
         self._metrics.append(metrics_lst)

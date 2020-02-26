@@ -105,7 +105,7 @@ def run():
     # TODO: add info about order of calculation
     metrics_report.calculate()
 
-    # Comment this line out to supress the performance plot
+    # Comment this line out to suppress the performance plot
     metrics_report.plot()
 
     metrics_report.report()

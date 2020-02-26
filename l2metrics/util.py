@@ -75,7 +75,8 @@ def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_
             task_colors = color_selection[:len(unique_tasks)]
         else:
             task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
-        fig, ax = plt.subplots()
+        fig = plt.figure(figsize=(12, 6))
+        ax = fig.add_subplot(111)
 
         for c, t in zip(task_colors, unique_tasks):
             data = dataframe.loc[dataframe['class_name'] == t, col_to_plot].values
@@ -95,7 +96,8 @@ def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_
                 data = _localutil.smooth(data)
         x_axis = dataframe[x_axis_col].values
 
-        fig, ax = plt.subplots()
+        fig = plt.figure(figsize=(8, 4))
+        ax = fig.add_subplot(111)
         ax.scatter(x_axis, data, marker='*', linestyle='None')
 
     if show_block_boundary:
@@ -104,6 +106,10 @@ def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_
         for b in unique_blocks:
             idx = df2[df2['block'] == b].index[0]
             ax.axes.axvline(idx, linewidth=1, linestyle=':')
+
+    # Want the saved figured to have a grid so do this before saving
+    ax.set(xlabel=input_xlabel, ylabel=input_ylabel, title=input_title)
+    ax.grid()
 
     if do_save_fig:
         if not plot_filename:
@@ -114,10 +120,8 @@ def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_
 
         fig.savefig(plot_filename)
 
-    # TODO: This is a blocking call. Perhaps better to just save by default?
-    ax.set(xlabel=input_xlabel, ylabel=input_ylabel, title=input_title)
-    ax.grid()
-    plt.show()
+    # TODO: This is a blocking call. Perhaps better to just save by default and not show?
+    # plt.show()
 
 
 def read_log_data(input_dir, analysis_variables=None):

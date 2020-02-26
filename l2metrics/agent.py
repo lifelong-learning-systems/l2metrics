@@ -511,8 +511,9 @@ class AgentMetricsReport(core.MetricsReport):
         # Call a describe method to inform printing
         for r_key in self._results:
             print('\nMetric: {:s}'.format(r_key))
-            print('Averaged Value: {:s}'.format(str(self._results[r_key])))
-            print('Per Block Values: {:s}'.format(str(self._metrics_dict[r_key])))
+            # print('Averaged Value: {:s}'.format(str(self._results[r_key])))
+            for k in self._metrics_dict[r_key].keys():
+                print('{:s} : {:s}'.format(k, str(self._metrics_dict[r_key][k])))
 
     def plot(self):
         print('Plotting a smoothed reward curve:')

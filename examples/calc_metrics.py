@@ -1,22 +1,47 @@
 import argparse
 import l2metrics
 from l2metrics import _localutil
+import numpy as np
+
+"""
+This file demonstrates how to add custom Metrics to a MetricsReport. Most
+
+
+calculate(dataframe, phase_info, metrics_dict):
+
+# This is where the actual calculation of your metric should live.
+
+:param dataframe: Pandas dataframe
+:param phase_info: Pandas dataframe
+:param metrics_dict: Python dictionary
+
+:return: Python dictionary of single metric, Python dictionary of metric appended to existing metrics_dict
+"""
 
 
 class MyCustomAgentMetric(l2metrics.AgentMetric):
-    name = "An Example Custom Metric"
+    name = "An Example Custom Metric" # TODO: Add some docstring here
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent'}
-    description = "A Custom Metric"
+    description = "Records the maximum value per block in the dataframe"
     
     def calculate(self, dataframe, phase_info, metrics_dict):
-        return {'global_perf': dataframe.loc[:, "reward"].mean()}, {'global_perf': dataframe.loc[:, "reward"].mean()}
+        metrics_dict['max_value'] = {}
+        max_vals = {}
+
+        for idx in range(phase_info.loc[:, 'block'].max() + 1):
+            max_block_value = dataframe.loc[dataframe["block"] == idx, 'reward'].max()
+
+            max_vals[idx] = max_block_value
+
+        metrics_dict['max_value'] = max_vals
+
+        return {'global_avg_max_value': np.mean(list(max_vals.values()))}, metrics_dict
 
     def plot(self, result):
         pass
 
     def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
         pass
 
 
@@ -24,24 +49,25 @@ class MyCustomClassMetric(l2metrics.ClassificationMetric):
     name = "An Example Custom Metric"
     capability = "continual_learning"
     requires = {'syllabus_type': 'class'}
-    description = "A Custom Metric"
+    description = "Records the maximum value per block in the dataframe"
 
     def calculate(self, dataframe, phase_info, metrics_dict):
-        source_column = "GET_LABELS"
+        metrics_dict['max_value'] = {}
+        max_vals = {}
 
         # This could be moved to the validate method in the future
+        source_column = "GET_LABELS"
         relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
         if len(relevant_columns) < 1:
             raise Exception('Not enough performance columns!')
 
-        metrics_dict['avg_across_blocks'] = {}
-
         for col in relevant_columns:
             data_rows = dataframe.loc[dataframe["source"] == source_column]
-            global_perf_cross_blocks = data_rows[col].mean()
-            metrics_dict['avg_across_blocks'][col] = global_perf_cross_blocks
+            for idx in range(phase_info.loc[:, 'block'].max() + 1):
+                max_block_val = data_rows.loc[dataframe['block'] == idx, col]
+                max_vals[col, idx] = max_block_val
 
-        metric_to_return = {c: metrics_dict['avg_across_blocks'][c] for c in relevant_columns}
+        metrics_dict['max_value'] = max_vals
 
         return {'global_perf_per_column': metric_to_return}, metrics_dict
 
@@ -76,14 +102,16 @@ def run():
 
     if args.syllabus_type == "class":
         metrics_report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+        # toDO: add something here
         metrics_report.add(MyCustomClassMetric())
     else:
         metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
         metrics_report.add(MyCustomAgentMetric())
 
+    # TODO: add info about order of calculation
     metrics_report.calculate()
 
-    # Uncomment this for a plot of performance:
+    # Comment this line out to supress the performance plot
     metrics_report.plot()
 
     metrics_report.report()

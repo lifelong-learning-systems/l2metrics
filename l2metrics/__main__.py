@@ -48,6 +48,8 @@ def run():
         report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
     
     report.calculate()
+    # Comment this line out to supress the performance plot
+    report.plot()
     report.report()
 
 

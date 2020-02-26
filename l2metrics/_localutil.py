@@ -218,26 +218,26 @@ def simplify_task_names(unique_task_names, phase_info):
     return task_map, block_list, name_map, type_map
 
 
-def plot_transfer_matrix(phase_info, forward, reverse):
-    # Want to build a table of data showing the forward/reverse transfer from one task to another. Phases are rows,
-    # Tasks are columns.
-    train_blocks = phase_info.loc[phase_info['phase_type'] == 'train', 'block'].to_numpy()
-    test_blocks = phase_info.loc[phase_info['phase_type'] == 'test', 'block'].to_numpy()
-
-    # We'll produce a table with unique_phase_nums rows and unique_test_blocks columns.
-    unique_phase_nums = phase_info.loc[:, 'phase_number'].unique()
-    unique_test_blocks = phase_info.loc[phase_info['phase_type'] == 'test', 'task_name'].unique()
-
-    table_data = np.empty((len(unique_phase_nums), len(unique_test_blocks)))
-
-    for n in unique_phase_nums:
-        blocks_within_phase = phase_info.loc[phase_info['phase_number'] == n, 'block'].to_numpy()
-        this_phase_test_blocks = [b for b in blocks_within_phase if b in test_blocks]
-
-        # Now check the forward and reverse transfer dicts for a key with these blocks
-
-        for task_name, block_num in reverse.keys():
-            # Fill in the table,
-            table_data[n, block_num] = reverse.get((task_name, block_num))
-
-    pass
+# def plot_transfer_matrix(phase_info, forward, reverse):
+#     # Want to build a table of data showing the forward/reverse transfer from one task to another. Phases are rows,
+#     # Tasks are columns.
+#     train_blocks = phase_info.loc[phase_info['phase_type'] == 'train', 'block'].to_numpy()
+#     test_blocks = phase_info.loc[phase_info['phase_type'] == 'test', 'block'].to_numpy()
+#
+#     # We'll produce a table with unique_phase_nums rows and unique_test_blocks columns.
+#     unique_phase_nums = phase_info.loc[:, 'phase_number'].unique()
+#     unique_test_blocks = phase_info.loc[phase_info['phase_type'] == 'test', 'task_name'].unique()
+#
+#     table_data = np.empty((len(unique_phase_nums), len(unique_test_blocks)))
+#
+#     for n in unique_phase_nums:
+#         blocks_within_phase = phase_info.loc[phase_info['phase_number'] == n, 'block'].to_numpy()
+#         this_phase_test_blocks = [b for b in blocks_within_phase if b in test_blocks]
+#
+#         # Now check the forward and reverse transfer dicts for a key with these blocks
+#
+#         for task_name, block_num in reverse.keys():
+#             # Fill in the table,
+#             table_data[n, block_num] = reverse.get((task_name, block_num))
+#
+#     pass

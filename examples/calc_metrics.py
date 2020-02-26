@@ -25,18 +25,15 @@ class MyCustomAgentMetric(l2metrics.AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Records the maximum value per block in the dataframe"
     
-    def calculate(self, dataframe, phase_info, metrics_dict):
-        metrics_dict['max_value'] = {}
-        max_vals = {}
+    def calculate(self, dataframe, phase_info, metrics_df):
+        metrics_df['max_value'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        max_values = {}
 
         for idx in range(phase_info.loc[:, 'block'].max() + 1):
             max_block_value = dataframe.loc[dataframe["block"] == idx, 'reward'].max()
+            max_values[idx] = max_block_value
 
-            max_vals[idx] = max_block_value
-
-        metrics_dict['max_value'] = max_vals
-
-        return {'global_avg_max_value': np.mean(list(max_vals.values()))}, metrics_dict
+        return _localutil.fill_metrics_df(max_values, 'max_value', metrics_df)
 
     def plot(self, result):
         pass
@@ -51,9 +48,9 @@ class MyCustomClassMetric(l2metrics.ClassificationMetric):
     requires = {'syllabus_type': 'class'}
     description = "Records the maximum value per block in the dataframe"
 
-    def calculate(self, dataframe, phase_info, metrics_dict):
-        metrics_dict['max_value'] = {}
-        max_vals = {}
+    def calculate(self, dataframe, phase_info, metrics_df):
+        metrics_df['max_value'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        max_values = {}
 
         # This could be moved to the validate method in the future
         source_column = "GET_LABELS"
@@ -65,11 +62,9 @@ class MyCustomClassMetric(l2metrics.ClassificationMetric):
             data_rows = dataframe.loc[dataframe["source"] == source_column]
             for idx in range(phase_info.loc[:, 'block'].max() + 1):
                 max_block_val = data_rows.loc[dataframe['block'] == idx, col]
-                max_vals[col, idx] = max_block_val
+                max_values[col, idx] = max_block_val
 
-        metrics_dict['max_value'] = max_vals
-
-        return {'global_perf_per_column': metric_to_return}, metrics_dict
+        return _localutil.fill_metrics_df(max_values, 'max_value', metrics_df)
 
     def plot(self, result):
         pass

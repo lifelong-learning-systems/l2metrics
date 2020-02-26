@@ -62,6 +62,18 @@ def load_default_ste_data():
     return ste_dict
 
 
+def load_default_random_agent_data():
+    # This function will return a dictionary of the Random Agent data from all of the available baselines that have \
+    # been stored in this JSON file, located at $L2DATA/taskinfo/random_agent.json
+    json_file = get_l2root_base_dirs('taskinfo', 'random_agent.json')
+
+    # Load the defaults from the json file, return them as a dictionary
+    with open(json_file) as f:
+        random_agent_dict = json.load(f)
+
+    return random_agent_dict
+
+
 def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_col='task', input_title=None,
                      do_save_fig=False, plot_filename=None, input_xlabel='Episodes', input_ylabel='Performance',
                      show_block_boundary=False, do_task_colors=False, new_smoothing_value=None):

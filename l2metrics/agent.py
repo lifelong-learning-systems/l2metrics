@@ -18,7 +18,7 @@
 from abc import ABC
 from . import core, util, _localutil
 import numpy as np
-
+from tabulate import tabulate
 """
 Standard metrics for Agent Learning (RL tasks)
 """
@@ -46,6 +46,7 @@ class MeanRewardPerEpisodes(AgentMetric):
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'all'}
     description = "Calculates the performance across all tasks and phases"
+    metric_title = {}
 
     def __init__(self):
         super().__init__()
@@ -54,7 +55,7 @@ class MeanRewardPerEpisodes(AgentMetric):
     def validate(self, phase_info):
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_dict):
+    def calculate(self, dataframe, phase_info, metrics_df):
         avg_reward = {}
 
         # Iterate over all of the blocks and compute the within block performance
@@ -64,10 +65,7 @@ class MeanRewardPerEpisodes(AgentMetric):
 
             avg_reward[idx] = block_data['reward'].mean()
 
-        metrics_dict["avg_achieved_reward"] = avg_reward
-        metric_to_return = {'global_avg_achieved_reward': np.mean(list(avg_reward.values()))}
-
-        return metric_to_return, metrics_dict
+        return _localutil.fill_metrics_df(avg_reward, 'avg_achieved_reward', metrics_df)
 
 
 class WithinBlockSaturation(AgentMetric):
@@ -83,11 +81,11 @@ class WithinBlockSaturation(AgentMetric):
     def validate(self, phase_info):
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_dict):
-        saturation_value = {}
+    def calculate(self, dataframe, phase_info, metrics_df):
+        metrics_df['saturation_value'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df['eps_to_saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        saturation_values = {}
         eps_to_saturation = {}
-        all_sat_vals = []
-        all_eps_to_sat = []
 
         # Iterate over all of the blocks and compute the within block performance
         for idx in range(phase_info.loc[:, 'block'].max() + 1):
@@ -97,20 +95,15 @@ class WithinBlockSaturation(AgentMetric):
             sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(block_data, column_to_use='reward')
 
             # Record them
-            saturation_value[idx] = sat_value
-            all_sat_vals.append(sat_value)
+            saturation_values[idx] = sat_value
             eps_to_saturation[idx] = eps_to_sat
-            all_eps_to_sat.append(eps_to_sat)
 
-        metrics_dict = {"saturation_value": saturation_value, "eps_to_saturation": eps_to_saturation}
-        metric_to_return = {'global_within_block_saturation': np.mean(all_sat_vals),
-                            'global_num_eps_to_saturation': np.mean(all_eps_to_sat)}
-
-        return metric_to_return, metrics_dict
+        metrics_df = _localutil.fill_metrics_df(saturation_values, 'saturation_value', metrics_df)
+        return _localutil.fill_metrics_df(eps_to_saturation, 'eps_to_saturation', metrics_df)
 
 
-class LearningRate(AgentMetric):
-    name = "Learning Rate"
+class AverageLearningReward(AgentMetric):
+    name = "Average Learning Reward"
     capability = "adapt_to_new_tasks"
     requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
     description = "Calculates the average reward accumulated until the system achieves saturation"
@@ -121,12 +114,13 @@ class LearningRate(AgentMetric):
     def validate(self, phase_info):
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_dict):
-        metrics_dict['learning_rate'] = {}
+    def calculate(self, dataframe, phase_info, metrics_df):
+        metrics_df['average_learning'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        learning_rate = {}
         train_block_ids = phase_info.loc[phase_info['phase_type'] == 'train', 'block'].values
 
         for tr_block in train_block_ids:
-            num_episodes = metrics_dict['eps_to_saturation'][tr_block]
+            num_episodes = metrics_df['eps_to_saturation'][tr_block]
 
             if num_episodes is np.NaN:
                 reward_until_saturation = 0
@@ -138,9 +132,9 @@ class LearningRate(AgentMetric):
 
                 reward_until_saturation = block_data.loc[block_data['task'] <= saturation_task_num, 'reward'].sum()
 
-            metrics_dict['learning_rate'][tr_block] = reward_until_saturation / num_episodes
+            learning_rate[tr_block] = reward_until_saturation / num_episodes
 
-        return {'global_learning_rate': np.mean(list(metrics_dict['learning_rate'].values()))}, metrics_dict
+        return _localutil.fill_metrics_df(learning_rate, 'average_learning', metrics_df)
 
 
 class RecoveryTime(AgentMetric):
@@ -180,19 +174,21 @@ class RecoveryTime(AgentMetric):
 
         return tr_bl_inds_to_use, tr_bl_inds_to_assess
 
-    def calculate(self, dataframe, phase_info, metrics_dict):
+    def calculate(self, dataframe, phase_info, metrics_df):
         # Get the places where we should calculate recovery time
-        metrics_dict['recovery_time'] = {}
         tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
+        metrics_df['recovery_time'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        recovery_time = {}
 
         for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
-            prev_val = metrics_dict['saturation_value'][use_ind]
+            prev_val = metrics_df['saturation_value'][use_ind]
             block_data = dataframe.loc[assess_ind]
             _, _, eps_to_rec = _localutil.get_block_saturation_perf(block_data,
                                                                     column_to_use='reward',
                                                                     previous_saturation_value=prev_val)
-            metrics_dict['recovery_time'][assess_ind] = eps_to_rec
-        return {'global_avg_recovery_time': np.mean(list(metrics_dict['recovery_time'].values()))}, metrics_dict
+            recovery_time[assess_ind] = eps_to_rec
+
+        return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
 
 
 class STERelativePerf(AgentMetric):
@@ -218,11 +214,11 @@ class STERelativePerf(AgentMetric):
 
         return ste_dict
 
-    def calculate(self, dataframe, phase_info, metrics_dict):
+    def calculate(self, dataframe, phase_info, metrics_df):
         # Validate the STE
         ste_dict = self.validate(phase_info)
-        STE_normalized_saturation = {}
-        all_STE_normalized_saturations = []
+        metrics_df['STE_normalized_saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        ste_normalized_saturation = {}
 
         for idx in range(phase_info.loc[:, 'block'].max()):
             # Get which task this block is and grab the STE performance for that task
@@ -230,14 +226,9 @@ class STERelativePerf(AgentMetric):
             this_ste_comparison = ste_dict[this_task]
 
             # Compare the saturation value of this block to the STE performance and store it
+            ste_normalized_saturation[idx] = metrics_df["saturation_value"][idx] / this_ste_comparison
 
-            STE_normalized_saturation[idx] = metrics_dict["saturation_value"][idx] / this_ste_comparison
-            all_STE_normalized_saturations.append(STE_normalized_saturation[idx])
-
-        metrics_dict["STE_normalized_saturation"] = STE_normalized_saturation
-        metric_to_return = {'global_STE_normalized_saturation': np.mean(all_STE_normalized_saturations)}
-
-        return metric_to_return, metrics_dict
+        return _localutil.fill_metrics_df(ste_normalized_saturation, 'STE_normalized_saturation', metrics_df)
 
 
 class PerfMaintenanceANT(AgentMetric):
@@ -256,15 +247,15 @@ class PerfMaintenanceANT(AgentMetric):
         # Must ensure that the training phase has only one block or else handle multiple
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_dict):
+    def calculate(self, dataframe, phase_info, metrics_df):
         # This metric must compute in each evaluation block the performance of the tasks
         # relative to the previously trained ones
-        metrics_dict['saturation_maintenance'] = {}
-        metrics_dict['num_eps_maintenance'] = {}
+        metrics_df['saturation_maintenance'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df['num_eps_maintenance'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         previously_trained_tasks = np.array([])
         previously_trained_task_ids = np.array([])
-        all_sat_diff_vals = []
-        all_eps_to_sat_diff_vals = []
+        saturation_maintenance = {}
+        num_eps_maintenance = {}
 
         # Iterate over the phases, just the evaluation portion. We need to do this in order.
         for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
@@ -294,27 +285,23 @@ class PerfMaintenanceANT(AgentMetric):
 
                     # TODO: Handle multiple comparison points
                     block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
-                    previously_trained_sat_value = metrics_dict['saturation_value'][block_ids_for_comparison[0]]
-                    previously_trained_num_eps_to_sat = metrics_dict['eps_to_saturation'][block_ids_for_comparison[0]]
+                    previously_trained_sat_value = metrics_df['saturation_value'][block_ids_for_comparison[0]]
+                    previously_trained_num_eps_to_sat = metrics_df['eps_to_saturation'][block_ids_for_comparison[0]]
 
-                    new_sat_value = metrics_dict['saturation_value'][this_phase_test_task_ids[idx]]
-                    new_num_eps_to_sat = metrics_dict['eps_to_saturation'][this_phase_test_task_ids[idx]]
+                    new_sat_value = metrics_df['saturation_value'][this_phase_test_task_ids[idx]]
+                    new_num_eps_to_sat = metrics_df['eps_to_saturation'][this_phase_test_task_ids[idx]]
 
                     this_sat_val_comparison = previously_trained_sat_value - new_sat_value
                     this_num_eps_to_sat_comparison = previously_trained_num_eps_to_sat - new_num_eps_to_sat
 
-                    key = (task, phase)
+                    block_id = this_phase_test_task_ids[idx]
 
-                    metrics_dict['saturation_maintenance'][key] = this_sat_val_comparison
-                    metrics_dict['num_eps_maintenance'][key] = this_num_eps_to_sat_comparison
+                    saturation_maintenance[block_id] = this_sat_val_comparison
+                    num_eps_maintenance[block_id] = this_num_eps_to_sat_comparison
 
-                    all_sat_diff_vals.append(this_sat_val_comparison)
-                    all_eps_to_sat_diff_vals.append(this_num_eps_to_sat_comparison)
+        metrics_df = _localutil.fill_metrics_df(saturation_maintenance, 'saturation_maintenance', metrics_df)
 
-        metric_to_return = {'mean_saturation_value_diff': np.mean(all_sat_diff_vals),
-                            'mean_num_eps_to_saturation_diff': np.mean(all_eps_to_sat_diff_vals)}
-
-        return metric_to_return, metrics_dict
+        return _localutil.fill_metrics_df(num_eps_maintenance, 'num_eps_maintenance', metrics_df)
 
 
 class RewardPerStep(AgentMetric):
@@ -331,10 +318,11 @@ class RewardPerStep(AgentMetric):
         # TODO: Add structure validation of phase_info
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_dict):
-        metrics_dict['reward_per_step'] = {}
+    def calculate(self, dataframe, phase_info, metrics_df):
+        metrics_df['reward_per_step'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        reward_per_step = {}
 
-        for idx in range(phase_info.loc[:, 'block'].max()):
+        for idx in range(phase_info.loc[:, 'block'].max()+1):
             block_data = dataframe.loc[dataframe['block'] == idx]
 
             reward = np.array(block_data.loc[:, "reward"].values)
@@ -345,9 +333,9 @@ class RewardPerStep(AgentMetric):
             # cumsum_steps = np.cumsum(steps)
 
             res = summed_reward / np.sum(steps)
-            metrics_dict['reward_per_step'][idx] = res
+            reward_per_step[idx] = res
 
-        return {'global_reward_per_step': np.mean(list(metrics_dict['reward_per_step'].values()))}, metrics_dict
+        return _localutil.fill_metrics_df(reward_per_step, 'reward_per_step', metrics_df)
 
 
 class TransferMatrix(AgentMetric):
@@ -403,35 +391,27 @@ class TransferMatrix(AgentMetric):
 
         return ste_dict, tasks_for_transfer_matrix
 
-    def calculate(self, data, metadata, metrics_dict):
+    def calculate(self, data, metadata, metrics_df):
         # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
         ste_dict, tasks_to_compute = self.validate(metadata)
-
+        metrics_df['forward_transfer'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df['reverse_transfer'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         reverse_transfer = {}
-        reverse_vals = []
         forward_transfer = {}
-        forward_vals = []
 
         # Calculate, for each task, (task eval saturation / ste saturation)
         for task, block in tasks_to_compute['forward']:
             print('Computing forward transfer for {:s}'.format(task))
-            this_transfer_val = metrics_dict['saturation_value'][block] / ste_dict[task]
-            forward_transfer[(task, block)] = this_transfer_val
-            forward_vals.append(this_transfer_val)
+            this_transfer_val = metrics_df['saturation_value'][block] / ste_dict[task]
+            forward_transfer[block] = this_transfer_val
 
         for task, block in tasks_to_compute['reverse']:
             print('Computing reverse transfer for {:s}'.format(task))
-            this_transfer_val = metrics_dict['saturation_value'][block] / ste_dict[task]
-            reverse_transfer[(task, block)] = this_transfer_val
-            reverse_vals.append(this_transfer_val)
+            this_transfer_val = metrics_df['saturation_value'][block] / ste_dict[task]
+            reverse_transfer[block] = this_transfer_val
 
-        metrics_dict['forward_transfer'] = forward_transfer
-        metrics_dict['reverse_transfer'] = reverse_transfer
-
-        metric_to_return = {'forward_transfer': np.mean(forward_vals),
-                            'reverse_transfer': np.mean(reverse_vals)}
-
-        return metric_to_return, metrics_dict
+        metrics_df = _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
+        return _localutil.fill_metrics_df(reverse_transfer, 'reverse_transfer', metrics_df)
 
 
 class AgentMetricsReport(core.MetricsReport):
@@ -457,6 +437,12 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
+        phase_info_keys_to_include = ['phase_number', 'phase_type', 'task_name', 'block']
+        if len(self.phase_info.loc[:, 'param_set'].unique()) > 1:
+            phase_info_keys_to_include.append('param_set')
+
+        self._metrics_df = self.phase_info[phase_info_keys_to_include].copy()
+
         self._results = {}
         self._collated_metrics_dict = {}
         self._metrics_dict = {}
@@ -466,7 +452,7 @@ class AgentMetricsReport(core.MetricsReport):
         # Default metrics no matter the syllabus type
         self.add(WithinBlockSaturation())
         self.add(RewardPerStep())
-        self.add(LearningRate())
+        self.add(AverageLearningReward())
         self.add(MeanRewardPerEpisodes())
 
         if self.syllabus_subtype == "CL":
@@ -494,31 +480,32 @@ class AgentMetricsReport(core.MetricsReport):
 
     def calculate(self):
         previously_calculated_metric_keys = []
-        this_metrics_dict = {}
+        this_metrics_df = self._metrics_df
         for metric in self._metrics:
-            this_result, this_metrics_dict = metric.calculate(self._log_data, self.phase_info, this_metrics_dict)
-            self._results[metric.name] = this_result
+            this_metrics_df = metric.calculate(self._log_data, self.phase_info, this_metrics_df)
+            # self._results[metric.name] = this_metrics_df
 
-            this_metrics_dict_subset = {k: this_metrics_dict[k] for k in this_metrics_dict
-                                        if k not in previously_calculated_metric_keys}  # Only get the new keys
+            this_metrics_dict_subset = {col: this_metrics_df[col] for col in this_metrics_df.columns
+                                        if col not in previously_calculated_metric_keys}  # Only get the new keys
 
             self._metrics_dict[metric.name] = this_metrics_dict_subset
 
-            previously_calculated_metric_keys.extend([k for k in this_metrics_dict
-                                                      if k not in previously_calculated_metric_keys])
+            previously_calculated_metric_keys.extend([col for col in this_metrics_df
+                                                      if col not in previously_calculated_metric_keys])
 
     def report(self):
         # Call a describe method to inform printing
-        for r_key in self._results:
-            print('\nMetric: {:s}'.format(r_key))
-            # print('Averaged Value: {:s}'.format(str(self._results[r_key])))
-            for k in self._metrics_dict[r_key].keys():
-                print('{:s} : {:s}'.format(k, str(self._metrics_dict[r_key][k])))
+        # for r_key in self._results:
+        #     print('\nMetric: {:s}'.format(r_key))
+        #     # print('Averaged Value: {:s}'.format(str(self._results[r_key])))
+        #     for k in self._metrics_dict[r_key].keys():
+        #         print('{:s} : {:s}'.format(k, str(self._metrics_dict[r_key][k])))
+        print(tabulate(self._metrics_df, headers='keys', tablefmt='psql'))
 
     def plot(self):
         print('Plotting a smoothed reward curve:')
         window = int(np.floor(len(self._log_data) * 0.02))
-        custom_window = min(window, 100)
+        custom_window = max(window, 100)
         save = True
 
         util.plot_performance(self._log_data, do_smoothing=True, do_task_colors=True, do_save_fig=save,

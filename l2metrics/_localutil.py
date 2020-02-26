@@ -161,7 +161,7 @@ def get_block_saturation_perf(data, column_to_use=None, previous_saturation_valu
         if len(inds[0]):
             episodes_to_recovery = inds[0][0]
         else:
-            episodes_to_recovery = np.NAN
+            episodes_to_recovery = "No Recovery"
 
     return saturation_value, episodes_to_saturation, episodes_to_recovery
 
@@ -175,6 +175,13 @@ def extract_relevant_columns(dataframe, keyword):
             relevant_cols.append(col)
 
     return relevant_cols
+
+
+def fill_metrics_df(metric, metric_string_name, metrics_df):
+    for idx in metric.keys():
+        metrics_df.loc[idx, metric_string_name] = metric[idx]
+
+    return metrics_df
 
 
 def simplify_task_names(unique_task_names, phase_info):

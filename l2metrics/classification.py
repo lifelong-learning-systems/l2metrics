@@ -102,7 +102,6 @@ class WithinBlockSaturation(ClassificationMetric):
                 block_data = dataframe.loc[dataframe["block"] == idx]
                 # Make within block calculations
                 sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(block_data, column_to_use=col)
-
                 # Record them
                 saturation_value[(col, idx)] = sat_value
                 eps_to_saturation[(col, idx)] = eps_to_sat

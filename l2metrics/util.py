@@ -75,7 +75,7 @@ def load_default_random_agent_data():
 
 
 def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_col='task', input_title=None,
-                     do_save_fig=False, plot_filename=None, input_xlabel='Episodes', input_ylabel='Performance',
+                     do_save_fig=True, plot_filename=None, input_xlabel='Episodes', input_ylabel='Performance',
                      show_block_boundary=False, do_task_colors=False, new_smoothing_value=None):
     # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
     # directory and/or customize the title, axes labeling, filename, etc. Color is supported for agent tasks only.
@@ -119,6 +119,12 @@ def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_
             idx = df2[df2['block'] == b].index[0]
             ax.axes.axvline(idx, linewidth=1, linestyle=':')
 
+    if os.path.dirname(input_title) != "":
+        _, plot_filename = os.path.split(input_title)
+        input_title = plot_filename
+    else:
+        plot_filename = input_title
+
     # Want the saved figured to have a grid so do this before saving
     ax.set(xlabel=input_xlabel, ylabel=input_ylabel, title=input_title)
     ax.grid()
@@ -127,13 +133,22 @@ def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_
         if not plot_filename:
             if not input_title:
                 plot_filename = 'plot.png'
-            else:
-                plot_filename = input_title
+
+        print('Saving figure with name: {:s}'.format(plot_filename))
 
         fig.savefig(plot_filename)
+    else:
+        plt.show()
 
-    # TODO: This is a blocking call. Perhaps better to just save by default and not show?
-    # plt.show()
+
+def get_fully_qualified_name(log_dir):
+    if os.path.dirname(log_dir) == '':
+        return get_l2root_base_dirs('logs', log_dir)
+    else:
+        if os.path.isdir(log_dir):
+            return log_dir
+        else:
+            raise NotADirectoryError
 
 
 def read_log_data(input_dir, analysis_variables=None):
@@ -141,7 +156,10 @@ def read_log_data(input_dir, analysis_variables=None):
     # pandas dataframe with the merged data
     logs = None
     blocks = None
-    for root, dirs, files in os.walk(input_dir):
+
+    fully_qualified_dir = get_fully_qualified_name(input_dir)
+
+    for root, dirs, files in os.walk(fully_qualified_dir):
         for file in files:
             if file == 'data-log.tsv':
                 has_data = True

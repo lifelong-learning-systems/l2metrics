@@ -1,26 +1,11 @@
 import argparse
 import l2metrics
 from l2metrics import _localutil
-import numpy as np
-
-"""
-This file demonstrates how to add custom Metrics to a MetricsReport. Most
-
-
-calculate(dataframe, phase_info, metrics_dict):
-
-# This is where the actual calculation of your metric should live.
-
-:param dataframe: Pandas dataframe
-:param phase_info: Pandas dataframe
-:param metrics_dict: Python dictionary
-
-:return: Python dictionary of single metric, Python dictionary of metric appended to existing metrics_dict
-"""
+import os
 
 
 class MyCustomAgentMetric(l2metrics.AgentMetric):
-    name = "An Example Custom Metric" # TODO: Add some docstring here
+    name = "An Example Custom Metric for illustration"
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent'}
     description = "Records the maximum value per block in the dataframe"
@@ -32,7 +17,9 @@ class MyCustomAgentMetric(l2metrics.AgentMetric):
             max_block_value = dataframe.loc[dataframe["block"] == idx, 'reward'].max()
             max_values[idx] = max_block_value
 
-        return _localutil.fill_metrics_df(max_values, 'max_value', metrics_df)
+        # This is the line that fills the metric into the dataframe. Comment it out to suppress this behavior
+        metrics_df = _localutil.fill_metrics_df(max_values, 'max_value', metrics_df)
+        return metrics_df
 
     def plot(self, result):
         pass
@@ -42,7 +29,7 @@ class MyCustomAgentMetric(l2metrics.AgentMetric):
 
 
 class MyCustomClassMetric(l2metrics.ClassificationMetric):
-    name = "An Example Custom Metric"
+    name = "An Example Custom Metric for illustration"
     capability = "continual_learning"
     requires = {'syllabus_type': 'class'}
     description = "Records the maximum value per block in the dataframe"
@@ -61,6 +48,7 @@ class MyCustomClassMetric(l2metrics.ClassificationMetric):
             for idx in range(phase_info.loc[:, 'block'].max() + 1):
                 max_values[idx] = data_rows.loc[dataframe['block'] == idx, col].max()
 
+            # This is the line that fills the metric into the dataframe. Comment it out to suppress this behavior
             metrics_df = _localutil.fill_metrics_df(max_values, 'max_value', metrics_df, dict_key=col)
 
         return metrics_df
@@ -96,16 +84,17 @@ def run():
 
     if args.syllabus_type == "class":
         metrics_report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
-        # toDO: add something here
+        # Here is where you add your custom metric to the list of metrics already being calculated
         metrics_report.add(MyCustomClassMetric())
     else:
         metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+        # Here is where you add your custom metric to the list of metrics already being calculated
         metrics_report.add(MyCustomAgentMetric())
 
-    # TODO: add info about order of calculation
+    # Calculate metrics in order of their addition to the metrics list.
     metrics_report.calculate()
 
-    # Comment this line out to suppress the performance plot
+    # Comment this line out to suppress the generation of a performance plot. Will save by default (no visualization).
     metrics_report.plot()
 
     metrics_report.report()

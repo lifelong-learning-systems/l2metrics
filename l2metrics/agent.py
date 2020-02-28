@@ -426,7 +426,7 @@ class AgentMetricsReport(core.MetricsReport):
         super().__init__(**kwargs)
 
         # Gets all data from the relevant log files
-        self._log_data = util.read_log_data(util.get_l2root_base_dirs('logs', self.log_dir))
+        self._log_data = util.read_log_data(self.log_dir)
         self._log_data = self._log_data.sort_values(by=['block', 'task']).set_index("block", drop=False)
         _, self.phase_info = _localutil.parse_blocks(self._log_data)
 
@@ -481,18 +481,13 @@ class AgentMetricsReport(core.MetricsReport):
             self._metrics_df = metric.calculate(self._log_data, self.phase_info, self._metrics_df)
 
     def report(self):
-        # Call a describe method to inform printing
-        # for r_key in self._results:
-        #     print('\nMetric: {:s}'.format(r_key))
-        #     # print('Averaged Value: {:s}'.format(str(self._results[r_key])))
-        #     for k in self._metrics_dict[r_key].keys():
-        #         print('{:s} : {:s}'.format(k, str(self._metrics_dict[r_key][k])))
         print(tabulate(self._metrics_df, headers='keys', tablefmt='psql'))
 
     def plot(self):
-        print('Plotting a smoothed reward curve:')
+        print('Plotting a smoothed reward curve')
         window = int(np.floor(len(self._log_data) * 0.02))
         custom_window = max(window, 100)
+        # change to false to view only and not save
         save = True
 
         util.plot_performance(self._log_data, do_smoothing=True, do_task_colors=True, do_save_fig=save,

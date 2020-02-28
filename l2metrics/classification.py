@@ -47,9 +47,6 @@ class AveragedScorePerBatch(ClassificationMetric):
         # self.validate()
 
     def validate(self, phase_info):
-        # TODO: validate that the proper columns are present here rather than in calculate?
-        # relevant_columns = _localutil.extract_relevant_columns(block_data, keyword='score')
-        # Check that len(relevant_columns) >= 1 and return it if so
         pass
 
     def calculate(self, dataframe, phase_info, metrics_df):
@@ -82,8 +79,6 @@ class WithinBlockSaturation(ClassificationMetric):
         # self.validate()
 
     def validate(self, phase_info):
-        # TODO: validate that the proper columns are present here rather than in calculate?
-        # Since I'm getting relevant columns per block that might not make as much sense.
         pass
 
     def calculate(self, dataframe, phase_info, metrics_df):
@@ -229,8 +224,6 @@ class PerfDifferenceANT(ClassificationMetric):
         # self.validate()
 
     def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
-        # Must ensure that the training phase has only one block or else handle multiple
         pass
 
     def calculate(self, data, phase_info, metrics_df):
@@ -275,7 +268,7 @@ class PerfDifferenceANT(ClassificationMetric):
                         # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
                         inds_where_task = np.where(previously_trained_tasks == task)
 
-                        # TODO: Handle multiple comparison points
+                        # TODO: Should handle multiple comparison points?
                         block_ids_to_compare = previously_trained_task_ids[inds_where_task]
                         previously_trained_sat_values = metrics_df[col]['saturation_value'][block_ids_to_compare[0]]
                         previously_trained_num_eps_to_sat = metrics_df[col]['eps_to_saturation'][block_ids_to_compare[0]]
@@ -315,8 +308,6 @@ class STERelativePerf(ClassificationMetric):
         # Make sure STE baselines are available for all tasks, else complain
         if unique_tasks.any() not in ste_dict:
             Warning('STE Baseline not found for all tasks trained!')
-
-        # TODO: Add structure validation of phase_info
 
         return ste_dict
 
@@ -375,7 +366,7 @@ class TransferMatrix(ClassificationMetric):
                 train_phase_nums = np.array([int(phase_info.loc[b, 'phase_number']) for b in train_block_nums])
                 test_phase_nums = np.array([int(phase_info.loc[b, 'phase_number']) for b in test_block_nums])
 
-                # TODO: Are multiple training blocks of the same task ok for transfer matrix calculation?
+                # TODO: Are multiple training blocks of the same task ok for transfer matrix calculation? Right now, no
                 if len(train_block_nums) > 1:
                     raise Exception('Too many training instances of task: {:s}'.format(task))
                 train_phase_num = train_phase_nums[0]
@@ -423,7 +414,7 @@ class ClassificationMetricsReport(core.MetricsReport):
         super().__init__(**kwargs)
 
         # Gets all data from the relevant log files
-        self._log_data = util.read_log_data(util.get_l2root_base_dirs('logs', self.log_dir))
+        self._log_data = util.read_log_data(self.log_dir)
         _, self.phase_info = _localutil.parse_blocks(self._log_data)
 
         # Adds default metrics to list based on passed syllabus subtype
@@ -477,11 +468,7 @@ class ClassificationMetricsReport(core.MetricsReport):
             self._metrics_df = metric.calculate(self._log_data, self.phase_info, self._metrics_df)
 
     def report(self):
-        # Call a describe method to inform printing
-        # for r_key in self._results:
-        #     print('\nMetric: {:s}'.format(r_key))
-        #     # print('Averaged Value: {:s}'.format(str(self._results[r_key])))
-        #     print('Per Block Values: {:s}'.format(str(self._metrics_dict[r_key])))
+        # Print out the metrics per performance column in the dataframe
         for key in self._metrics_df.keys():
             print(tabulate(self._metrics_df[key], headers='keys', tablefmt='psql'))
 

@@ -34,8 +34,12 @@ def parse_blocks(data):
         # Extract information
         x = re.match(r'^(\d+)[.-_]*(\w+)', p)
 
-        if x.re.groups != 2:
-            raise Exception('Unsupported phase annotation: {:s}! Supported format is phase_number.'
+        if x is not None:
+            if x.re.groups != 2:
+                raise Exception('Unsupported phase annotation: "{:s}"! Supported format is phase_number.'
+                                'phase_type, which must be (int).(string)'.format(p))
+        else:
+            raise Exception('Unsupported phase annotation: "{:s}"! Supported format is phase_number.'
                             'phase_type, which must be (int).(string)'.format(p))
         
         phase_number = x.group(1)     
@@ -112,7 +116,8 @@ def smooth(x, window_len=11, window='hanning'):
         raise(ValueError, "smooth only accepts 1 dimension arrays.")
 
     if x.size < window_len:
-        raise(ValueError, "Input vector needs to be bigger than window size.")
+        # raise(ValueError, "Input vector needs to be bigger than window size.")
+        window_len = int(np.floor(x.size / 2))
 
     if window_len < 3:
         return x
@@ -128,14 +133,18 @@ def smooth(x, window_len=11, window='hanning'):
         w = eval('np.' + window + '(window_len)')
 
     y = np.convolve(w / w.sum(), s, mode='valid')
-    return y
+
+    # Changed to return output of same length as input
+    start_ind = int(np.floor(window_len/2-1))
+    end_ind = -int(np.ceil(window_len/2))
+    return y[start_ind:end_ind]
 
 
-def get_block_saturation_performance(data, previous_saturation_value=None):
+def get_block_saturation_perf(data, column_to_use=None, previous_saturation_value=None):
     # Calculate the "saturation" value
     # Calculate the number of episodes to "saturation"
 
-    mean_reward_per_episode = data.loc[:, ['task', 'reward']].groupby('task').mean()
+    mean_reward_per_episode = data.loc[:, ['task', column_to_use]].groupby('task').mean()
     mean_data = np.ravel(mean_reward_per_episode.values)
 
     # Take the moving average of the mean of the per episode reward
@@ -152,6 +161,100 @@ def get_block_saturation_performance(data, previous_saturation_value=None):
         if len(inds[0]):
             episodes_to_recovery = inds[0][0]
         else:
-            episodes_to_recovery = -999
+            episodes_to_recovery = "No Recovery"
 
     return saturation_value, episodes_to_saturation, episodes_to_recovery
+
+
+def extract_relevant_columns(dataframe, keyword):
+    # Parse the dataframe and get out the appropriate column names for Classification performance assessment
+    relevant_cols = []
+
+    for col in dataframe.columns:
+        if col.startswith(keyword):
+            relevant_cols.append(col)
+
+    return relevant_cols
+
+
+def fill_metrics_df(metric, metric_string_name, metrics_df, dict_key=None):
+    if not dict_key:
+        metrics_df[metric_string_name] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        for idx in metric.keys():
+            metrics_df.loc[idx, metric_string_name] = metric[idx]
+    else:
+        metrics_df[dict_key][metric_string_name] = np.full_like(metrics_df[dict_key]['block'], np.nan, dtype=np.double)
+        for idx in metric.keys():
+            metrics_df[dict_key].loc[idx, metric_string_name] = metric[idx]
+
+    return metrics_df
+
+
+def simplify_classification_task_names(unique_task_names, phase_info):
+    # Capture the correspondence between the Classification Train/Test tasks
+    name_map = {'full_name_map': {}}
+    task_map = {}
+    type_map = {}
+    block_list = {}
+    all_name_list = []
+
+    # First find the blocks for each task
+    for t in unique_task_names:
+        this_instance_blocks = phase_info.loc[phase_info['task_name'] == t, 'block']
+
+        # Then get the base class name by finding the phase/task type annotation and getting the string that comes after
+        x = re.search(r'(train|test)(\w+)', t)
+        if x.re.groups != 2:
+            raise Exception('Improperly formatted task names! Classification tasks should include '
+                            '"train" or "test," but this one was: {:s}'.format(t))
+
+        task_type = x.group(1)
+        task_name = x.group(2)
+        all_name_list.append(task_name)
+
+        # Record which tasks were used for training for future metric computation
+        if task_type == 'train':
+            name_map[task_name] = t
+
+        name_map['full_name_map'][t] = task_name
+
+        # Add to the task map
+        if task_name not in task_map.keys():
+            task_map[task_name] = this_instance_blocks.values
+        else:
+            existing_blocks = task_map.get(task_name)
+            tmp = {task_name: np.append(existing_blocks, this_instance_blocks.values)}
+            task_map.update(tmp)
+
+        # And update the block and type lists
+        block_list.update({v: task_name for v in this_instance_blocks.values})
+        type_map.update({v: task_type for v in this_instance_blocks.values})
+
+    return task_map, block_list, name_map, type_map
+
+
+def get_simple_class_task_names(task_names):
+    all_name_list = {}
+
+    for idx, t in enumerate(task_names):
+
+        # Get the base class name by finding the phase/task type annotation and getting the string that comes after
+        x = re.search(r'(train|test)(\w+)', t)
+        if x.re.groups != 2:
+            raise Exception('Improperly formatted task names! Classification tasks should include '
+                            '"train" or "test," but this one was: {:s}'.format(t))
+
+        task_name = x.group(2)
+        all_name_list[idx] = task_name
+
+    return all_name_list
+
+
+def get_simple_rl_task_names(task_names):
+    simple_names = []
+
+    for t in task_names:
+        splits = str.split(t, '_')
+        simple_names.append(splits[-1])
+
+    return simple_names

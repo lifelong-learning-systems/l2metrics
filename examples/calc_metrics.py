@@ -1,21 +1,62 @@
 import argparse
 import l2metrics
+from l2metrics import _localutil
+import os
 
 
-class MyCustomMetric(l2metrics.AgentMetric):
-    name = "An Example Custom Metric"
+class MyCustomAgentMetric(l2metrics.AgentMetric):
+    name = "An Example Custom Metric for illustration"
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent'}
-    description = "A Custom Metric"
+    description = "Records the maximum value per block in the dataframe"
     
-    def calculate(self, dataframe, phase_info, metrics_dict):
-        return {'global_perf': dataframe.loc[:, "reward"].mean()}, {'global_perf': dataframe.loc[:, "reward"].mean()}
+    def calculate(self, dataframe, phase_info, metrics_df):
+        max_values = {}
+
+        for idx in range(phase_info.loc[:, 'block'].max() + 1):
+            max_block_value = dataframe.loc[dataframe["block"] == idx, 'reward'].max()
+            max_values[idx] = max_block_value
+
+        # This is the line that fills the metric into the dataframe. Comment it out to suppress this behavior
+        metrics_df = _localutil.fill_metrics_df(max_values, 'max_value', metrics_df)
+        return metrics_df
 
     def plot(self, result):
         pass
 
     def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
+        pass
+
+
+class MyCustomClassMetric(l2metrics.ClassificationMetric):
+    name = "An Example Custom Metric for illustration"
+    capability = "continual_learning"
+    requires = {'syllabus_type': 'class'}
+    description = "Records the maximum value per block in the dataframe"
+
+    def calculate(self, dataframe, phase_info, metrics_df):
+        max_values = {}
+
+        # This could be moved to the validate method in the future
+        source_column = "GET_LABELS"
+        relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
+        if len(relevant_columns) < 1:
+            raise Exception('Not enough performance columns!')
+
+        for col in relevant_columns:
+            data_rows = dataframe.loc[dataframe["source"] == source_column]
+            for idx in range(phase_info.loc[:, 'block'].max() + 1):
+                max_values[idx] = data_rows.loc[dataframe['block'] == idx, col].max()
+
+            # This is the line that fills the metric into the dataframe. Comment it out to suppress this behavior
+            metrics_df = _localutil.fill_metrics_df(max_values, 'max_value', metrics_df, dict_key=col)
+
+        return metrics_df
+
+    def plot(self, result):
+        pass
+
+    def validate(self, phase_info):
         pass
 
 
@@ -41,10 +82,21 @@ def run():
     if args.log_dir is None:
         raise Exception('Log directory must be specified!')
 
-    metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+    if args.syllabus_type == "class":
+        metrics_report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+        # Here is where you add your custom metric to the list of metrics already being calculated
+        metrics_report.add(MyCustomClassMetric())
+    else:
+        metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+        # Here is where you add your custom metric to the list of metrics already being calculated
+        metrics_report.add(MyCustomAgentMetric())
 
-    metrics_report.add(MyCustomMetric())
+    # Calculate metrics in order of their addition to the metrics list.
     metrics_report.calculate()
+
+    # Comment this line out to suppress the generation of a performance plot. Will save by default (no visualization).
+    metrics_report.plot()
+
     metrics_report.report()
 
 

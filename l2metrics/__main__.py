@@ -43,11 +43,13 @@ def run():
         raise Exception('Log directory must be specified!')
     
     if args.syllabus_type == "class":
-        report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir)
+        report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
     else:
         report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
     
     report.calculate()
+    # Comment this line out to supress the performance plot
+    report.plot()
     report.report()
 
 

@@ -1,0 +1,2 @@
+phase	worker	class_name	block	params
+3.train	env-1	minigridkit_minigridkit_minigridfourrooms	8	"{""agent_pos"": [1, 1]}"

@@ -1,0 +1,2 @@
+phase	worker	class_name	block	params
+1.test	env-0	minigridkit_minigridkit_minigrid6x6	2	"{""agent_pos"": [1, 1]}"

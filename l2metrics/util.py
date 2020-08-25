@@ -76,7 +76,7 @@ def load_default_random_agent_data():
 
 def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_col='task', input_title=None,
                      do_save_fig=True, plot_filename=None, input_xlabel='Episodes', input_ylabel='Performance',
-                     show_block_boundary=False, do_task_colors=False, new_smoothing_value=None):
+                     show_block_boundary=True, do_task_colors=False, new_smoothing_value=None):
     # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
     # directory and/or customize the title, axes labeling, filename, etc. Color is supported for agent tasks only.
 

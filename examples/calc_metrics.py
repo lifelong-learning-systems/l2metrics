@@ -94,11 +94,15 @@ def run():
     # Calculate metrics in order of their addition to the metrics list.
     metrics_report.calculate()
 
-    # Comment this line out to suppress the generation of a performance plot. Will save by default (no visualization).
-    metrics_report.plot()
+    # Plot metrics
+    metrics_report.plot(save=True)
 
-    metrics_report.report()
+    # Print table of metrics and save values to file
+    metrics_report.report(save=True)
 
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    except Exception as e:
+        print('Error: ', e)

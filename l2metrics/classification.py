@@ -18,6 +18,7 @@
 from abc import ABC
 from . import core, util, _localutil
 import numpy as np
+import os
 from tabulate import tabulate
 """
 Standard metrics for Classification tasks
@@ -467,19 +468,32 @@ class ClassificationMetricsReport(core.MetricsReport):
         for metric in self._metrics:
             self._metrics_df = metric.calculate(self._log_data, self.phase_info, self._metrics_df)
 
-    def report(self):
+    def report(self, save=False):
         # Print out the metrics per performance column in the dataframe
         for key in self._metrics_df.keys():
             print(tabulate(self._metrics_df[key], headers='keys', tablefmt='psql'))
 
-    def plot(self):
+        if save:
+            # Generate filename
+            if os.path.dirname(self.log_dir) != "":
+                _, filename = os.path.split(self.log_dir)
+            else:
+                filename = 'agent'
+
+            # Save collated log data to file
+            self._log_data.to_csv(filename + '_data.tsv', sep='\t')
+
+            # Save metrics to file
+            self._metrics_df.to_csv(filename + '_metrics.tsv', sep='\t')
+
+    def plot(self, save=False):
         # Ignore the rows indicating that a new batch was requested; only get evaluation rows
         relevant_dataframe = self._log_data[self._log_data['source'] == 'GET_LABELS']
         relevant_columns = _localutil.extract_relevant_columns(relevant_dataframe, keyword='score')
         print('Plotting a performance curve for each score column:')
         for col in relevant_columns:
             util.plot_performance(relevant_dataframe, col_to_plot=col, do_smoothing=True, input_xlabel='Batches',
-                                  do_save_fig=True, input_title=self.log_dir)
+                                  do_save_fig=save, input_title=self.log_dir)
 
     def add(self, metrics_lst):
         self._metrics.append(metrics_lst)

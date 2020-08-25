@@ -18,6 +18,7 @@
 from abc import ABC
 from . import core, util, _localutil
 import numpy as np
+import os
 from tabulate import tabulate
 
 """
@@ -480,16 +481,26 @@ class AgentMetricsReport(core.MetricsReport):
         for metric in self._metrics:
             self._metrics_df = metric.calculate(self._log_data, self.phase_info, self._metrics_df)
 
-    def report(self):
+    def report(self, save=False):
         print(tabulate(self._metrics_df, headers='keys', tablefmt='psql'))
 
-    def plot(self):
+        if save:
+            # Generate filename
+            if os.path.dirname(self.log_dir) != "":
+                _, filename = os.path.split(self.log_dir)
+            else:
+                filename = 'agent'
+
+            # Save collated log data to file
+            self._log_data.to_csv(filename + '_data.tsv', sep='\t')
+
+            # Save metrics to file
+            self._metrics_df.to_csv(filename + '_metrics.tsv', sep='\t')
+
+    def plot(self, save=False):
         print('Plotting a smoothed reward curve')
         window = int(np.floor(len(self._log_data) * 0.02))
         custom_window = max(window, 100)
-        # change to false to view only and not save
-        save = True
-
         util.plot_performance(self._log_data, do_smoothing=True, do_task_colors=True, do_save_fig=save,
                               new_smoothing_value=custom_window, input_title=self.log_dir)
 

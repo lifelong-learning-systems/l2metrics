@@ -48,7 +48,7 @@ class AgentMetric(core.Metric, ABC):
 class MeanRewardPerEpisodes(AgentMetric):
     name = "Achieved Reward, Averaged Per Episodes within a Block"
     capability = "continual_learning"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'all'}
+    requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance across all tasks and phases"
     metric_title = {}
 
@@ -75,7 +75,7 @@ class MeanRewardPerEpisodes(AgentMetric):
 class WithinBlockSaturation(AgentMetric):
     name = "Average Within Block Saturation Calculation"
     capability = "continual_learning"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'CL'}
+    requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance within each block"
 
     def __init__(self):
@@ -113,7 +113,7 @@ class WithinBlockSaturation(AgentMetric):
 class AverageLearningReward(AgentMetric):
     name = "Average Learning Reward"
     capability = "adapt_to_new_tasks"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
+    requires = {'syllabus_type': 'agent'}
     description = "Calculates the average reward accumulated until the system achieves saturation"
 
     def __init__(self):
@@ -148,7 +148,7 @@ class AverageLearningReward(AgentMetric):
 class RecoveryTime(AgentMetric):
     name = "Recovery Time"
     capability = "adapt_to_new_tasks"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
+    requires = {'syllabus_type': 'agent'}
     description = "Calculates whether the system recovers after a change of task or parameters"
 
     def __init__(self):
@@ -209,7 +209,7 @@ class RecoveryTime(AgentMetric):
 class STERelativePerf(AgentMetric):
     name = "Performance relative to S.T.E"
     capability = "adapt_to_new_tasks"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
+    requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance of each task relative to it's corresponding single task expert"
 
     def __init__(self):
@@ -231,25 +231,29 @@ class STERelativePerf(AgentMetric):
 
     def calculate(self, dataframe, phase_info, metrics_df):
         # Validate the STE
-        ste_dict = self.validate(phase_info)
-        metrics_df['STE_normalized_saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-        ste_normalized_saturation = {}
+        try:
+            ste_dict = self.validate(phase_info)
+            metrics_df['STE_normalized_saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            ste_normalized_saturation = {}
 
-        for idx in range(phase_info.loc[:, 'block'].max() + 1):
-            # Get which task this block is and grab the STE performance for that task
-            this_task = phase_info.loc[idx, "task_name"]
-            this_ste_comparison = ste_dict[this_task]
+            for idx in range(phase_info.loc[:, 'block'].max() + 1):
+                # Get which task this block is and grab the STE performance for that task
+                this_task = phase_info.loc[idx, "task_name"]
+                this_ste_comparison = ste_dict[this_task]
 
-            # Compare the saturation value of this block to the STE performance and store it
-            ste_normalized_saturation[idx] = metrics_df["saturation_value"][idx] / this_ste_comparison
+                # Compare the saturation value of this block to the STE performance and store it
+                ste_normalized_saturation[idx] = metrics_df["saturation_value"][idx] / this_ste_comparison
 
-        return _localutil.fill_metrics_df(ste_normalized_saturation, 'STE_normalized_saturation', metrics_df)
+            return _localutil.fill_metrics_df(ste_normalized_saturation, 'STE_normalized_saturation', metrics_df)
+        except:
+            print("Data not suitable for", self.name)
+            return metrics_df
 
 
 class PerfDifferenceANT(AgentMetric):
     name = "Performance Difference from Previously Trained Task Performance"
     capability = "adapting_to_new_tasks"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT'}
+    requires = {'syllabus_type': 'agent'}
     description = "Calculates the difference in performance of each task, in each evaluation block, " \
                   "relative to the previously trained task"
 
@@ -320,7 +324,7 @@ class PerfDifferenceANT(AgentMetric):
 class RewardPerStep(AgentMetric):
     name = "Reward per Step"
     capability = "continual_learning"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'all'}
+    requires = {'syllabus_type': 'agent'}
     description = "Calculates the reward achieved per steps used to achieve it"
 
     def __init__(self):
@@ -354,7 +358,7 @@ class RewardPerStep(AgentMetric):
 class TransferMatrix(AgentMetric):
     name = "Transfer Matrix - both forward and reverse transfer"
     capability = "adapt_to_new_tasks"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT'}
+    requires = {'syllabus_type': 'agent'}
     description = "Calculates a transfer matrix for all trained tasks"
 
     def __init__(self):
@@ -433,7 +437,7 @@ class AgentMetricsReport(core.MetricsReport):
     """
 
     def __init__(self, **kwargs):
-        # Defines log_dir, syllabus_subtype, and initializes the _metrics list
+        # Defines log_dir and initializes the metrics list
         super().__init__(**kwargs)
 
         # Gets all data from the relevant log files
@@ -441,7 +445,7 @@ class AgentMetricsReport(core.MetricsReport):
         self._log_data = self._log_data.sort_values(by=['block', 'task']).set_index("block", drop=False)
         _, self.phase_info = _localutil.parse_blocks(self._log_data)
 
-        # Adds default metrics to list based on passed syllabus subtype
+        # Adds default metrics
         self._add_default_metrics()
 
         # Do an initial check to make sure that reward has been logged
@@ -463,29 +467,10 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(RewardPerStep())
         self.add(AverageLearningReward())
         self.add(MeanRewardPerEpisodes())
-
-        if self.syllabus_subtype == "CL":
-            self.add(RecoveryTime())
-
-        elif self.syllabus_subtype == "ANT_A":
-            self.add(RecoveryTime())
-            self.add(STERelativePerf())
-            self.add(PerfDifferenceANT())
-
-        elif self.syllabus_subtype == "ANT_B":
-            self.add(RecoveryTime())
-            self.add(STERelativePerf())
-            self.add(PerfDifferenceANT())
-            self.add(TransferMatrix())
-
-        # This is an unhandled syllabus type as of right now
-        elif self.syllabus_subtype == "ANT_C":
-            raise Exception('This syllabus type ({:s}) will be handled in the future, but is not yet supported!'
-                            .format(self.syllabus_subtype))
-
-        else:
-            raise Exception('Unhandled syllabus type {:s}! Supported syllabus types are: CL, ANT_A, and ANT_B'
-                            .format(self.syllabus_subtype))
+        self.add(RecoveryTime())
+        self.add(STERelativePerf())
+        self.add(PerfDifferenceANT())
+        self.add(TransferMatrix())
 
     def calculate(self):
         for metric in self._metrics:

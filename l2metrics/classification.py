@@ -72,7 +72,7 @@ class AveragedScorePerBatch(ClassificationMetric):
 class WithinBlockSaturation(ClassificationMetric):
     name = "Average Within Block Saturation Calculation"
     capability = "continual_learning"
-    requires = {'syllabus_type': 'class', 'syllabus_subtype': 'CL'}
+    requires = {'syllabus_type': 'class'}
     description = "Calculates the performance within each block"
 
     def __init__(self):
@@ -109,7 +109,7 @@ class WithinBlockSaturation(ClassificationMetric):
 class AverageLearning(ClassificationMetric):
     name = "Average Score During Learning"
     capability = "adapt_to_new_tasks"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
+    requires = {'syllabus_type': 'agent'}
     description = "Calculates the average reward accumulated until the system achieves saturation"
 
     def __init__(self):
@@ -148,7 +148,7 @@ class AverageLearning(ClassificationMetric):
 class RecoveryTime(ClassificationMetric):
     name = "Recovery Time"
     capability = "adapt_to_new_tasks"
-    requires = {'syllabus_type': 'agent', 'syllabus_subtype': 'ANT_A'}
+    requires = {'syllabus_type': 'agent'}
     description = "Calculates whether the system recovers after a change of task or parameters"
 
     def __init__(self):
@@ -216,7 +216,7 @@ class RecoveryTime(ClassificationMetric):
 class PerfDifferenceANT(ClassificationMetric):
     name = "Performance Difference from Previously Trained Task Performance"
     capability = "adapting_to_new_tasks"
-    requires = {'syllabus_type': 'class', 'syllabus_subtype': 'ANT'}
+    requires = {'syllabus_type': 'class'}
     description = "Calculates the performance of each task, in each evaluation block, " \
                   "relative to the previously trained task"
 
@@ -294,7 +294,7 @@ class PerfDifferenceANT(ClassificationMetric):
 class STERelativePerf(ClassificationMetric):
     name = "Performance relative to S.T.E"
     capability = "adapt_to_new_tasks"
-    requires = {'syllabus_type': 'class', 'syllabus_subtype': 'ANT_A'}
+    requires = {'syllabus_type': 'class'}
     description = "Calculates the performance of each task relative to it's corresponding single task expert"
 
     def __init__(self):
@@ -337,7 +337,7 @@ class STERelativePerf(ClassificationMetric):
 class TransferMatrix(ClassificationMetric):
     name = "Transfer Matrix - both forward and reverse transfer"
     capability = "adapt_to_new_tasks"
-    requires = {'syllabus_type': 'class', 'syllabus_subtype': 'ANT'}
+    requires = {'syllabus_type': 'class'}
     description = "Calculates a transfer matrix for all trained tasks"
 
     def __init__(self):
@@ -411,14 +411,14 @@ class TransferMatrix(ClassificationMetric):
 class ClassificationMetricsReport(core.MetricsReport):
 
     def __init__(self, **kwargs):
-        # Defines log_dir, syllabus_subtype, and initializes the _metrics list
+        # Defines log_dir and initializes the metrics list
         super().__init__(**kwargs)
 
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(self.log_dir)
         _, self.phase_info = _localutil.parse_blocks(self._log_data)
 
-        # Adds default metrics to list based on passed syllabus subtype
+        # Adds default metrics to list
         self._add_default_metrics()
 
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
@@ -440,29 +440,10 @@ class ClassificationMetricsReport(core.MetricsReport):
         self.add(AveragedScorePerBatch())
         self.add(WithinBlockSaturation())
         self.add(AverageLearning())
-
-        if self.syllabus_subtype == "CL":
-            self.add(RecoveryTime())  # This metric is under construction
-
-        elif self.syllabus_subtype == "ANT_A":
-            self.add(RecoveryTime())
-            self.add(PerfDifferenceANT())
-            self.add(STERelativePerf())
-
-        elif self.syllabus_subtype == "ANT_B":
-            self.add(RecoveryTime())
-            self.add(STERelativePerf())
-            self.add(PerfDifferenceANT())
-            self.add(TransferMatrix())
-
-        # This is an unhandled syllabus type as of right now
-        elif self.syllabus_subtype == "ANT_C":
-            raise Exception('This syllabus type ({:s}) will be handled in the future, but is not yet supported!'
-                            .format(self.syllabus_subtype))
-
-        else:
-            raise Exception('Unhandled syllabus type {:s}! Supported syllabus types are: CL, ANT_A, and ANT_B, and STE'
-                            .format(self.syllabus_subtype))
+        self.add(RecoveryTime())
+        self.add(STERelativePerf())
+        self.add(PerfDifferenceANT())
+        self.add(TransferMatrix())
 
     def calculate(self):
         for metric in self._metrics:

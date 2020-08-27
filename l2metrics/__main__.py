@@ -31,21 +31,15 @@ def run():
     parser.add_argument('-syllabus_type', choices=["agent", "class"],  default="agent", help='Type of learner '
                                                                                              'used in the syllabus')
 
-    # Syllabus_subtype refers to the structure of the syllabus and will determine the default list of metrics calculated
-    # where CL = Continual Learning; ANT_A = Adapting to New Tasks, type A; ANT_B = Adapting to New Tasks, type B; etc.
-    # Please refer to the documentation for more details on the distinction between these types.
-    parser.add_argument('-syllabus_subtype', choices=["CL", "ANT_A", "ANT_B", "ANT_C"],  default="ANT_A",
-                        help='Subtype of syllabus')
-
     args = parser.parse_args()
 
     if args.log_dir is None:
         raise Exception('Log directory must be specified!')
     
     if args.syllabus_type == "class":
-        report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+        report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir)
     else:
-        report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+        report = l2metrics.AgentMetricsReport(log_dir=args.log_dir)
     
     report.calculate()
     # Comment this line out to supress the performance plot

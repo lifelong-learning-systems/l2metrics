@@ -4,13 +4,13 @@ Background
 --
 To calculate metrics on the performance of your system, you must first generate log files in accordance with the TEF format. Please see /docs/metrics_documentation.pdf for more details on how to generate compatible logs.
 
-Once these logs are generated, you'll need to pass the log directory as well as high level parameters of syllabus type and subtype to run the metrics. An example log directory is provided to get you started.
+Once these logs are generated, you'll need to pass the log directory as well as high level parameters of syllabus type to run the metrics. An example log directory is provided to get you started.
 
 Get Started
 --
 To generate a metrics plot and report, run the following command from the project source:
 
-`python examples/calc_metrics.py --syllabus_type=agent --syllabus_subtype=CL -log_dir=examples/syllabus_ANT_harder-1582671493-285338`
+`python examples/calc_metrics.py --syllabus_type=agent -log_dir=examples/syllabus_ANT_harder-1582671493-285338`
 
 If you do not wish to provide a fully qualified path to your log directory, you may copy it to your $L2DATA/logs directory. This is the default location for logs generated using the TEF. 
 
@@ -23,7 +23,7 @@ Writing a custom metric
 ==
 Background
 --
-The file calc_metrics.py demonstrates how to add custom Metrics to a MetricsReport. Data from the logs is provided to the calculate method, where the actual calculation of your metric should live. An example of both a classification and agent metric are provided for your edificiation. To add this metric to the default metrics calculated for a MetricsReport, simply use: metrics_report.add(MyCustomAgentMetric()) and it will be added to the end of the list in addition to the defaults (based on what syllabus subtype you choose).
+The file calc_metrics.py demonstrates how to add custom Metrics to a MetricsReport. Data from the logs is provided to the calculate method, where the actual calculation of your metric should live. An example of both a classification and agent metric are provided for your edificiation. To add this metric to the default metrics calculated for a MetricsReport, simply use: metrics_report.add(MyCustomAgentMetric()) and it will be added to the end of the list in addition to the defaults.
 
 
 calculate(dataframe, phase_info, metrics_dict):

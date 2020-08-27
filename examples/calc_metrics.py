@@ -2,6 +2,7 @@ import argparse
 import l2metrics
 from l2metrics import _localutil
 import os
+import traceback
 
 
 class MyCustomAgentMetric(l2metrics.AgentMetric):
@@ -104,5 +105,5 @@ def run():
 if __name__ == "__main__":
     try:
         run()
-    except Exception as e:
-        print('Error: ', e)
+    except:
+        traceback.print_exc()

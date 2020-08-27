@@ -31,6 +31,8 @@ class AgentMetric(core.Metric, ABC):
     A single metric for an Agent (aka. Reinforcement Learning) learner
     """
 
+    max_window_size = 300
+
     def __init__(self):
         pass
         # self.validate()
@@ -89,12 +91,16 @@ class WithinBlockSaturation(AgentMetric):
         saturation_values = {}
         eps_to_saturation = {}
 
+        window = int(np.floor(len(dataframe) * 0.02))
+        custom_window = max(window, self.max_window_size)
+
         # Iterate over all of the blocks and compute the within block performance
         for idx in range(phase_info.loc[:, 'block'].max() + 1):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe.loc[dataframe["block"] == idx]
             # Make within block calculations
-            sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(block_data, column_to_use='reward')
+            sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(
+                block_data, column_to_use='reward', window_len=custom_window)
 
             # Record them
             saturation_values[idx] = sat_value
@@ -185,12 +191,16 @@ class RecoveryTime(AgentMetric):
         metrics_df['recovery_time'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         recovery_time = {}
 
+        window = int(np.floor(len(dataframe) * 0.02))
+        custom_window = max(window, self.max_window_size)
+
         for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
             prev_val = metrics_df['saturation_value'][use_ind]
             block_data = dataframe.loc[assess_ind]
             _, _, eps_to_rec = _localutil.get_block_saturation_perf(block_data,
                                                                     column_to_use='reward',
-                                                                    previous_saturation_value=prev_val)
+                                                                    previous_saturation_value=prev_val,
+                                                                    window_len=custom_window)
             recovery_time[assess_ind] = eps_to_rec
 
         return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
@@ -500,7 +510,7 @@ class AgentMetricsReport(core.MetricsReport):
     def plot(self, save=False):
         print('Plotting a smoothed reward curve')
         window = int(np.floor(len(self._log_data) * 0.02))
-        custom_window = max(window, 100)
+        custom_window = max(window, 300)
         util.plot_performance(self._log_data, do_smoothing=True, do_task_colors=True, do_save_fig=save,
                               new_smoothing_value=custom_window, input_title=self.log_dir)
 

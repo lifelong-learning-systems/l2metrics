@@ -140,7 +140,7 @@ def smooth(x, window_len=11, window='hanning'):
     return y[start_ind:end_ind]
 
 
-def get_block_saturation_perf(data, column_to_use=None, previous_saturation_value=None):
+def get_block_saturation_perf(data, column_to_use=None, previous_saturation_value=None, window_len=11):
     # Calculate the "saturation" value
     # Calculate the number of episodes to "saturation"
 
@@ -148,7 +148,7 @@ def get_block_saturation_perf(data, column_to_use=None, previous_saturation_valu
     mean_data = np.ravel(mean_reward_per_episode.values)
 
     # Take the moving average of the mean of the per episode reward
-    smoothed_data = smooth(mean_data, window='flat')
+    smoothed_data = smooth(mean_data, window_len=window_len, window='flat')
     saturation_value = np.max(smoothed_data)
 
     # Calculate the number of episodes to "saturation", which we define as the max of the moving average

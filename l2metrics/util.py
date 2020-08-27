@@ -76,7 +76,7 @@ def load_default_random_agent_data():
 
 def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_col='task', input_title=None,
                      do_save_fig=True, plot_filename=None, input_xlabel='Episodes', input_ylabel='Performance',
-                     show_block_boundary=True, do_task_colors=False, new_smoothing_value=None):
+                     show_block_boundary=False, do_task_colors=False, shade_test_phases=True, new_smoothing_value=None):
     # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
     # directory and/or customize the title, axes labeling, filename, etc. Color is supported for agent tasks only.
 
@@ -118,6 +118,16 @@ def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_
         for b in unique_blocks:
             idx = df2[df2['block'] == b].index[0]
             ax.axes.axvline(idx, linewidth=1, linestyle=':')
+
+    if shade_test_phases:
+        phases = dataframe.loc[:, 'phase'].unique()
+        df2 = dataframe.set_index("task", drop=False)
+
+        for phase in phases:
+            if 'test' in phase:
+                x1 = df2[df2['phase'] == phase].index[0]
+                x2 = df2[df2['phase'] == phase].index[-1]
+                ax.axvspan(x1, x2, alpha=0.1, color='black')
 
     if os.path.dirname(input_title) != "":
         _, plot_filename = os.path.split(input_title)

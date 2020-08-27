@@ -99,6 +99,8 @@ def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_
                 else:
                     data = _localutil.smooth(data)
             ax.scatter(x_axis, data, color=c, marker='*', linestyle='None')
+        
+        ax.legend(unique_tasks)
     else:
         data = dataframe[col_to_plot].values
         if do_smoothing:

@@ -76,7 +76,7 @@ class WithinBlockSaturation(AgentMetric):
     name = "Average Within Block Saturation Calculation"
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent'}
-    description = "Calculates the performance within each block"
+    description = "Calculates the max performance within each block"
 
     def __init__(self):
         super().__init__()
@@ -91,13 +91,15 @@ class WithinBlockSaturation(AgentMetric):
         saturation_values = {}
         eps_to_saturation = {}
 
-        window = int(np.floor(len(dataframe) * 0.02))
-        custom_window = max(window, self.max_window_size)
-
         # Iterate over all of the blocks and compute the within block performance
         for idx in range(phase_info.loc[:, 'block'].max() + 1):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe.loc[dataframe["block"] == idx]
+
+            # Get block window size for smoothing
+            window = int(block_data.size * 0.2)
+            custom_window = min(window, self.max_window_size)
+
             # Make within block calculations
             sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(
                 block_data, column_to_use='reward', window_len=custom_window)
@@ -108,6 +110,44 @@ class WithinBlockSaturation(AgentMetric):
 
         metrics_df = _localutil.fill_metrics_df(saturation_values, 'saturation_value', metrics_df)
         return _localutil.fill_metrics_df(eps_to_saturation, 'eps_to_saturation', metrics_df)
+
+
+class MostRecentTerminalPerformance(AgentMetric):
+    name = "Most Recent Terminal Performance"
+    capability = "continual_learning"
+    requires = {'syllabus_type': 'agent'}
+    description = "Calculates the terminal performance within each block"
+
+    def __init__(self):
+        super().__init__()
+
+    def validate(self, phase_info):
+        pass
+
+    def calculate(self, dataframe, phase_info, metrics_df):
+        metrics_df['terminal_performance_value'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df['eps_to_terminal_performance'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        terminal_perf_values = {}
+        eps_to_terminal_perf = {}
+
+        # Iterate over all of the blocks and compute the within block performance
+        for idx in range(phase_info.loc[:, 'block'].max() + 1):
+            # Need to get the part of the data corresponding to the block
+            block_data = dataframe.loc[dataframe["block"] == idx]
+
+            window = int(block_data.size * 0.2)
+            custom_window = min(window, self.max_window_size)
+
+            # Make within block calculations
+            terminal_value, eps_to_term_perf, _ = _localutil.get_terminal_perf(
+                block_data, column_to_use='reward', window_len=custom_window)
+
+            # Record them
+            terminal_perf_values[idx] = terminal_value
+            eps_to_terminal_perf[idx] = eps_to_term_perf
+
+        metrics_df = _localutil.fill_metrics_df(terminal_perf_values, 'terminal_performance_value', metrics_df)
+        return _localutil.fill_metrics_df(eps_to_terminal_perf, 'eps_to_terminal_performance', metrics_df)
 
 
 class AverageLearningReward(AgentMetric):
@@ -223,7 +263,7 @@ class STERelativePerf(AgentMetric):
 
         # Make sure STE baselines are available for all tasks, else complain
         if unique_tasks.any() not in ste_dict:
-            raise Exception
+            raise Exception('STE baselines not available for all tasks')
 
         # TODO: Add structure validation of phase_info
 
@@ -459,7 +499,8 @@ class AgentMetricsReport(core.MetricsReport):
             phase_info_keys_to_include.append('param_set')
 
         self._metrics_df = self.phase_info[phase_info_keys_to_include].copy()
-        self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(self._metrics_df.loc[:, 'task_name'].values)
+        self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(
+            self._metrics_df.loc[:, 'task_name'].values)
 
     def _add_default_metrics(self):
         # Default metrics no matter the syllabus type
@@ -467,6 +508,7 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(RewardPerStep())
         self.add(AverageLearningReward())
         self.add(MeanRewardPerEpisodes())
+        self.add(MostRecentTerminalPerformance())
         self.add(RecoveryTime())
         self.add(STERelativePerf())
         self.add(PerfDifferenceANT())
@@ -494,10 +536,8 @@ class AgentMetricsReport(core.MetricsReport):
 
     def plot(self, save=False):
         print('Plotting a smoothed reward curve')
-        window = int(np.floor(len(self._log_data) * 0.02))
-        custom_window = max(window, 300)
         util.plot_performance(self._log_data, do_smoothing=True, do_task_colors=True, do_save_fig=save,
-                              new_smoothing_value=custom_window, input_title=self.log_dir)
+                              max_smoothing_window=100, input_title=self.log_dir)
 
     def add(self, metrics_list):
         self._metrics.append(metrics_list)

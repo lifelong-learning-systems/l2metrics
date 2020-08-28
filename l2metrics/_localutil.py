@@ -166,6 +166,31 @@ def get_block_saturation_perf(data, column_to_use=None, previous_saturation_valu
     return saturation_value, episodes_to_saturation, episodes_to_recovery
 
 
+def get_terminal_perf(data, column_to_use=None, previous_value=None, window_len=11, term_window_ratio=0.1):
+    # Calculate the terminal performance value
+    # Calculate the number of episodes to terminal performance
+
+    mean_reward_per_episode = data.loc[:, ['task', column_to_use]].groupby('task').mean()
+    mean_data = np.ravel(mean_reward_per_episode.values)
+
+    # Take the moving average of the mean of the per episode reward
+    smoothed_data = smooth(mean_data, window_len=window_len, window='flat')
+    terminal_value = np.mean(smoothed_data[int((1-0.1)*smoothed_data.size):])
+
+    # Calculate the number of episodes to terminal performance
+    episodes_to_terminal_perf = int((1-(0.1/2))*smoothed_data.size)
+    episodes_to_recovery = np.nan
+
+    if previous_value is not None:
+        inds = np.where(smoothed_data >= previous_value)
+        if len(inds[0]):
+            episodes_to_recovery = inds[0][0]
+        else:
+            episodes_to_recovery = "No Recovery"
+
+    return terminal_value, episodes_to_terminal_perf, episodes_to_recovery
+
+
 def extract_relevant_columns(dataframe, keyword):
     # Parse the dataframe and get out the appropriate column names for Classification performance assessment
     relevant_cols = []

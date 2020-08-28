@@ -76,43 +76,44 @@ def load_default_random_agent_data():
 
 def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_col='task', input_title=None,
                      do_save_fig=True, plot_filename=None, input_xlabel='Episodes', input_ylabel='Performance',
-                     show_block_boundary=False, do_task_colors=False, shade_test_phases=True, new_smoothing_value=None):
+                     show_block_boundary=False, do_task_colors=False, shade_test_phases=True, max_smoothing_window=100):
     # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
     # directory and/or customize the title, axes labeling, filename, etc. Color is supported for agent tasks only.
 
+    unique_tasks = dataframe.loc[:, 'class_name'].unique()
+    fig = plt.figure(figsize=(12, 6))
+    ax = fig.add_subplot(111)
+
     if do_task_colors:
         color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'cyan', 'orange', 'purple']
-        unique_tasks = dataframe.loc[:, 'class_name'].unique()
         if len(unique_tasks) < len(color_selection):
             task_colors = color_selection[:len(unique_tasks)]
         else:
             task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
-        fig = plt.figure(figsize=(12, 6))
-        ax = fig.add_subplot(111)
 
         for c, t in zip(task_colors, unique_tasks):
             data = dataframe.loc[dataframe['class_name'] == t, col_to_plot].values
             x_axis = dataframe.loc[dataframe['class_name'] == t, x_axis_col].values
-            if do_smoothing:
-                if new_smoothing_value:
-                    data = _localutil.smooth(data, window_len=new_smoothing_value)
-                else:
-                    data = _localutil.smooth(data)
-            ax.scatter(x_axis, data, color=c, marker='*', linestyle='None')
-        
-        ax.legend(unique_tasks)
-    else:
-        data = dataframe[col_to_plot].values
-        if do_smoothing:
-            if new_smoothing_value:
-                data = _localutil.smooth(data, window_len=new_smoothing_value)
-            else:
-                data = _localutil.smooth(data)
-        x_axis = dataframe[x_axis_col].values
 
-        fig = plt.figure(figsize=(8, 4))
-        ax = fig.add_subplot(111)
-        ax.scatter(x_axis, data, marker='*', linestyle='None')
+            if do_smoothing:               
+                window = int(x_axis.size * 0.2)
+                custom_window = min(window, max_smoothing_window)
+                data = _localutil.smooth(data, window_len=custom_window)
+
+            ax.scatter(x_axis, data, color=c, marker='*', linestyle='None')
+    else:
+        for task in unique_tasks:
+            data = dataframe.loc[dataframe['class_name'] == task, col_to_plot].values
+            x_axis = dataframe.loc[dataframe['class_name'] == task, x_axis_col].values
+
+            if do_smoothing:
+                window = int(x_axis.size * 0.2)
+                custom_window = min(window, max_smoothing_window)
+                data = _localutil.smooth(data, window_len=max_smoothing_window)
+
+            ax.scatter(x_axis, data, marker='*', linestyle='None')
+
+    ax.legend(unique_tasks)
 
     if show_block_boundary:
         unique_blocks = dataframe.loc[:, 'block'].unique()

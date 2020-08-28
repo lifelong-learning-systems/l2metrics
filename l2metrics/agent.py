@@ -189,7 +189,7 @@ class RecoveryTime(AgentMetric):
     name = "Recovery Time"
     capability = "adapt_to_new_tasks"
     requires = {'syllabus_type': 'agent'}
-    description = "Calculates whether the system recovers after a change of task or parameters"
+    description = "Calculates whether the system recovers after a change of task or parameters and calculate how long it takes if recovery is achieved"
 
     def __init__(self):
         super().__init__()
@@ -322,6 +322,11 @@ class PerfDifferenceANT(AgentMetric):
             # Get the task names that were used for the train portion of the phase
             trained_task = phase_info[(phase_info.phase_type == 'train') &
                                       (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+
+            # Skip block if phase is not training phase
+            if len(trained_task) == 0:
+                continue
+
             trained_task = trained_task[0]
             trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
                                           (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()

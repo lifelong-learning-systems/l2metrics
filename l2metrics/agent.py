@@ -217,33 +217,36 @@ class RecoveryTime(AgentMetric):
                 tr_bl_inds_to_assess.append(block_idx)
                 tr_bl_inds_to_use.append(tb_inds[idx - 1])
 
-        if tr_bl_inds_to_assess is None:
-            raise Exception('No changes across training blocks to assess recovery time!')
+        if tr_bl_inds_to_assess is None or tr_bl_inds_to_use is None:
+            raise Exception(
+                'No changes across training blocks to assess recovery time!')
 
         return tr_bl_inds_to_use, tr_bl_inds_to_assess
 
     def calculate(self, dataframe, phase_info, metrics_df):
         # Get the places where we should calculate recovery time
-        tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
-        if len(tr_inds_to_use) == 0:
+        try:
+            tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
+
+            metrics_df['recovery_time'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            recovery_time = {}
+
+            window = int(np.floor(len(dataframe) * 0.02))
+            custom_window = max(window, self.max_window_size)
+
+            for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
+                prev_val = metrics_df['terminal_performance_value'][use_ind]
+                block_data = dataframe.loc[assess_ind]
+                _, _, eps_to_rec = _localutil.get_terminal_perf(block_data,
+                                                                column_to_use='reward',
+                                                                previous_value=prev_val,
+                                                                window_len=custom_window)
+                recovery_time[assess_ind] = eps_to_rec
+
+            return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
+        except:
+            print("Data not suitable for", self.name)
             return metrics_df
-
-        metrics_df['recovery_time'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-        recovery_time = {}
-
-        window = int(np.floor(len(dataframe) * 0.02))
-        custom_window = max(window, self.max_window_size)
-
-        for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
-            prev_val = metrics_df['saturation_value'][use_ind]
-            block_data = dataframe.loc[assess_ind]
-            _, _, eps_to_rec = _localutil.get_block_saturation_perf(block_data,
-                                                                    column_to_use='reward',
-                                                                    previous_saturation_value=prev_val,
-                                                                    window_len=custom_window)
-            recovery_time[assess_ind] = eps_to_rec
-
-        return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
 
 
 class STERelativePerf(AgentMetric):

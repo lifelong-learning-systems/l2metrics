@@ -176,7 +176,6 @@ def read_log_data(input_dir, analysis_variables=None):
         for file in files:
             if file == 'data-log.tsv':
                 has_data = True
-                task = os.path.split(root)[-1]
                 if analysis_variables is not None:
                     df = pd.read_csv(os.path.join(root, file), sep='\t')[
                         ['timestamp', 'class_name', 'phase', 'worker', 'block', 'task', 'seed'] + analysis_variables]

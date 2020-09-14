@@ -88,106 +88,6 @@ class WithinBlockSaturation(AgentMetric):
         return _localutil.fill_metrics_df(eps_to_saturation, 'eps_to_saturation', metrics_df)
 
 
-class RewardPerStep(AgentMetric):
-    name = "Reward per Step"
-    capability = "continual_learning"
-    requires = {'syllabus_type': 'agent'}
-    description = "Calculates the reward achieved per steps used to achieve it"
-
-    def __init__(self):
-        super().__init__()
-        # self.validate()
-
-    def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
-        pass
-
-    def calculate(self, dataframe, phase_info, metrics_df):
-        metrics_df['reward_per_step'] = np.full_like(
-            metrics_df['block'], np.nan, dtype=np.double)
-        reward_per_step = {}
-
-        for idx in range(phase_info.loc[:, 'block'].max() + 1):
-            block_data = dataframe.loc[dataframe['block'] == idx]
-
-            reward = np.array(block_data.loc[:, "reward"].values)
-            steps = np.array(block_data.loc[:, 'steps'].values)
-
-            summed_reward = np.sum(reward)
-            # cumsum_reward = np.cumsum(reward)
-            # cumsum_steps = np.cumsum(steps)
-
-            res = summed_reward / np.sum(steps)
-            reward_per_step[idx] = res
-
-        return _localutil.fill_metrics_df(reward_per_step, 'reward_per_step', metrics_df)
-
-
-class AverageLearningReward(AgentMetric):
-    name = "Average Learning Reward"
-    capability = "adapt_to_new_tasks"
-    requires = {'syllabus_type': 'agent'}
-    description = "Calculates the average reward accumulated until the system achieves saturation"
-
-    def __init__(self):
-        super().__init__()
-
-    def validate(self, phase_info):
-        pass
-
-    def calculate(self, dataframe, phase_info, metrics_df):
-        metrics_df['average_learning'] = np.full_like(
-            metrics_df['block'], np.nan, dtype=np.double)
-        learning_rate = {}
-        train_block_ids = phase_info.loc[phase_info['phase_type']
-                                         == 'train', 'block'].values
-
-        for tr_block in train_block_ids:
-            num_episodes = metrics_df['eps_to_saturation'][tr_block]
-
-            if num_episodes is np.NaN:
-                reward_until_saturation = 0
-
-            else:
-                block_data = dataframe.loc[dataframe['block'] == tr_block]
-                first_episode_num = block_data.iloc[0]['task']
-                saturation_task_num = num_episodes + first_episode_num
-
-                reward_until_saturation = block_data.loc[block_data['task']
-                                                         <= saturation_task_num, 'reward'].sum()
-
-            learning_rate[tr_block] = reward_until_saturation / num_episodes
-
-        return _localutil.fill_metrics_df(learning_rate, 'average_learning', metrics_df)
-
-
-class MeanRewardPerEpisodes(AgentMetric):
-    name = "Achieved Reward, Averaged Per Episodes within a Block"
-    capability = "continual_learning"
-    requires = {'syllabus_type': 'agent'}
-    description = "Calculates the performance across all tasks and phases"
-    metric_title = {}
-
-    def __init__(self):
-        super().__init__()
-        # self.validate()
-
-    def validate(self, phase_info):
-        pass
-
-    def calculate(self, dataframe, phase_info, metrics_df):
-        avg_reward = {}
-
-        # Iterate over all of the blocks and compute the within block performance
-        for idx in range(phase_info.loc[:, 'block'].max() + 1):
-            # Need to get the part of the data corresponding to the block
-            block_data = dataframe.loc[dataframe["block"] == idx]
-
-            avg_reward[idx] = block_data['reward'].mean()
-
-        return _localutil.fill_metrics_df(avg_reward, 'avg_achieved_reward', metrics_df)
-
-
 class MostRecentTerminalPerformance(AgentMetric):
     name = "Most Recent Terminal Performance"
     capability = "continual_learning"
@@ -747,17 +647,14 @@ class AgentMetricsReport(core.MetricsReport):
     def _add_default_metrics(self):
         # Default metrics no matter the syllabus type
         self.add(WithinBlockSaturation())
-        # self.add(RewardPerStep())
-        # self.add(AverageLearningReward())
-        # self.add(MeanRewardPerEpisodes())
         self.add(MostRecentTerminalPerformance())
         self.add(RecoveryTime())
-        # self.add(PerformanceRecovery())
+        self.add(PerformanceRecovery())
         self.add(PerformanceMaintenance())
         self.add(TransferMatrix())
         self.add(STERelativePerf())
         self.add(PerfDifferenceANT())
-        # self.add(SampleEfficiency())
+        self.add(SampleEfficiency())
 
     def calculate(self):
         for metric in self._metrics:

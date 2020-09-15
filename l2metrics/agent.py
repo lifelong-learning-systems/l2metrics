@@ -198,11 +198,15 @@ class PerformanceRecovery(AgentMetric):
 
     def validate(self, metrics_df):
         # Get number of recovery times
-        r_count = metrics_df['recovery_time'].count()
+        r = metrics_df['recovery_time']
+        r = r[r.notna()]
+        r_count = r.count()
 
         if r_count <= 1:
             raise Exception('Not enough recovery times to assess performance recovery!')
         elif r_count != metrics_df["phase_type"].value_counts()["train"] - 1:
+            raise Exception('There are blocks where the system did not recover!')
+        elif np.any(r.str.contains('No Recovery')):
             raise Exception('There are blocks where the system did not recover!')
 
         return

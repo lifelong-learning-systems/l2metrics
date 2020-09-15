@@ -54,16 +54,13 @@ class WithinBlockSaturation(AgentMetric):
 
     def __init__(self):
         super().__init__()
-        # self.validate()
 
     def validate(self, phase_info):
         pass
 
     def calculate(self, dataframe, phase_info, metrics_df):
-        metrics_df['saturation_value'] = np.full_like(
-            metrics_df['block'], np.nan, dtype=np.double)
-        metrics_df['eps_to_saturation'] = np.full_like(
-            metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df['saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df['eps_to_sat'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         saturation_values = {}
         eps_to_saturation = {}
 
@@ -84,9 +81,9 @@ class WithinBlockSaturation(AgentMetric):
             saturation_values[idx] = sat_value
             eps_to_saturation[idx] = eps_to_sat
 
-        metrics_df = _localutil.fill_metrics_df(
-            saturation_values, 'saturation_value', metrics_df)
-        return _localutil.fill_metrics_df(eps_to_saturation, 'eps_to_saturation', metrics_df)
+        metrics_df = _localutil.fill_metrics_df(saturation_values, 'saturation', metrics_df)
+
+        return _localutil.fill_metrics_df(eps_to_saturation, 'eps_to_sat', metrics_df)
 
 
 class MostRecentTerminalPerformance(AgentMetric):
@@ -102,10 +99,8 @@ class MostRecentTerminalPerformance(AgentMetric):
         pass
 
     def calculate(self, dataframe, phase_info, metrics_df):
-        metrics_df['terminal_performance_value'] = np.full_like(
-            metrics_df['block'], np.nan, dtype=np.double)
-        metrics_df['eps_to_terminal_performance'] = np.full_like(
-            metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df['term_performance'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df['eps_to_term_perf'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         terminal_perf_values = {}
         eps_to_terminal_perf = {}
 
@@ -118,16 +113,15 @@ class MostRecentTerminalPerformance(AgentMetric):
             custom_window = min(window, self.max_window_size)
 
             # Make within block calculations
-            terminal_value, eps_to_term_perf, _ = _localutil.get_terminal_perf(
+            term_performance, eps_to_term_perf, _ = _localutil.get_terminal_perf(
                 block_data, column_to_use='reward', window_len=custom_window)
 
             # Record them
-            terminal_perf_values[idx] = terminal_value
+            terminal_perf_values[idx] = term_performance
             eps_to_terminal_perf[idx] = eps_to_term_perf
 
-        metrics_df = _localutil.fill_metrics_df(
-            terminal_perf_values, 'terminal_performance_value', metrics_df)
-        return _localutil.fill_metrics_df(eps_to_terminal_perf, 'eps_to_terminal_performance', metrics_df)
+        metrics_df = _localutil.fill_metrics_df(terminal_perf_values, 'term_performance', metrics_df)
+        return _localutil.fill_metrics_df(eps_to_terminal_perf, 'eps_to_term_perf', metrics_df)
 
 
 class RecoveryTime(AgentMetric):
@@ -138,7 +132,6 @@ class RecoveryTime(AgentMetric):
 
     def __init__(self):
         super().__init__()
-        # self.validate()
 
     def validate(self, phase_info):
         # Determine where we need to assess recovery time
@@ -163,8 +156,7 @@ class RecoveryTime(AgentMetric):
                 tr_bl_inds_to_use.append(tb_inds[idx - 1])
 
         if tr_bl_inds_to_assess is None or tr_bl_inds_to_use is None:
-            raise Exception(
-                'No changes across training blocks to assess recovery time!')
+            raise Exception('No changes across training blocks to assess recovery time!')
 
         return tr_bl_inds_to_use, tr_bl_inds_to_assess
 
@@ -173,15 +165,14 @@ class RecoveryTime(AgentMetric):
         try:
             tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
 
-            metrics_df['recovery_time'] = np.full_like(
-                metrics_df['block'], np.nan, dtype=np.double)
+            metrics_df['recovery_time'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
             recovery_time = {}
 
             window = int(np.floor(len(dataframe) * 0.02))
             custom_window = max(window, self.max_window_size)
 
             for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
-                prev_val = metrics_df['terminal_performance_value'][use_ind]
+                prev_val = metrics_df['term_performance'][use_ind]
                 block_data = dataframe.loc[assess_ind]
                 _, _, eps_to_rec = _localutil.get_terminal_perf(block_data,
                                                                 column_to_use='reward',
@@ -190,8 +181,9 @@ class RecoveryTime(AgentMetric):
                 recovery_time[assess_ind] = eps_to_rec
 
             return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
-        except:
+        except Exception as e:
             print("Data not suitable for", self.name)
+            print(e)
             return metrics_df
 
 
@@ -236,9 +228,10 @@ class PerformanceRecovery(AgentMetric):
             
             pr_values[idx + 1] = slope
 
-            return _localutil.fill_metrics_df(pr_values, 'performance_recovery', metrics_df)
-        except:
+            return _localutil.fill_metrics_df(pr_values, 'perf_recovery', metrics_df)
+        except Exception as e:
             print("Data not suitable for", self.name)
+            print(e)
             return metrics_df
 
 
@@ -246,88 +239,66 @@ class PerformanceMaintenance(AgentMetric):
     name = "Peformance Maintenance"
     capability = "adapting_to_new_tasks"
     requires = {'syllabus_type': 'agent'}
-    description = "Calculates the average difference between the most recent terminal learning performance of a task and each evaluation performance"
+    description = "Calculates the average difference between the most recent" \
+        "terminal learning performance of a task and each evaluation performance"
 
     def __init__(self):
         super().__init__()
-        # self.validate()
 
     def validate(self, phase_info):
-        # Must ensure that task training phases have proceeding testing phases
-        # Get unique task names
-        unique_tasks = phase_info.loc[:, 'task_name'].unique()
-
-        # Get train blocks, in order of appearance
-        tr_bl_info = phase_info.sort_index().loc[phase_info['phase_type'] == 'train', ['block', 'task_name',
-                                                                                       'param_set']]
-        tb_inds = tr_bl_info.index
+        # TODO: Add structure validation of phase_info
+        # Must ensure that the training phase has only one block or else handle multiple
+        pass
 
     def calculate(self, dataframe, phase_info, metrics_df):
         try:
-            # Validate data for performance maintenance
-            self.validate(phase_info)
-
             # This metric must compute in each evaluation block the performance of the tasks
             # relative to the previously trained ones
             previously_trained_tasks = np.array([])
             previously_trained_task_ids = np.array([])
-            saturation_difference = {}
+            performance_difference = {}
             eps_to_sat_dif = {}
 
-            unique_tasks = phase_info.loc[:, 'task_name'].unique()
+            # Iterate over the phases, just the evaluation portion. We need to do this in order.
+            for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
+                # Get the task names that were used for the train portion of the phase
+                trained_task = phase_info[(phase_info.phase_type == 'train') &
+                                        (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
 
-            # Iterate over all tasks and calculate performance maintenance on them
-            for task in unique_tasks:
-                for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
-                    # Get the task names that were used for the train portion of the phase
-                    trained_task = phase_info[(phase_info.phase_type == 'train') &
-                                              (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
-                    trained_task = trained_task[0]
-                    trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
-                                                  (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
+                # Skip block if phase is not training phase
+                if len(trained_task) == 0:
+                    continue
 
-                    # Validation will have ensured that the training phase has exactly one training block
-                    previously_trained_tasks = np.append(
-                        previously_trained_tasks, trained_task)
-                    previously_trained_task_ids = np.append(
-                        previously_trained_task_ids, trained_task_ids)
+                trained_task = trained_task[0]
+                trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
+                                            (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
-                    this_phase_test_tasks = phase_info[(phase_info.phase_type == 'test') &
-                                                       (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
-                    this_phase_test_task_ids = phase_info[(phase_info.phase_type == 'test') &
-                                                          (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
+                # Validation will have ensured that the training phase has exactly one training block
+                previously_trained_tasks = np.append(previously_trained_tasks, trained_task)
+                previously_trained_task_ids = np.append(previously_trained_task_ids, trained_task_ids)
 
-                    for idx, task in enumerate(this_phase_test_tasks):
-                        # Skip the evaluation block immediately following a train task
-                        if task == trained_task:
-                            continue
-                        if task in previously_trained_tasks:
-                            # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
-                            inds_where_task = np.where(
-                                previously_trained_tasks == task)
+                test_tasks = phase_info[(phase_info.phase_type == 'test') &
+                                                (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+                test_task_ids = phase_info[(phase_info.phase_type == 'test') &
+                                                    (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
-                            # TODO: Handle multiple comparison points
-                            block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
-                            previously_trained_sat_value = metrics_df[
-                                'saturation_value'][block_ids_for_comparison[0]]
-                            previously_trained_num_eps_to_sat = metrics_df[
-                                'eps_to_saturation'][block_ids_for_comparison[0]]
+                for idx, task in enumerate(test_tasks):
+                    # Skip the evaluation block immediately following a train task
+                    if task == trained_task:
+                        continue
+                    if task in previously_trained_tasks:
+                        # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
+                        inds_where_task = np.where(previously_trained_tasks == task)
 
-                            new_sat_value = metrics_df['saturation_value'][this_phase_test_task_ids[idx]]
-                            new_num_eps_to_sat = metrics_df['eps_to_saturation'][this_phase_test_task_ids[idx]]
+                        # TODO: Handle multiple comparison points
+                        block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
+                        most_recent_term_perf = metrics_df['term_performance'][block_ids_for_comparison[0]]
+                        new_term_performance = metrics_df['term_performance'][test_task_ids[idx]]
+                        perf_diff = new_term_performance - most_recent_term_perf
+                        block_id = test_task_ids[idx]
+                        performance_difference[block_id] = perf_diff
 
-                            this_sat_val_comparison = previously_trained_sat_value - new_sat_value
-                            this_num_eps_to_sat_comparison = previously_trained_num_eps_to_sat - new_num_eps_to_sat
-
-                            block_id = this_phase_test_task_ids[idx]
-
-                            saturation_difference[block_id] = this_sat_val_comparison
-                            eps_to_sat_dif[block_id] = this_num_eps_to_sat_comparison
-
-                metrics_df = _localutil.fill_metrics_df(
-                    saturation_difference, 'saturation_difference', metrics_df)
-
-            return _localutil.fill_metrics_df(eps_to_sat_dif, 'eps_to_sat_dif', metrics_df)
+            return _localutil.fill_metrics_df(performance_difference, 'performance_difference', metrics_df)
         except:
             print("Data not suitable for", self.name)
             return metrics_df
@@ -399,28 +370,25 @@ class TransferMatrix(AgentMetric):
     def calculate(self, data, metadata, metrics_df):
         # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
         ste_dict, tasks_to_compute = self.validate(metadata)
-        metrics_df['forward_transfer'] = np.full_like(
-            metrics_df['block'], np.nan, dtype=np.double)
-        metrics_df['reverse_transfer'] = np.full_like(
-            metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df['forward_transfer'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df['reverse_transfer'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
         reverse_transfer = {}
         forward_transfer = {}
 
         # Calculate, for each task, (task eval saturation / ste saturation)
         for task, block in tasks_to_compute['forward']:
             print('Computing forward transfer for {:s}'.format(task))
-            this_transfer_val = metrics_df['saturation_value'][block] / \
+            this_transfer_val = metrics_df['term_performance'][block] / \
                 ste_dict[task]
             forward_transfer[block] = this_transfer_val
 
         for task, block in tasks_to_compute['reverse']:
             print('Computing reverse transfer for {:s}'.format(task))
-            this_transfer_val = metrics_df['saturation_value'][block] / \
+            this_transfer_val = metrics_df['term_performance'][block] / \
                 ste_dict[task]
             reverse_transfer[block] = this_transfer_val
 
-        metrics_df = _localutil.fill_metrics_df(
-            forward_transfer, 'forward_transfer', metrics_df)
+        metrics_df = _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
         return _localutil.fill_metrics_df(reverse_transfer, 'reverse_transfer', metrics_df)
 
 
@@ -441,18 +409,16 @@ class STERelativePerf(AgentMetric):
 
         # Make sure STE baselines are available for all tasks, else complain
         if unique_tasks.any() not in ste_dict:
-            raise Exception('STE baselines not available for all tasks')
+            raise Exception('STE data not available for all tasks')
 
-        # TODO: Add structure validation of phase_info
-
-        return ste_dict
+        return
 
     def calculate(self, dataframe, phase_info, metrics_df):
-        # Validate the STE
         try:
+            # Validate the STE
             ste_dict = self.validate(phase_info)
-            metrics_df['STE_normalized_saturation'] = np.full_like(
-                metrics_df['block'], np.nan, dtype=np.double)
+
+            metrics_df['STE_normalized_saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
             ste_normalized_saturation = {}
 
             for idx in range(phase_info.loc[:, 'block'].max() + 1):
@@ -461,94 +427,13 @@ class STERelativePerf(AgentMetric):
                 this_ste_comparison = ste_dict[this_task]
 
                 # Compare the saturation value of this block to the STE performance and store it
-                ste_normalized_saturation[idx] = metrics_df["saturation_value"][idx] / \
-                    this_ste_comparison
+                ste_normalized_saturation[idx] = metrics_df["term_performance"][idx] / this_ste_comparison
 
             return _localutil.fill_metrics_df(ste_normalized_saturation, 'STE_normalized_saturation', metrics_df)
-        except:
+        except Exception as e:
             print("Data not suitable for", self.name)
+            print(e)
             return metrics_df
-
-
-class PerfDifferenceANT(AgentMetric):
-    name = "Performance Difference from Previously Trained Task Performance"
-    capability = "adapting_to_new_tasks"
-    requires = {'syllabus_type': 'agent'}
-    description = "Calculates the difference in performance of each task, in each evaluation block, " \
-                  "relative to the previously trained task"
-
-    def __init__(self):
-        super().__init__()
-        # self.validate()
-
-    def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
-        # Must ensure that the training phase has only one block or else handle multiple
-        pass
-
-    def calculate(self, dataframe, phase_info, metrics_df):
-        # This metric must compute in each evaluation block the performance of the tasks
-        # relative to the previously trained ones
-        previously_trained_tasks = np.array([])
-        previously_trained_task_ids = np.array([])
-        saturation_difference = {}
-        eps_to_sat_dif = {}
-
-        # Iterate over the phases, just the evaluation portion. We need to do this in order.
-        for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
-            # Get the task names that were used for the train portion of the phase
-            trained_task = phase_info[(phase_info.phase_type == 'train') &
-                                      (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
-
-            # Skip block if phase is not training phase
-            if len(trained_task) == 0:
-                continue
-
-            trained_task = trained_task[0]
-            trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
-                                          (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
-
-            # Validation will have ensured that the training phase has exactly one training block
-            previously_trained_tasks = np.append(
-                previously_trained_tasks, trained_task)
-            previously_trained_task_ids = np.append(
-                previously_trained_task_ids, trained_task_ids)
-
-            this_phase_test_tasks = phase_info[(phase_info.phase_type == 'test') &
-                                               (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
-            this_phase_test_task_ids = phase_info[(phase_info.phase_type == 'test') &
-                                                  (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
-
-            for idx, task in enumerate(this_phase_test_tasks):
-                # Skip the evaluation block immediately following a train task
-                if task == trained_task:
-                    continue
-                if task in previously_trained_tasks:
-                    # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
-                    inds_where_task = np.where(
-                        previously_trained_tasks == task)
-
-                    # TODO: Handle multiple comparison points
-                    block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
-                    previously_trained_sat_value = metrics_df['saturation_value'][block_ids_for_comparison[0]]
-                    previously_trained_num_eps_to_sat = metrics_df[
-                        'eps_to_saturation'][block_ids_for_comparison[0]]
-
-                    new_sat_value = metrics_df['saturation_value'][this_phase_test_task_ids[idx]]
-                    new_num_eps_to_sat = metrics_df['eps_to_saturation'][this_phase_test_task_ids[idx]]
-
-                    this_sat_val_comparison = previously_trained_sat_value - new_sat_value
-                    this_num_eps_to_sat_comparison = previously_trained_num_eps_to_sat - new_num_eps_to_sat
-
-                    block_id = this_phase_test_task_ids[idx]
-
-                    saturation_difference[block_id] = this_sat_val_comparison
-                    eps_to_sat_dif[block_id] = this_num_eps_to_sat_comparison
-
-        metrics_df = _localutil.fill_metrics_df(
-            saturation_difference, 'saturation_difference', metrics_df)
-
-        return _localutil.fill_metrics_df(eps_to_sat_dif, 'eps_to_sat_dif', metrics_df)
 
 
 class SampleEfficiency(AgentMetric):
@@ -559,7 +444,6 @@ class SampleEfficiency(AgentMetric):
 
     def __init__(self):
         super().__init__()
-        # self.validate()
 
     def validate(self, phase_info):
         # Determine where we need to assess recovery time
@@ -584,34 +468,37 @@ class SampleEfficiency(AgentMetric):
                 tr_bl_inds_to_use.append(tb_inds[idx - 1])
 
         if tr_bl_inds_to_assess is None:
-            raise Exception(
-                'No changes across training blocks to assess recovery time!')
+            raise Exception('No changes across training blocks to assess recovery time!')
 
         return tr_bl_inds_to_use, tr_bl_inds_to_assess
 
     def calculate(self, dataframe, phase_info, metrics_df):
-        # Get the places where we should calculate recovery time
-        tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
-        if len(tr_inds_to_use) == 0:
+        try:
+            # Get the places where we should calculate recovery time
+            tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
+            if len(tr_inds_to_use) == 0:
+                return metrics_df
+
+            metrics_df['recovery_time'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            recovery_time = {}
+
+            window = int(np.floor(len(dataframe) * 0.02))
+            custom_window = max(window, self.max_window_size)
+
+            for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
+                prev_val = metrics_df['term_performance'][use_ind]
+                block_data = dataframe.loc[assess_ind]
+                _, _, eps_to_rec = _localutil.get_block_saturation_perf(block_data,
+                                                                        column_to_use='reward',
+                                                                        previous_saturation_value=prev_val,
+                                                                        window_len=custom_window)
+                recovery_time[assess_ind] = eps_to_rec
+
+            return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
+        except Exception as e:
+            print("Data not suitable for", self.name)
+            print(e)
             return metrics_df
-
-        metrics_df['recovery_time'] = np.full_like(
-            metrics_df['block'], np.nan, dtype=np.double)
-        recovery_time = {}
-
-        window = int(np.floor(len(dataframe) * 0.02))
-        custom_window = max(window, self.max_window_size)
-
-        for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
-            prev_val = metrics_df['saturation_value'][use_ind]
-            block_data = dataframe.loc[assess_ind]
-            _, _, eps_to_rec = _localutil.get_block_saturation_perf(block_data,
-                                                                    column_to_use='reward',
-                                                                    previous_saturation_value=prev_val,
-                                                                    window_len=custom_window)
-            recovery_time[assess_ind] = eps_to_rec
-
-        return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
 
 
 class AgentMetricsReport(core.MetricsReport):
@@ -656,7 +543,6 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(PerformanceMaintenance())
         self.add(TransferMatrix())
         self.add(STERelativePerf())
-        self.add(PerfDifferenceANT())
         self.add(SampleEfficiency())
 
     def calculate(self):

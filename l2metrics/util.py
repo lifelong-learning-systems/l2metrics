@@ -16,12 +16,13 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
+import glob
+import json
+import matplotlib.pyplot as plt
 import pandas as pd
 import os
-import json
-from learnkit.data_util.utils import get_l2data_root
-import matplotlib.pyplot as plt
 from . import _localutil
+from learnkit.data_util.utils import get_l2data_root
 
 
 def get_l2root_base_dirs(directory_to_append, sub_to_get=None):
@@ -60,6 +61,24 @@ def load_default_ste_data():
         ste_dict = json.load(f)
 
     return ste_dict
+
+
+def get_ste_data_names():
+    # This function will return a list of the Single-Task-Expert data files names from all of
+    # available single task baselines that have been stored in $L2DATA/taskinfo/
+    return [os.path.splitext(os.path.basename(x))[0] for x in glob.glob(get_l2root_base_dirs('taskinfo') + "\\*.pkl")]
+
+
+def load_ste_data(task_name):
+    # This function will return a dataframe of the specified task's Single-Task-Expert data that has
+    # been stored in $L2DATA/taskinfo/
+
+    if task_name in get_ste_data_names():
+        data_file_name = get_l2root_base_dirs('taskinfo', task_name + '.pkl')
+        dataframe = pd.read_pickle(data_file_name)
+        return dataframe
+    else:
+        return None
 
 
 def load_default_random_agent_data():

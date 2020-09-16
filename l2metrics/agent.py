@@ -371,26 +371,31 @@ class TransferMatrix(AgentMetric):
         return ste_dict, tasks_for_transfer_matrix
 
     def calculate(self, data, metadata, metrics_df):
-        # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
-        ste_dict, tasks_to_compute = self.validate(metadata)
-        metrics_df['forward_transfer'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-        metrics_df['reverse_transfer'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-        reverse_transfer = {}
-        forward_transfer = {}
+        try:
+            # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
+            ste_dict, tasks_to_compute = self.validate(metadata)
+            metrics_df['forward_transfer'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            metrics_df['reverse_transfer'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            reverse_transfer = {}
+            forward_transfer = {}
 
-        # Calculate, for each task, (task eval saturation / ste saturation)
-        for task, block in tasks_to_compute['forward']:
-            print('Computing forward transfer for {:s}'.format(task))
-            this_transfer_val = metrics_df['term_performance'][block] / ste_dict[task]
-            forward_transfer[block] = this_transfer_val
+            # Calculate, for each task, (task eval saturation / ste saturation)
+            for task, block in tasks_to_compute['forward']:
+                print('Computing forward transfer for {:s}'.format(task))
+                this_transfer_val = metrics_df['term_performance'][block] / ste_dict[task]
+                forward_transfer[block] = this_transfer_val
 
-        for task, block in tasks_to_compute['reverse']:
-            print('Computing reverse transfer for {:s}'.format(task))
-            this_transfer_val = metrics_df['term_performance'][block] / ste_dict[task]
-            reverse_transfer[block] = this_transfer_val
+            for task, block in tasks_to_compute['reverse']:
+                print('Computing reverse transfer for {:s}'.format(task))
+                this_transfer_val = metrics_df['term_performance'][block] / ste_dict[task]
+                reverse_transfer[block] = this_transfer_val
 
-        metrics_df = _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
-        return _localutil.fill_metrics_df(reverse_transfer, 'reverse_transfer', metrics_df)
+            metrics_df = _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
+            return _localutil.fill_metrics_df(reverse_transfer, 'reverse_transfer', metrics_df)
+        except Exception as e:
+            print("Data not suitable for", self.name)
+            print(e)
+            return metrics_df
 
 
 class STERelativePerf(AgentMetric):

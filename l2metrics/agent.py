@@ -458,55 +458,62 @@ class SampleEfficiency(AgentMetric):
         super().__init__()
 
     def validate(self, phase_info):
-        # Determine where we need to assess recovery time
-        tr_bl_inds_to_use = []
-        tr_bl_inds_to_assess = []
+        # Check if there is STE data for each task in the scenario
+        unique_tasks = phase_info.loc[:, 'task_name'].unique()
+        ste_names = util.get_ste_data_names()
 
-        # Get train blocks, in order of appearance
-        tr_bl_info = phase_info.sort_index().loc[phase_info['phase_type'] == 'train', ['block', 'task_name',
-                                                                                       'param_set']]
-        tb_inds = tr_bl_info.index
-
-        # Blocks are defined as new combinations of task + params, but can repeat, so check for changes across blocks
-        first = True
-        for idx, block_idx in enumerate(tb_inds):
-            if first:
-                first = False
-                continue
-            # Either the task name or the param set must be different
-            if tr_bl_info.loc[block_idx, 'task_name'] != tr_bl_info.loc[tb_inds[idx - 1], 'task_name'] or \
-                    tr_bl_info.loc[block_idx, 'param_set'] != tr_bl_info.loc[tb_inds[idx - 1], 'param_set']:
-                tr_bl_inds_to_assess.append(block_idx)
-                tr_bl_inds_to_use.append(tb_inds[idx - 1])
-
-        if tr_bl_inds_to_assess is None:
-            raise Exception('No changes across training blocks to assess recovery time!')
-
-        return tr_bl_inds_to_use, tr_bl_inds_to_assess
+        # Make sure STE baselines are available for all tasks, else complain
+        if ~np.all(np.isin(unique_tasks, ste_names)):
+            raise Exception('STE data not available for all tasks')
 
     def calculate(self, dataframe, phase_info, metrics_df):
         try:
-            # Get the places where we should calculate recovery time
-            tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
-            if len(tr_inds_to_use) == 0:
-                return metrics_df
+            # Validate the STE
+            self.validate(phase_info)
 
-            metrics_df['recovery_time'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-            recovery_time = {}
+            # Initialize metric column
+            metrics_df['se_saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            metrics_df['se_eps_to_sat'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            metrics_df['sample_efficiency'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            se_saturation = {}
+            se_eps_to_sat = {}
+            sample_efficiency = {}
 
-            window = int(np.floor(len(dataframe) * 0.02))
-            custom_window = max(window, self.max_window_size)
+            # Iterate through unique tasks and STE
+            unique_tasks = phase_info.loc[:, 'task_name'].unique()
 
-            for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
-                prev_val = metrics_df['term_performance'][use_ind]
-                block_data = dataframe.loc[assess_ind]
-                _, _, eps_to_rec = _localutil.get_block_saturation_perf(block_data,
-                                                                        column_to_use='reward',
-                                                                        previous_saturation_value=prev_val,
-                                                                        window_len=custom_window)
-                recovery_time[assess_ind] = eps_to_rec
+            for task in unique_tasks:
+                # Get phase info for task during training
+                task_phases = phase_info[(phase_info['task_name'] == task) & (
+                    phase_info['phase_type'] == 'train')]
 
-            return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
+                # Get data concatenated data for task
+                task_data = dataframe[dataframe['block'].isin(task_phases['block'])]
+
+                # Load STE data
+                ste_data = util.load_ste_data(task)
+
+                # Get task saturation value and episodes to saturation
+                window = int(task_data.shape[0] * 0.2)
+                custom_window = min(window, self.max_window_size)
+                task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
+                    task_data, column_to_use='reward', window_len=custom_window)
+
+                # Get STE saturation value and episodes to saturation
+                window = int(ste_data.shape[0] * 0.2)
+                custom_window = min(window, self.max_window_size)
+                ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
+                    ste_data, column_to_use='reward', window_len=custom_window)
+
+                # Compute sample efficiency
+                se_saturation[task_data['block'].iloc[-1]] = task_saturation / ste_saturation
+                se_eps_to_sat[task_data['block'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
+                sample_efficiency[task_data['block'].iloc[-1]] = \
+                    (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
+
+            metrics_df = _localutil.fill_metrics_df(se_saturation, 'se_saturation', metrics_df)
+            metrics_df = _localutil.fill_metrics_df(se_eps_to_sat, 'se_eps_to_sat', metrics_df)
+            return _localutil.fill_metrics_df(sample_efficiency, 'sample_efficiency', metrics_df)
         except Exception as e:
             print("Data not suitable for", self.name)
             print(e)

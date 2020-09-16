@@ -573,7 +573,7 @@ class AgentMetricsReport(core.MetricsReport):
 
         if save:
             # Generate filename
-            if os.path.dirname(self.log_dir) != "":
+            if os.path.dirname(util.get_fully_qualified_name(self.log_dir)) != "":
                 _, filename = os.path.split(self.log_dir)
             else:
                 filename = 'agent'

@@ -267,7 +267,7 @@ class PerformanceMaintenance(AgentMetric):
             for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
                 # Get the task names that were used for the train portion of the phase
                 trained_task = phase_info[(phase_info.phase_type == 'train') &
-                                        (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+                                          (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
 
                 # Skip block if phase is not training phase
                 if len(trained_task) == 0:
@@ -282,9 +282,9 @@ class PerformanceMaintenance(AgentMetric):
                 previously_trained_task_ids = np.append(previously_trained_task_ids, trained_task_ids)
 
                 test_tasks = phase_info[(phase_info.phase_type == 'test') &
-                                                (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+                                        (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
                 test_task_ids = phase_info[(phase_info.phase_type == 'test') &
-                                                    (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
+                                           (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
 
                 for idx, task in enumerate(test_tasks):
                     # Skip the evaluation block immediately following a train task
@@ -330,44 +330,43 @@ class TransferMatrix(AgentMetric):
         for task in tasks_with_ste:
             types_per_this_task = phase_info[phase_info['task_name'] == task]
             phase_types = types_per_this_task.loc[:, 'phase_type'].to_numpy()
-            phase_nums = types_per_this_task.loc[:, 'phase_number'].to_numpy(
-                dtype=int)
+            phase_nums = types_per_this_task.loc[:, 'phase_number'].to_numpy(dtype=int)
+
             if 'train' in phase_types and 'test' in phase_types:
                 # Check eligibility for both forward and reverse transfer
                 train_phase_nums = phase_nums[phase_types == 'train']
                 test_phase_nums = phase_nums[phase_types == 'test']
+
                 if len(train_phase_nums) > 1:
-                    raise Exception(
-                        'Too many training instances of task: {:s}'.format(task))
+                    raise Exception('Too many training instances of task: {:s}'.format(task))
+
                 train_phase_num = train_phase_nums[0]
 
                 if any(test_phase_nums < train_phase_num):
-                    phase_nums_to_add = test_phase_nums[np.where(
-                        test_phase_nums < train_phase_num)]
+                    phase_nums_to_add = test_phase_nums[np.where(test_phase_nums < train_phase_num)]
+
                     for num in phase_nums_to_add:
                         tmp = types_per_this_task.loc[types_per_this_task['phase_type'] == 'test']
-                        blocks_to_add = tmp.loc[tmp['phase_number'] == str(
-                            num), 'block']
+                        blocks_to_add = tmp.loc[tmp['phase_number'] == str(num), 'block']
+
                         if len(blocks_to_add) > 1:
-                            raise Exception(
-                                'Too many eval instances of task: {:s}'.format(task))
+                            raise Exception('Too many eval instances of task: {:s}'.format(task))
+
                         block_to_add = blocks_to_add.values[0]
-                        tasks_for_transfer_matrix['forward'].append(
-                            (task, block_to_add))
+                        tasks_for_transfer_matrix['forward'].append((task, block_to_add))
 
                 if any(test_phase_nums > train_phase_num):
-                    phase_nums_to_add = test_phase_nums[np.where(
-                        test_phase_nums > train_phase_num)]
+                    phase_nums_to_add = test_phase_nums[np.where(test_phase_nums > train_phase_num)]
+
                     for num in phase_nums_to_add:
                         tmp = types_per_this_task.loc[types_per_this_task['phase_type'] == 'test']
-                        blocks_to_add = tmp.loc[tmp['phase_number'] == str(
-                            num), 'block']
+                        blocks_to_add = tmp.loc[tmp['phase_number'] == str(num), 'block']
+
                         if len(blocks_to_add) > 1:
-                            raise Exception(
-                                'Too many eval instances of task: {:s}'.format(task))
+                            raise Exception('Too many eval instances of task: {:s}'.format(task))
+
                         block_to_add = blocks_to_add.values[0]
-                        tasks_for_transfer_matrix['reverse'].append(
-                            (task, block_to_add))
+                        tasks_for_transfer_matrix['reverse'].append((task, block_to_add))
 
         return ste_dict, tasks_for_transfer_matrix
 
@@ -382,14 +381,12 @@ class TransferMatrix(AgentMetric):
         # Calculate, for each task, (task eval saturation / ste saturation)
         for task, block in tasks_to_compute['forward']:
             print('Computing forward transfer for {:s}'.format(task))
-            this_transfer_val = metrics_df['term_performance'][block] / \
-                ste_dict[task]
+            this_transfer_val = metrics_df['term_performance'][block] / ste_dict[task]
             forward_transfer[block] = this_transfer_val
 
         for task, block in tasks_to_compute['reverse']:
             print('Computing reverse transfer for {:s}'.format(task))
-            this_transfer_val = metrics_df['term_performance'][block] / \
-                ste_dict[task]
+            this_transfer_val = metrics_df['term_performance'][block] / ste_dict[task]
             reverse_transfer[block] = this_transfer_val
 
         metrics_df = _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
@@ -397,43 +394,54 @@ class TransferMatrix(AgentMetric):
 
 
 class STERelativePerf(AgentMetric):
-    name = "Performance relative to S.T.E"
+    name = "Performance relative to STE"
     capability = "adapt_to_new_tasks"
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance of each task relative to it's corresponding single task expert"
 
     def __init__(self):
         super().__init__()
-        # self.validate()
 
     def validate(self, phase_info):
-        # Load the single task experts and compare them to the ones in the logs
-        ste_dict = util.load_default_ste_data()
+        # Check if there is STE data for each task in the scenario
         unique_tasks = phase_info.loc[:, 'task_name'].unique()
+        ste_names = util.get_ste_data_names()
 
         # Make sure STE baselines are available for all tasks, else complain
-        if unique_tasks.any() not in ste_dict:
+        if ~np.all(np.isin(unique_tasks, ste_names)):
             raise Exception('STE data not available for all tasks')
-
-        return
 
     def calculate(self, dataframe, phase_info, metrics_df):
         try:
             # Validate the STE
-            ste_dict = self.validate(phase_info)
+            self.validate(phase_info)
 
-            metrics_df['STE_normalized_saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-            ste_normalized_saturation = {}
+            # Initialize metric column
+            metrics_df['ste_rel_perf'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            ste_rel_perf = {}
 
-            for idx in range(phase_info.loc[:, 'block'].max() + 1):
-                # Get which task this block is and grab the STE performance for that task
-                this_task = phase_info.loc[idx, "task_name"]
-                this_ste_comparison = ste_dict[this_task]
+            # Iterate through unique tasks and STE
+            unique_tasks = phase_info.loc[:, 'task_name'].unique()
 
-                # Compare the saturation value of this block to the STE performance and store it
-                ste_normalized_saturation[idx] = metrics_df["term_performance"][idx] / this_ste_comparison
+            for task in unique_tasks:
+                # Get phase info for task during training
+                task_phases = phase_info[(phase_info['task_name'] == task) & (
+                    phase_info['phase_type'] == 'train')]
 
-            return _localutil.fill_metrics_df(ste_normalized_saturation, 'STE_normalized_saturation', metrics_df)
+                # Get data concatenated data for task
+                task_data = dataframe[dataframe['block'].isin(task_phases['block'])]
+
+                # Load STE data
+                ste_data = util.load_ste_data(task)
+
+                # Compute relative performance
+                min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
+                task_perf = task_data.head(min_exp)['reward'].sum()
+                ste_perf = ste_data.head(min_exp)['reward'].sum()
+                rel_perf = task_perf / ste_perf
+                ste_rel_perf[task_data['block'].iloc[-1]] = rel_perf
+
+            return _localutil.fill_metrics_df(ste_rel_perf, 'ste_rel_perf', metrics_df)
         except Exception as e:
             print("Data not suitable for", self.name)
             print(e)
@@ -529,8 +537,7 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
-        phase_info_keys_to_include = [
-            'phase_number', 'phase_type', 'task_name', 'block']
+        phase_info_keys_to_include = ['phase_number', 'phase_type', 'task_name', 'block']
         if len(self.phase_info.loc[:, 'param_set'].unique()) > 1:
             phase_info_keys_to_include.append('param_set')
 

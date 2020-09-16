@@ -66,23 +66,29 @@ def run():
 
     # We assume that the logs are found in a subdirectory under $L2DATA/logs - this subdirectory must be passed as a
     # parameter in order to locate the logs which will be parsed by this code
-    parser.add_argument('-log_dir', default=None, help='Subdirectory under $L2DATA/logs for the log files')
+    parser.add_argument('-l', '--log_dir', help='Subdirectory under $L2DATA/logs for the log files')
 
     # Choose syllabus type "agent" for Agent-based environments, and "class" for Classification-based environments
-    parser.add_argument('-syllabus_type', choices=["agent", "class"],  default="agent", help='Type of learner '
-                                                                                             'used in the syllabus')
+    parser.add_argument('-t', '--syllabus_type', choices=["agent", "class"],  default="agent",
+                        help='Type of learner used in the syllabus')
+
+    # Choose application measure to use as performance column
+    parser.add_argument('-p', '--perf_measure', default="reward",
+                        help='Name of column to use for metrics calculations')
 
     args = parser.parse_args()
 
     if args.log_dir is None:
         raise Exception('Log directory must be specified!')
 
+    # TODO: Check if performance measure is in list of application measures
+
     if args.syllabus_type == "class":
         metrics_report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir)
         # Here is where you add your custom metric to the list of metrics already being calculated
         metrics_report.add(MyCustomClassMetric())
     else:
-        metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir)
+        metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure)
         # Here is where you add your custom metric to the list of metrics already being calculated
         metrics_report.add(MyCustomAgentMetric())
 

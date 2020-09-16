@@ -52,8 +52,9 @@ class WithinBlockSaturation(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the max performance within each block"
 
-    def __init__(self):
+    def __init__(self, perf_measure):
         super().__init__()
+        self.perf_measure = perf_measure
 
     def validate(self, phase_info):
         pass
@@ -75,7 +76,7 @@ class WithinBlockSaturation(AgentMetric):
 
             # Make within block calculations
             sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                block_data, column_to_use='reward', window_len=custom_window)
+                block_data, column_to_use=self.perf_measure, window_len=custom_window)
 
             # Record them
             saturation_values[idx] = sat_value
@@ -92,8 +93,9 @@ class MostRecentTerminalPerformance(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the terminal performance within each block"
 
-    def __init__(self):
+    def __init__(self, perf_measure):
         super().__init__()
+        self.perf_measure = perf_measure
 
     def validate(self, phase_info):
         pass
@@ -114,7 +116,7 @@ class MostRecentTerminalPerformance(AgentMetric):
 
             # Make within block calculations
             term_performance, eps_to_term_perf, _ = _localutil.get_terminal_perf(
-                block_data, column_to_use='reward', window_len=custom_window)
+                block_data, column_to_use=self.perf_measure, window_len=custom_window)
 
             # Record them
             terminal_perf_values[idx] = term_performance
@@ -130,8 +132,9 @@ class RecoveryTime(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates whether the system recovers after a change of task or parameters and calculate how long it takes if recovery is achieved"
 
-    def __init__(self):
+    def __init__(self, perf_measure):
         super().__init__()
+        self.perf_measure = perf_measure
 
     def validate(self, phase_info):
         # Determine where we need to assess recovery time
@@ -175,7 +178,7 @@ class RecoveryTime(AgentMetric):
                 prev_val = metrics_df['term_performance'][use_ind]
                 block_data = dataframe.loc[assess_ind]
                 _, _, eps_to_rec = _localutil.get_terminal_perf(block_data,
-                                                                column_to_use='reward',
+                                                                column_to_use=self.perf_measure,
                                                                 previous_value=prev_val,
                                                                 window_len=custom_window)
                 recovery_time[assess_ind] = eps_to_rec
@@ -193,8 +196,9 @@ class PerformanceRecovery(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance recovery value corresponding to a change of task or parameters"
 
-    def __init__(self):
+    def __init__(self, perf_measure):
         super().__init__()
+        self.perf_measure = perf_measure
 
     def validate(self, metrics_df):
         # Get number of recovery times
@@ -246,8 +250,9 @@ class PerformanceMaintenance(AgentMetric):
     description = "Calculates the average difference between the most recent" \
         "terminal learning performance of a task and each evaluation performance"
 
-    def __init__(self):
+    def __init__(self, perf_measure):
         super().__init__()
+        self.perf_measure = perf_measure
 
     def validate(self, phase_info):
         # TODO: Add structure validation of phase_info
@@ -314,9 +319,9 @@ class TransferMatrix(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates a transfer matrix for all trained tasks"
 
-    def __init__(self):
+    def __init__(self, perf_measure):
         super().__init__()
-        # self.validate()
+        self.perf_measure = perf_measure
 
     def validate(self, phase_info):
         # Load the single task experts and compare them to the ones in the logs
@@ -404,8 +409,9 @@ class STERelativePerf(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance of each task relative to it's corresponding single task expert"
 
-    def __init__(self):
+    def __init__(self, perf_measure):
         super().__init__()
+        self.perf_measure = perf_measure
 
     def validate(self, phase_info):
         # Check if there is STE data for each task in the scenario
@@ -441,8 +447,8 @@ class STERelativePerf(AgentMetric):
 
                 # Compute relative performance
                 min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
-                task_perf = task_data.head(min_exp)['reward'].sum()
-                ste_perf = ste_data.head(min_exp)['reward'].sum()
+                task_perf = task_data.head(min_exp)[self.perf_measure].sum()
+                ste_perf = ste_data.head(min_exp)[self.perf_measure].sum()
                 rel_perf = task_perf / ste_perf
                 ste_rel_perf[task_data['block'].iloc[-1]] = rel_perf
 
@@ -459,8 +465,9 @@ class SampleEfficiency(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the sample efficiency relative to the single task expert"
 
-    def __init__(self):
+    def __init__(self, perf_measure):
         super().__init__()
+        self.perf_measure = perf_measure
 
     def validate(self, phase_info):
         # Check if there is STE data for each task in the scenario
@@ -502,13 +509,13 @@ class SampleEfficiency(AgentMetric):
                 window = int(task_data.shape[0] * 0.2)
                 custom_window = min(window, self.max_window_size)
                 task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                    task_data, column_to_use='reward', window_len=custom_window)
+                    task_data, column_to_use=self.perf_measure, window_len=custom_window)
 
                 # Get STE saturation value and episodes to saturation
                 window = int(ste_data.shape[0] * 0.2)
                 custom_window = min(window, self.max_window_size)
                 ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                    ste_data, column_to_use='reward', window_len=custom_window)
+                    ste_data, column_to_use=self.perf_measure, window_len=custom_window)
 
                 # Compute sample efficiency
                 se_saturation[task_data['block'].iloc[-1]] = task_saturation / ste_saturation
@@ -534,18 +541,23 @@ class AgentMetricsReport(core.MetricsReport):
         # Defines log_dir and initializes the metrics list
         super().__init__(**kwargs)
 
+        if 'perf_measure' in kwargs:
+            perf_measure = kwargs['perf_measure']
+        else:
+            perf_measure = 'reward'
+
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(self.log_dir)
         self._log_data = self._log_data.sort_values(
             by=['block', 'task']).set_index("block", drop=False)
         _, self.phase_info = _localutil.parse_blocks(self._log_data)
 
-        # Adds default metrics
-        self._add_default_metrics()
-
         # Do an initial check to make sure that reward has been logged
-        if 'reward' not in self._log_data.columns:
-            raise Exception('Reward column is required in the log data!')
+        if perf_measure not in self._log_data.columns:
+            raise Exception('Performance measurement column is required in the log data!')
+
+        # Adds default metrics
+        self._add_default_metrics(perf_measure)
 
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
@@ -557,16 +569,16 @@ class AgentMetricsReport(core.MetricsReport):
         self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(
             self._metrics_df.loc[:, 'task_name'].values)
 
-    def _add_default_metrics(self):
+    def _add_default_metrics(self, perf_measure):
         # Default metrics no matter the syllabus type
-        self.add(WithinBlockSaturation())
-        self.add(MostRecentTerminalPerformance())
-        self.add(RecoveryTime())
-        self.add(PerformanceRecovery())
-        self.add(PerformanceMaintenance())
-        self.add(TransferMatrix())
-        self.add(STERelativePerf())
-        self.add(SampleEfficiency())
+        self.add(WithinBlockSaturation(perf_measure))
+        self.add(MostRecentTerminalPerformance(perf_measure))
+        self.add(RecoveryTime(perf_measure))
+        self.add(PerformanceRecovery(perf_measure))
+        self.add(PerformanceMaintenance(perf_measure))
+        self.add(TransferMatrix(perf_measure))
+        self.add(STERelativePerf(perf_measure))
+        self.add(SampleEfficiency(perf_measure))
 
     def calculate(self):
         for metric in self._metrics:

@@ -213,3 +213,12 @@ def read_log_data(input_dir, analysis_variables=None):
                     blocks = pd.concat([blocks, df])
 
     return logs.merge(blocks, on=['block_num', 'regime_num', 'worker'])
+
+
+def read_column_info(input_dir):
+    # This function reads the column info JSON file in the input directory returns the contents
+
+    fully_qualified_dir = get_fully_qualified_name(input_dir)
+
+    with open(fully_qualified_dir + '/column_metric_list.json') as json_file:
+        return json.load(json_file)

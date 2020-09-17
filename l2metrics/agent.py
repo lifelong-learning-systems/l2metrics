@@ -546,17 +546,19 @@ class AgentMetricsReport(core.MetricsReport):
         else:
             perf_measure = 'reward'
 
-        # Do an initial check to make sure that reward is valid and has been logged
+        # Do an initial check to make sure that reward is valid
         if perf_measure not in util.read_column_info(self.log_dir):
             raise Exception(f'Invalid performance measure: {perf_measure}')
-        if perf_measure not in self._log_data.columns:
-            raise Exception(f'Performance measure ({perf_measure}) not found in the log data')
 
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(self.log_dir, [perf_measure])
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
         _, self.block_info = _localutil.parse_blocks(self._log_data)
+
+        # Do another check to make sure that reward has been logged
+        if perf_measure not in self._log_data.columns:
+            raise Exception(f'Performance measure ({perf_measure}) not found in the log data')
 
         # Adds default metrics
         self._add_default_metrics(perf_measure)

@@ -26,12 +26,12 @@ Background
 The file calc_metrics.py demonstrates how to add custom Metrics to a MetricsReport. Data from the logs is provided to the calculate method, where the actual calculation of your metric should live. An example of both a classification and agent metric are provided for your edificiation. To add this metric to the default metrics calculated for a MetricsReport, simply use: metrics_report.add(MyCustomAgentMetric()) and it will be added to the end of the list in addition to the defaults.
 
 
-calculate(dataframe, phase_info, metrics_dict):
+calculate(dataframe, block_info, metrics_dict):
 
 Inputs:
 - :param dataframe: Pandas dataframe of log data, collated from log files
-- :param phase_info: Pandas dataframe with high level information about blocks/phases extracted from log data. Contains no reward/score columns
-- :param metrics_df: Pandas dataframe with columns corresponding to calculated metrics along with some of the phase_info information. Prints out at the end for reporting. 
+- :param block_info: Pandas dataframe with high level information about blocks/phases extracted from log data. Contains no reward/score columns
+- :param metrics_df: Pandas dataframe with columns corresponding to calculated metrics along with some of the block_info information. Prints out at the end for reporting. 
 
 Output:
 - :return: metrics_df: Pandas dataframe, updated with columns corresponding to previously calculated metrics

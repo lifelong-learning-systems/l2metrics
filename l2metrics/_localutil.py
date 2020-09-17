@@ -22,70 +22,57 @@ import numpy as np
 
 
 def parse_blocks(data):
-    # Want to get the unique phases, split out training/testing info, and return the split info
-    phases_list = []
+    # Want to get the unique blocks, split out training/testing info, and return the split info
+    block_list = []
     test_task_nums = []
-    all_block_nums = []
+    all_regime_nums = []
 
-    phases_from_logs = data.loc[:, 'phase'].unique()
+    blocks_from_logs = data.loc[:, ['block_num', 'block_type']].drop_duplicates()
 
-    for p in phases_from_logs:
+    for _, block in blocks_from_logs.iterrows():
+        block_num = block['block_num']
+        block_type = block['block_type']
 
-        # Extract information
-        x = re.match(r'^(\d+)[.-_]*(\w+)', p)
-
-        if x is not None:
-            if x.re.groups != 2:
-                raise Exception('Unsupported phase annotation: "{:s}"! Supported format is phase_number.'
-                                'phase_type, which must be (int).(string)'.format(p))
-        else:
-            raise Exception('Unsupported phase annotation: "{:s}"! Supported format is phase_number.'
-                            'phase_type, which must be (int).(string)'.format(p))
-        
-        phase_number = x.group(1)     
-        phase_type = x.group(2)
-
-        if str.lower(phase_type) not in ["train", "test"]:
-            raise Exception('Unsupported phase type: {:s}! Supported phase types are "train" and "test"'
-                            .format(phase_type))
+        if str.lower(block_type) not in ["train", "test"]:
+            raise Exception(f'Unsupported block type: {block_type}! Supported block types are "train" and "test"')
 
         # Now must account for the multiple tasks, parameters
-        d1 = data[data["phase"] == p]
-        blocks_within_phases = d1.loc[:, 'block'].unique()
+        d1 = data[(data["block_num"] == block_num) & (data["block_type"] == block_type)]
+        regimes_within_blocks = d1.loc[:, 'regime_num'].unique()
         param_set = d1.loc[:, 'params'].unique()
 
-        # Save the block numbers involved in testing for subsequent metrics
-        if phase_type == 'test':
-            test_task_nums.extend(blocks_within_phases)
+        # Save the regime_num numbers involved in testing for subsequent metrics
+        if block_type == 'test':
+            test_task_nums.extend(regimes_within_blocks)
 
-        for b in blocks_within_phases:
-            all_block_nums.append(b)
-            d2 = d1[d1["block"] == b]
-            task_name = d2.loc[:, 'class_name'].unique()[0]
+        for regime_num in regimes_within_blocks:
+            all_regime_nums.append(regime_num)
+            d2 = d1[d1["regime_num"] == regime_num]
+            task_name = d2.loc[:, 'task_name'].unique()[0]
 
-            phase_block = {'phase': p, 'phase_number': phase_number, 'phase_type': phase_type, 'task_name': task_name,
-                           'block': b}
+            block_info = {'block_num': block_num, 'block_type': block_type, 'task_name': task_name,
+                           'regime_num': regime_num}
 
             if len(param_set) > 1:
                 # There is parameter variation exercised in the syllabus and we need to record it
                 task_specific_param_set = d2.loc[:, 'params'].unique()[0]
-                phase_block['param_set'] = task_specific_param_set
+                block_info['param_set'] = task_specific_param_set
             elif len(param_set) == 1:
                 # Every task in this block has the same parameter set
-                phase_block['param_set'] = param_set[0]
+                block_info['param_set'] = param_set[0]
             else:
                 raise Exception("Error parsing the parameter set for this task: {:s}".format(param_set))
 
-            phases_list.append(phase_block)
+            block_list.append(block_info)
 
     # Convenient for future dev to have the block id be the same as the index of the dataframe
-    phases_df = pd.DataFrame(phases_list).sort_values(by=['block']).set_index("block", drop=False)
+    blocks_df = pd.DataFrame(block_list).sort_values(by=['regime_num']).set_index("regime_num", drop=False)
 
-    # Quick check to make sure the block numbers (zero indexed) aren't a mismatch on the length of the block nums array
-    if (max(all_block_nums)+1)/len(all_block_nums) != 1:
-        Warning("Phase number: {:f} and length {:d} mismatch!".format(max(all_block_nums), len(all_block_nums)))
+    # Quick check to make sure the regime numbers (zero indexed) aren't a mismatch on the length of the regime nums array
+    if (max(all_regime_nums)+1)/len(all_regime_nums) != 1:
+        Warning(f"Block number: {max(all_regime_nums)} and length {len(all_regime_nums)} mismatch!")
 
-    return test_task_nums, phases_df
+    return test_task_nums, blocks_df
 
 
 def smooth(x, window_len=11, window='hanning'):
@@ -144,7 +131,7 @@ def get_block_saturation_perf(data, column_to_use=None, previous_saturation_valu
     # Calculate the "saturation" value
     # Calculate the number of episodes to "saturation"
 
-    mean_reward_per_episode = data.loc[:, ['task', column_to_use]].groupby('task').mean()
+    mean_reward_per_episode = data.loc[:, ['exp_num', column_to_use]].groupby('exp_num').mean()
     mean_data = np.ravel(mean_reward_per_episode.values)
 
     # Take the moving average of the mean of the per episode reward
@@ -170,7 +157,7 @@ def get_terminal_perf(data, column_to_use=None, previous_value=None, window_len=
     # Calculate the terminal performance value
     # Calculate the number of episodes to terminal performance
 
-    mean_reward_per_episode = data.loc[:, ['task', column_to_use]].groupby('task').mean()
+    mean_reward_per_episode = data.loc[:, ['exp_num', column_to_use]].groupby('exp_num').mean()
     mean_data = np.ravel(mean_reward_per_episode.values)
 
     # Take the moving average of the mean of the per episode reward
@@ -204,18 +191,18 @@ def extract_relevant_columns(dataframe, keyword):
 
 def fill_metrics_df(metric, metric_string_name, metrics_df, dict_key=None):
     if not dict_key:
-        metrics_df[metric_string_name] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+        metrics_df[metric_string_name] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
         for idx in metric.keys():
             metrics_df.loc[idx, metric_string_name] = metric[idx]
     else:
-        metrics_df[dict_key][metric_string_name] = np.full_like(metrics_df[dict_key]['block'], np.nan, dtype=np.double)
+        metrics_df[dict_key][metric_string_name] = np.full_like(metrics_df[dict_key]['regime_num'], np.nan, dtype=np.double)
         for idx in metric.keys():
             metrics_df[dict_key].loc[idx, metric_string_name] = metric[idx]
 
     return metrics_df
 
 
-def simplify_classification_task_names(unique_task_names, phase_info):
+def simplify_classification_task_names(unique_task_names, block_info):
     # Capture the correspondence between the Classification Train/Test tasks
     name_map = {'full_name_map': {}}
     task_map = {}
@@ -225,9 +212,9 @@ def simplify_classification_task_names(unique_task_names, phase_info):
 
     # First find the blocks for each task
     for t in unique_task_names:
-        this_instance_blocks = phase_info.loc[phase_info['task_name'] == t, 'block']
+        this_instance_blocks = block_info.loc[block_info['task_name'] == t, 'regime_num']
 
-        # Then get the base class name by finding the phase/task type annotation and getting the string that comes after
+        # Then get the base class name by finding the block/task type annotation and getting the string that comes after
         x = re.search(r'(train|test)(\w+)', t)
         if x.re.groups != 2:
             raise Exception('Improperly formatted task names! Classification tasks should include '
@@ -263,7 +250,7 @@ def get_simple_class_task_names(task_names):
 
     for idx, t in enumerate(task_names):
 
-        # Get the base class name by finding the phase/task type annotation and getting the string that comes after
+        # Get the base class name by finding the block/task type annotation and getting the string that comes after
         x = re.search(r'(train|test)(\w+)', t)
         if x.re.groups != 2:
             raise Exception('Improperly formatted task names! Classification tasks should include '

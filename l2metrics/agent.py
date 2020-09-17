@@ -41,8 +41,8 @@ class AgentMetric(core.Metric, ABC):
     def plot(self, result):
         pass
 
-    def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
+    def validate(self, block_info):
+        # TODO: Add structure validation of block_info
         pass
 
 
@@ -56,19 +56,19 @@ class WithinBlockSaturation(AgentMetric):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_df):
-        metrics_df['saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-        metrics_df['eps_to_sat'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+    def calculate(self, dataframe, block_info, metrics_df):
+        metrics_df['saturation'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+        metrics_df['eps_to_sat'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
         saturation_values = {}
         eps_to_saturation = {}
 
         # Iterate over all of the blocks and compute the within block performance
-        for idx in range(phase_info.loc[:, 'block'].max() + 1):
+        for idx in range(block_info.loc[:, 'regime_num'].max() + 1):
             # Need to get the part of the data corresponding to the block
-            block_data = dataframe.loc[dataframe["block"] == idx]
+            block_data = dataframe.loc[dataframe["regime_num"] == idx]
 
             # Get block window size for smoothing
             window = int(block_data.size * 0.2)
@@ -97,19 +97,19 @@ class MostRecentTerminalPerformance(AgentMetric):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_df):
-        metrics_df['term_performance'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-        metrics_df['eps_to_term_perf'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+    def calculate(self, dataframe, block_info, metrics_df):
+        metrics_df['term_performance'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+        metrics_df['eps_to_term_perf'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
         terminal_perf_values = {}
         eps_to_terminal_perf = {}
 
         # Iterate over all of the blocks and compute the within block performance
-        for idx in range(phase_info.loc[:, 'block'].max() + 1):
+        for idx in range(block_info.loc[:, 'regime_num'].max() + 1):
             # Need to get the part of the data corresponding to the block
-            block_data = dataframe.loc[dataframe["block"] == idx]
+            block_data = dataframe.loc[dataframe["regime_num"] == idx]
 
             window = int(block_data.size * 0.2)
             custom_window = min(window, self.max_window_size)
@@ -136,13 +136,13 @@ class RecoveryTime(AgentMetric):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         # Determine where we need to assess recovery time
         tr_bl_inds_to_use = []
         tr_bl_inds_to_assess = []
 
         # Get train blocks, in order of appearance
-        tr_bl_info = phase_info.sort_index().loc[phase_info['phase_type'] == 'train', ['block', 'task_name',
+        tr_bl_info = block_info.sort_index().loc[block_info['block_type'] == 'train', ['regime_num', 'task_name',
                                                                                        'param_set']]
         tb_inds = tr_bl_info.index
 
@@ -159,16 +159,16 @@ class RecoveryTime(AgentMetric):
                 tr_bl_inds_to_use.append(tb_inds[idx - 1])
 
         if tr_bl_inds_to_assess is None or tr_bl_inds_to_use is None:
-            raise Exception('No changes across training blocks to assess recovery time!')
+            raise Exception('No changes across training blocks to assess recovery time')
 
         return tr_bl_inds_to_use, tr_bl_inds_to_assess
 
-    def calculate(self, dataframe, phase_info, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         # Get the places where we should calculate recovery time
         try:
-            tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
+            tr_inds_to_use, tr_inds_to_assess = self.validate(block_info)
 
-            metrics_df['recovery_time'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            metrics_df['recovery_time'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
             recovery_time = {}
 
             window = int(np.floor(len(dataframe) * 0.02))
@@ -185,8 +185,7 @@ class RecoveryTime(AgentMetric):
 
             return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
         except Exception as e:
-            print("Data not suitable for", self.name)
-            print(e)
+            print(f"Cannot compute {self.name} - {e}")
             return metrics_df
 
 
@@ -207,15 +206,15 @@ class PerformanceRecovery(AgentMetric):
         r_count = r.count()
 
         if r_count <= 1:
-            raise Exception('Not enough recovery times to assess performance recovery!')
-        elif r_count != metrics_df["phase_type"].value_counts()["train"] - 1:
-            raise Exception('There are blocks where the system did not recover!')
+            raise Exception('Not enough recovery times to assess performance recovery')
+        elif r_count != metrics_df["block_type"].value_counts()["train"] - 1:
+            raise Exception('There are blocks where the system did not recover')
         elif np.any(r.str.contains('No Recovery')):
-            raise Exception('There are blocks where the system did not recover!')
+            raise Exception('There are blocks where the system did not recover')
 
         return
 
-    def calculate(self, dataframe, phase_info, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         # Get the places where we should calculate recovery time
         try:
             self.validate(metrics_df)
@@ -231,15 +230,14 @@ class PerformanceRecovery(AgentMetric):
 
             pr_values = {}
 
-            for idx in range(phase_info.loc[:, 'block'].max()):
+            for idx in range(block_info.loc[:, 'regime_num'].max()):
                 pr_values[idx] = 0
             
             pr_values[idx + 1] = slope
 
             return _localutil.fill_metrics_df(pr_values, 'perf_recovery', metrics_df)
         except Exception as e:
-            print("Data not suitable for", self.name)
-            print(e)
+            print(f"Cannot compute {self.name} - {e}")
             return metrics_df
 
 
@@ -254,12 +252,12 @@ class PerformanceMaintenance(AgentMetric):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, phase_info):
-        # TODO: Add structure validation of phase_info
-        # Must ensure that the training phase has only one block or else handle multiple
+    def validate(self, block_info):
+        # TODO: Add structure validation of block_info
+        # Must ensure that the training block has only one regime or else handle multiple
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         try:
             # This metric must compute in each evaluation block the performance of the tasks
             # relative to the previously trained ones
@@ -268,28 +266,28 @@ class PerformanceMaintenance(AgentMetric):
             performance_difference = {}
             eps_to_sat_dif = {}
 
-            # Iterate over the phases, just the evaluation portion. We need to do this in order.
-            for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
-                # Get the task names that were used for the train portion of the phase
-                trained_task = phase_info[(phase_info.phase_type == 'train') &
-                                          (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+            # Iterate over the blocs, just the evaluation portion. We need to do this in order.
+            for block in block_info.sort_index().loc[:, 'block_num'].unique():
+                # Get the task names that were used for the train portion of the block
+                trained_task = block_info[(block_info.block_type == 'train') &
+                                          (block_info.block_num == block)].loc[:, 'task_name'].to_numpy()
 
-                # Skip block if phase is not training phase
+                # Skip block if not training block
                 if len(trained_task) == 0:
                     continue
 
                 trained_task = trained_task[0]
-                trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
-                                            (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
+                trained_task_ids = block_info[(block_info.block_type == 'train') &
+                                            (block_info.block_num == block)].loc[:, 'regime_num'].to_numpy()
 
-                # Validation will have ensured that the training phase has exactly one training block
+                # Validation will have ensured that the training block has exactly one training block
                 previously_trained_tasks = np.append(previously_trained_tasks, trained_task)
                 previously_trained_task_ids = np.append(previously_trained_task_ids, trained_task_ids)
 
-                test_tasks = phase_info[(phase_info.phase_type == 'test') &
-                                        (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
-                test_task_ids = phase_info[(phase_info.phase_type == 'test') &
-                                           (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
+                test_tasks = block_info[(block_info.block_type == 'test') &
+                                        (block_info.block_num == block)].loc[:, 'task_name'].to_numpy()
+                test_task_ids = block_info[(block_info.block_type == 'test') &
+                                           (block_info.block_num == block)].loc[:, 'regime_num'].to_numpy()
 
                 for idx, task in enumerate(test_tasks):
                     # Skip the evaluation block immediately following a train task
@@ -309,7 +307,7 @@ class PerformanceMaintenance(AgentMetric):
 
             return _localutil.fill_metrics_df(performance_difference, 'performance_difference', metrics_df)
         except:
-            print("Data not suitable for", self.name)
+            print("Cannot compute", self.name)
             return metrics_df
 
 
@@ -323,19 +321,19 @@ class TransferMatrix(AgentMetric):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         # Load the single task experts and compare them to the ones in the logs
         ste_dict = util.load_default_ste_data()
-        unique_tasks = phase_info.loc[:, 'task_name'].unique()
+        unique_tasks = block_info.loc[:, 'task_name'].unique()
 
         # Return tasks which have STE baselines
         tasks_with_ste = [t for t in ste_dict.keys() if t in unique_tasks]
         tasks_for_transfer_matrix = {'forward': [], 'reverse': []}
 
         for task in tasks_with_ste:
-            types_per_this_task = phase_info[phase_info['task_name'] == task]
-            phase_types = types_per_this_task.loc[:, 'phase_type'].to_numpy()
-            phase_nums = types_per_this_task.loc[:, 'phase_number'].to_numpy(dtype=int)
+            types_per_this_task = block_info[block_info['task_name'] == task]
+            phase_types = types_per_this_task.loc[:, 'block_type'].to_numpy()
+            phase_nums = types_per_this_task.loc[:, 'block_num'].to_numpy(dtype=int)
 
             if 'train' in phase_types and 'test' in phase_types:
                 # Check eligibility for both forward and reverse transfer
@@ -351,8 +349,8 @@ class TransferMatrix(AgentMetric):
                     phase_nums_to_add = test_phase_nums[np.where(test_phase_nums < train_phase_num)]
 
                     for num in phase_nums_to_add:
-                        tmp = types_per_this_task.loc[types_per_this_task['phase_type'] == 'test']
-                        blocks_to_add = tmp.loc[tmp['phase_number'] == str(num), 'block']
+                        tmp = types_per_this_task.loc[types_per_this_task['block_type'] == 'test']
+                        blocks_to_add = tmp.loc[tmp['block_num'] == str(num), 'regime_num']
 
                         if len(blocks_to_add) > 1:
                             raise Exception('Too many eval instances of task: {:s}'.format(task))
@@ -364,8 +362,8 @@ class TransferMatrix(AgentMetric):
                     phase_nums_to_add = test_phase_nums[np.where(test_phase_nums > train_phase_num)]
 
                     for num in phase_nums_to_add:
-                        tmp = types_per_this_task.loc[types_per_this_task['phase_type'] == 'test']
-                        blocks_to_add = tmp.loc[tmp['phase_number'] == str(num), 'block']
+                        tmp = types_per_this_task.loc[types_per_this_task['block_type'] == 'test']
+                        blocks_to_add = tmp.loc[tmp['block_num'] == str(num), regime_num]
 
                         if len(blocks_to_add) > 1:
                             raise Exception('Too many eval instances of task: {:s}'.format(task))
@@ -379,8 +377,8 @@ class TransferMatrix(AgentMetric):
         try:
             # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
             ste_dict, tasks_to_compute = self.validate(metadata)
-            metrics_df['forward_transfer'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-            metrics_df['reverse_transfer'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            metrics_df['forward_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+            metrics_df['reverse_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
             reverse_transfer = {}
             forward_transfer = {}
 
@@ -398,8 +396,7 @@ class TransferMatrix(AgentMetric):
             metrics_df = _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
             return _localutil.fill_metrics_df(reverse_transfer, 'reverse_transfer', metrics_df)
         except Exception as e:
-            print("Data not suitable for", self.name)
-            print(e)
+            print(f"Cannot compute {self.name} - {e}")
             return metrics_df
 
 
@@ -413,49 +410,49 @@ class STERelativePerf(AgentMetric):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         # Check if there is STE data for each task in the scenario
-        unique_tasks = phase_info.loc[:, 'task_name'].unique()
+        unique_tasks = block_info.loc[:, 'task_name'].unique()
         ste_names = util.get_ste_data_names()
 
         # Make sure STE baselines are available for all tasks, else complain
         if ~np.all(np.isin(unique_tasks, ste_names)):
-            raise Exception('STE data not available for all tasks')
+            Warning('STE data not available for all tasks')
 
-    def calculate(self, dataframe, phase_info, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         try:
             # Validate the STE
-            self.validate(phase_info)
+            self.validate(block_info)
 
             # Initialize metric column
-            metrics_df['ste_rel_perf'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            metrics_df['ste_rel_perf'] = np.full_like(metrics_df[regime_num], np.nan, dtype=np.double)
             ste_rel_perf = {}
 
             # Iterate through unique tasks and STE
-            unique_tasks = phase_info.loc[:, 'task_name'].unique()
+            unique_tasks = block_info.loc[:, 'task_name'].unique()
 
             for task in unique_tasks:
-                # Get phase info for task during training
-                task_phases = phase_info[(phase_info['task_name'] == task) & (
-                    phase_info['phase_type'] == 'train')]
+                # Get block info for task during training
+                task_phases = block_info[(block_info['task_name'] == task) & (
+                    block_info['block_type'] == 'train')]
 
                 # Get data concatenated data for task
-                task_data = dataframe[dataframe['block'].isin(task_phases['block'])]
+                task_data = dataframe[dataframe['regime_num'].isin(task_phases['regime_num'])]
 
                 # Load STE data
                 ste_data = util.load_ste_data(task)
 
-                # Compute relative performance
-                min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
-                task_perf = task_data.head(min_exp)[self.perf_measure].sum()
-                ste_perf = ste_data.head(min_exp)[self.perf_measure].sum()
-                rel_perf = task_perf / ste_perf
-                ste_rel_perf[task_data['block'].iloc[-1]] = rel_perf
+                if ste_data is not None:
+                    # Compute relative performance
+                    min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
+                    task_perf = task_data.head(min_exp)[self.perf_measure].sum()
+                    ste_perf = ste_data.head(min_exp)[self.perf_measure].sum()
+                    rel_perf = task_perf / ste_perf
+                    ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
 
             return _localutil.fill_metrics_df(ste_rel_perf, 'ste_rel_perf', metrics_df)
         except Exception as e:
-            print("Data not suitable for", self.name)
-            print(e)
+            print(f"Cannot compute {self.name} - {e}")
             return metrics_df
 
 
@@ -469,38 +466,38 @@ class SampleEfficiency(AgentMetric):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         # Check if there is STE data for each task in the scenario
-        unique_tasks = phase_info.loc[:, 'task_name'].unique()
+        unique_tasks = block_info.loc[:, 'task_name'].unique()
         ste_names = util.get_ste_data_names()
 
         # Make sure STE baselines are available for all tasks, else complain
         if ~np.all(np.isin(unique_tasks, ste_names)):
-            raise Exception('STE data not available for all tasks')
+            Warning('STE data not available for all tasks')
 
-    def calculate(self, dataframe, phase_info, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         try:
             # Validate the STE
-            self.validate(phase_info)
+            self.validate(block_info)
 
             # Initialize metric column
-            metrics_df['se_saturation'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-            metrics_df['se_eps_to_sat'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
-            metrics_df['sample_efficiency'] = np.full_like(metrics_df['block'], np.nan, dtype=np.double)
+            metrics_df['se_saturation'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+            metrics_df['se_eps_to_sat'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+            metrics_df['sample_efficiency'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
             se_saturation = {}
             se_eps_to_sat = {}
             sample_efficiency = {}
 
             # Iterate through unique tasks and STE
-            unique_tasks = phase_info.loc[:, 'task_name'].unique()
+            unique_tasks = block_info.loc[:, 'task_name'].unique()
 
             for task in unique_tasks:
-                # Get phase info for task during training
-                task_phases = phase_info[(phase_info['task_name'] == task) & (
-                    phase_info['phase_type'] == 'train')]
+                # Get block info for task during training
+                task_phases = block_info[(block_info['task_name'] == task) & (
+                    block_info['block_type'] == 'train')]
 
                 # Get data concatenated data for task
-                task_data = dataframe[dataframe['block'].isin(task_phases['block'])]
+                task_data = dataframe[dataframe['regime_num'].isin(task_phases['regime_num'])]
 
                 # Load STE data
                 ste_data = util.load_ste_data(task)
@@ -518,17 +515,16 @@ class SampleEfficiency(AgentMetric):
                     ste_data, column_to_use=self.perf_measure, window_len=custom_window)
 
                 # Compute sample efficiency
-                se_saturation[task_data['block'].iloc[-1]] = task_saturation / ste_saturation
-                se_eps_to_sat[task_data['block'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
-                sample_efficiency[task_data['block'].iloc[-1]] = \
+                se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
+                se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
+                sample_efficiency[task_data['regime_num'].iloc[-1]] = \
                     (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
 
             metrics_df = _localutil.fill_metrics_df(se_saturation, 'se_saturation', metrics_df)
             metrics_df = _localutil.fill_metrics_df(se_eps_to_sat, 'se_eps_to_sat', metrics_df)
             return _localutil.fill_metrics_df(sample_efficiency, 'sample_efficiency', metrics_df)
         except Exception as e:
-            print("Data not suitable for", self.name)
-            print(e)
+            print(f"Cannot compute {self.name} - {e}")
             return metrics_df
 
 
@@ -547,25 +543,25 @@ class AgentMetricsReport(core.MetricsReport):
             perf_measure = 'reward'
 
         # Gets all data from the relevant log files
-        self._log_data = util.read_log_data(self.log_dir)
+        self._log_data = util.read_log_data(self.log_dir, [perf_measure])
         self._log_data = self._log_data.sort_values(
-            by=['block', 'task']).set_index("block", drop=False)
-        _, self.phase_info = _localutil.parse_blocks(self._log_data)
+            by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
+        _, self.block_info = _localutil.parse_blocks(self._log_data)
 
         # Do an initial check to make sure that reward has been logged
         if perf_measure not in self._log_data.columns:
-            raise Exception('Performance measurement column is required in the log data!')
+            raise Exception('Performance measurement column is required in the log data')
 
         # Adds default metrics
         self._add_default_metrics(perf_measure)
 
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
-        phase_info_keys_to_include = ['phase_number', 'phase_type', 'task_name', 'block']
-        if len(self.phase_info.loc[:, 'param_set'].unique()) > 1:
-            phase_info_keys_to_include.append('param_set')
+        block_info_keys_to_include = ['block_num', 'block_type', 'task_name', 'regime_num']
+        if len(self.block_info.loc[:, 'param_set'].unique()) > 1:
+            block_info_keys_to_include.append('param_set')
 
-        self._metrics_df = self.phase_info[phase_info_keys_to_include].copy()
+        self._metrics_df = self.block_info[block_info_keys_to_include].copy()
         self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(
             self._metrics_df.loc[:, 'task_name'].values)
 
@@ -583,7 +579,7 @@ class AgentMetricsReport(core.MetricsReport):
     def calculate(self):
         for metric in self._metrics:
             self._metrics_df = metric.calculate(
-                self._log_data, self.phase_info, self._metrics_df)
+                self._log_data, self.block_info, self._metrics_df)
 
     def report(self, save=False):
         print(tabulate(self._metrics_df, headers='keys', tablefmt='psql'))
@@ -603,7 +599,7 @@ class AgentMetricsReport(core.MetricsReport):
 
     def plot(self, save=False):
         print('Plotting a smoothed reward curve')
-        util.plot_performance(self._log_data, do_smoothing=True, do_task_colors=True, do_save_fig=save,
+        util.plot_performance(self._log_data, do_smoothing=True, do_save_fig=save,
                               max_smoothing_window=100, input_title=self.log_dir)
 
     def add(self, metrics_list):

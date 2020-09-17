@@ -19,10 +19,10 @@ def run():
     # Load data from ste logs
     log_data = util.read_log_data(args.log_dir)
     log_data = log_data.sort_values(
-        by=['block', 'task']).set_index("block", drop=False)
+        by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
 
     # Get task name
-    task_name = log_data.class_name.unique()
+    task_name = log_data.task_name.unique()
 
     # Check for number of tasks in scenario
     if task_name.size != 1:

@@ -33,7 +33,7 @@ class ClassificationMetric(core.Metric, ABC):
     def plot(self, result):
         pass
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         pass
 
 
@@ -41,20 +41,20 @@ class AveragedScorePerBatch(ClassificationMetric):
     name = "Average Score per block"
     capability = "continual_learning"
     requires = {'syllabus_type': 'type2'}
-    description = "Calculates the performance across all tasks and phases"
+    description = "Calculates the performance across all tasks and blocks"
 
     def __init__(self):
         super().__init__()
         # self.validate()
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         average_scores = {}
 
         # Iterate over all of the blocks and compute the within block performance
-        for idx in range(phase_info.loc[:, 'block'].max() + 1):
+        for idx in range(block_info.loc[:, 'regime_num'].max() + 1):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe.loc[dataframe["block"] == idx]
             # Make within block calculations
@@ -79,19 +79,19 @@ class WithinBlockSaturation(ClassificationMetric):
         super().__init__()
         # self.validate()
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
         saturation_values = {}
         eps_to_saturation = {}
 
         for col in relevant_columns:
-            metrics_df[col]['saturation_value'] = np.full_like(metrics_df[col]['block'], np.nan, dtype=np.double)
-            metrics_df[col]['eps_to_saturation'] = np.full_like(metrics_df[col]['block'], np.nan, dtype=np.double)
+            metrics_df[col]['saturation_value'] = np.full_like(metrics_df[col]['regime_num'], np.nan, dtype=np.double)
+            metrics_df[col]['eps_to_saturation'] = np.full_like(metrics_df[col]['regime_num'], np.nan, dtype=np.double)
             # Iterate over all of the blocks and compute the within block performance
-            for idx in range(phase_info.loc[:, 'block'].max() + 1):
+            for idx in range(block_info.loc[:, 'regime_num'].max() + 1):
                 # Get the part of the data corresponding to the relevant block
                 block_data = dataframe.loc[dataframe["block"] == idx]
                 # Make within block calculations
@@ -115,12 +115,12 @@ class AverageLearning(ClassificationMetric):
     def __init__(self):
         super().__init__()
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         pass
 
-    def calculate(self, dataframe, phase_info, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         metrics_df['average_learning'] = {}
-        train_block_ids = phase_info.loc[phase_info['phase_type'] == 'train', 'block'].values
+        train_block_ids = block_info.loc[block_info['block_type'] == 'train', 'regime_num'].values
         relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
         average_learning = {}
 
@@ -132,11 +132,11 @@ class AverageLearning(ClassificationMetric):
                     score_until_saturation = 0
 
                 else:
-                    block_data = dataframe.loc[dataframe['block'] == tr_block]
-                    first_episode_num = block_data.iloc[0]['task']
+                    block_data = dataframe.loc[dataframe['regime_num'] == tr_block]
+                    first_episode_num = block_data.iloc[0]['exp_num']
                     saturation_task_num = num_episodes + first_episode_num
 
-                    score_until_saturation = block_data.loc[block_data['task'] <= saturation_task_num, col].sum()
+                    score_until_saturation = block_data.loc[block_data['exp_num'] <= saturation_task_num, col].sum()
 
                 average_learning[tr_block] = score_until_saturation / num_episodes
 
@@ -155,19 +155,19 @@ class RecoveryTime(ClassificationMetric):
         super().__init__()
         # self.validate()
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         # Determine where we need to assess recovery time
         tr_bl_inds_to_use = []
         tr_bl_inds_to_assess = []
 
         # Get train blocks, in order of appearance
-        tr_bl_info = phase_info.sort_index().loc[phase_info['phase_type'] == 'train', ['block', 'task_name',
+        tr_bl_info = block_info.sort_index().loc[block_info['block_type'] == 'train', ['regime_num', 'task_name',
                                                                                        'param_set']]
         tb_inds = tr_bl_info.index
 
         # Grab the map of names in logs vs high level task names
-        unique_tasks = phase_info.loc[:, 'task_name'].unique()
-        task_map, block_list, name_map, type_map = _localutil.simplify_classification_task_names(unique_tasks, phase_info)
+        unique_tasks = block_info.loc[:, 'task_name'].unique()
+        task_map, block_list, name_map, type_map = _localutil.simplify_classification_task_names(unique_tasks, block_info)
 
         # Blocks are defined as new combinations of task + params, but can repeat, so check for changes across blocks
         first = True
@@ -190,10 +190,10 @@ class RecoveryTime(ClassificationMetric):
 
         return tr_bl_inds_to_use, tr_bl_inds_to_assess
 
-    def calculate(self, dataframe, phase_info, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         # Get the places where we should calculate recovery time
         recovery_time = {}
-        tr_inds_to_use, tr_inds_to_assess = self.validate(phase_info)
+        tr_inds_to_use, tr_inds_to_assess = self.validate(block_info)
         if len(tr_inds_to_assess) == 0:
             return metrics_df
         relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
@@ -201,7 +201,7 @@ class RecoveryTime(ClassificationMetric):
         for col in relevant_columns:
             for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
                 prev_val = metrics_df[col]['saturation_value'][use_ind]
-                block_data = dataframe.loc[dataframe['block'] == assess_ind]
+                block_data = dataframe.loc[dataframe['regime_num'] == assess_ind]
                 _, _, eps_to_rec = _localutil.get_block_saturation_perf(block_data,
                                                                         column_to_use=col,
                                                                         previous_saturation_value=prev_val)
@@ -224,10 +224,10 @@ class PerfDifferenceANT(ClassificationMetric):
         super().__init__()
         # self.validate()
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         pass
 
-    def calculate(self, data, phase_info, metrics_df):
+    def calculate(self, data, block_info, metrics_df):
         # This metric must compute in each evaluation block the performance of the tasks
         # relative to the previously trained ones
         # Initialize some variables
@@ -237,31 +237,31 @@ class PerfDifferenceANT(ClassificationMetric):
         eps_to_sat_diff = {}
 
         # Get the simplified version of task names in classification logs
-        unique_tasks = phase_info.loc[:, 'task_name'].unique()
-        task_map, block_list, name_map, type_map = _localutil.simplify_classification_task_names(unique_tasks, phase_info)
+        unique_tasks = block_info.loc[:, 'task_name'].unique()
+        task_map, block_list, name_map, type_map = _localutil.simplify_classification_task_names(unique_tasks, block_info)
 
         # Get relevant columns for this dataframe
         relevant_columns = _localutil.extract_relevant_columns(data, keyword='score')
 
-        # Iterate over the phases, just the evaluation portion. We need to do this in order.
-        for phase in phase_info.sort_index().loc[:, 'phase_number'].unique():
-            # Get the task names that were used for the train portion of the phase
-            trained_tasks_full_name = phase_info[(phase_info.phase_type == 'train') &
-                                                 (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+        # Iterate over the blocks, just the evaluation portion. We need to do this in order.
+        for block in block_info.sort_index().loc[:, 'block_num'].unique():
+            # Get the task names that were used for the train portion of the block
+            trained_tasks_full_name = block_info[(block_info.block_type == 'train') &
+                                                 (block_info.block_num == block)].loc[:, 'task_name'].to_numpy()
             trained_tasks = np.array(name_map['full_name_map'][trained_tasks_full_name[0]])
-            trained_task_ids = phase_info[(phase_info.phase_type == 'train') &
-                                          (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
+            trained_task_ids = block_info[(block_info.block_type == 'train') &
+                                          (block_info.block_num == block)].loc[:, 'regime_num'].to_numpy()
 
-            # Validation will have ensured that the training phase has exactly one training block
+            # Validation will have ensured that the training block has exactly one training block
             previously_trained_tasks = np.append(previously_trained_tasks, trained_tasks)
             previously_trained_task_ids = np.append(previously_trained_task_ids, trained_task_ids)
 
-            this_phase_test_task_names = phase_info[(phase_info.phase_type == 'test') &
-                                                    (phase_info.phase_number == phase)].loc[:, 'task_name'].to_numpy()
+            this_phase_test_task_names = block_info[(block_info.block_type == 'test') &
+                                                    (block_info.block_num == block)].loc[:, 'task_name'].to_numpy()
             this_phase_test_tasks = np.array([name_map['full_name_map'][task_name]
                                               for task_name in this_phase_test_task_names])
-            this_phase_test_task_ids = phase_info[(phase_info.phase_type == 'test') &
-                                                  (phase_info.phase_number == phase)].loc[:, 'block'].to_numpy()
+            this_phase_test_task_ids = block_info[(block_info.block_type == 'test') &
+                                                  (block_info.block_num == block)].loc[:, 'regime_num'].to_numpy()
 
             for col in relevant_columns:
                 for idx, task in enumerate(this_phase_test_tasks):
@@ -301,10 +301,10 @@ class STERelativePerf(ClassificationMetric):
         super().__init__()
         # self.validate()
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         # Load the single task experts and compare them to the ones in the logs
         ste_dict = util.load_default_ste_data()
-        unique_tasks = phase_info.loc[phase_info['phase_type'] == 'train', 'task_name'].unique()
+        unique_tasks = block_info.loc[block_info['block_type'] == 'train', 'task_name'].unique()
 
         # Make sure STE baselines are available for all tasks, else complain
         if unique_tasks.any() not in ste_dict:
@@ -312,18 +312,18 @@ class STERelativePerf(ClassificationMetric):
 
         return ste_dict
 
-    def calculate(self, dataframe, phase_info, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         # Validate the STE
-        ste_dict = self.validate(phase_info)
+        ste_dict = self.validate(block_info)
         ste_normalized_saturation = {}
         relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
 
         for col in relevant_columns:
-            for idx in range(phase_info.loc[:, 'block'].max()):
-                if phase_info.loc[idx, 'phase_type'] != 'train':
+            for idx in range(block_info.loc[:, 'regime_num'].max()):
+                if block_info.loc[idx, 'block_type'] != 'train':
                     continue
                 # Get which task this block is and grab the STE performance for that task
-                this_task = phase_info.loc[idx, "task_name"]
+                this_task = block_info.loc[idx, "task_name"]
                 this_ste_comparison = ste_dict[this_task]
 
                 # Compare the saturation value of this block to the STE performance and store it
@@ -344,16 +344,16 @@ class TransferMatrix(ClassificationMetric):
         super().__init__()
         # self.validate()
 
-    def validate(self, phase_info):
+    def validate(self, block_info):
         # Load the single task experts and compare them to the ones in the logs
         ste_dict = util.load_default_ste_data()
-        unique_tasks = phase_info.loc[:, 'task_name'].unique()
+        unique_tasks = block_info.loc[:, 'task_name'].unique()
 
         # Return tasks which have STE baselines
         tasks_with_ste = [t for t in ste_dict.keys() if t in unique_tasks]
         tasks_for_transfer_matrix = {'forward': [], 'reverse': []}
 
-        task_map, block_list, name_map, type_map = _localutil.simplify_classification_task_names(unique_tasks, phase_info)
+        task_map, block_list, name_map, type_map = _localutil.simplify_classification_task_names(unique_tasks, block_info)
 
         for task in task_map.keys():
             task_blocks = task_map[task]
@@ -364,8 +364,8 @@ class TransferMatrix(ClassificationMetric):
                 train_block_nums = np.array(task_blocks[np.isin(types_per_this_task, 'train')])
                 test_block_nums = np.array(task_blocks[np.isin(types_per_this_task, 'test')])
 
-                train_phase_nums = np.array([int(phase_info.loc[b, 'phase_number']) for b in train_block_nums])
-                test_phase_nums = np.array([int(phase_info.loc[b, 'phase_number']) for b in test_block_nums])
+                train_phase_nums = np.array([int(block_info.loc[b, 'block_num']) for b in train_block_nums])
+                test_phase_nums = np.array([int(block_info.loc[b, 'phase_number']) for b in test_block_nums])
 
                 # TODO: Are multiple training blocks of the same task ok for transfer matrix calculation? Right now, no
                 if len(train_block_nums) > 1:
@@ -416,7 +416,7 @@ class ClassificationMetricsReport(core.MetricsReport):
 
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(self.log_dir)
-        _, self.phase_info = _localutil.parse_blocks(self._log_data)
+        _, self.block_info = _localutil.parse_blocks(self._log_data)
 
         # Adds default metrics to list
         self._add_default_metrics()
@@ -424,15 +424,15 @@ class ClassificationMetricsReport(core.MetricsReport):
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
         self._metrics_df = {}
-        phase_info_keys_to_include = ['phase_number', 'phase_type', 'task_name', 'block']
-        if len(self.phase_info.loc[:, 'param_set'].unique()) > 1:
+        phase_info_keys_to_include = ['phase_number', 'block_type', 'task_name', 'regime_num']
+        if len(self.block_info.loc[:, 'param_set'].unique()) > 1:
             phase_info_keys_to_include.append('param_set')
 
         cols = _localutil.extract_relevant_columns(self._log_data[self._log_data['source'] == 'GET_LABELS'],
                                                    keyword='score')
 
         for col in cols:
-            self._metrics_df[col] = self.phase_info[phase_info_keys_to_include].copy()
+            self._metrics_df[col] = self.block_info[phase_info_keys_to_include].copy()
             simple_names = _localutil.get_simple_class_task_names(self._metrics_df[col].loc[:, 'task_name'])
             self._metrics_df[col]['task_name'] = simple_names.values()
 
@@ -447,7 +447,7 @@ class ClassificationMetricsReport(core.MetricsReport):
 
     def calculate(self):
         for metric in self._metrics:
-            self._metrics_df = metric.calculate(self._log_data, self.phase_info, self._metrics_df)
+            self._metrics_df = metric.calculate(self._log_data, self.block_info, self._metrics_df)
 
     def report(self, save=False):
         # Print out the metrics per performance column in the dataframe

@@ -15,17 +15,20 @@
 # USER OF THE MATERIAL FOR ANY ACTUAL, INDIRECT, CONSEQUENTIAL, SPECIAL OR OTHER
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
-from abc import ABC
-from . import core, util, _localutil
-from scipy import stats
-import numpy as np
+
 import os
+from abc import ABC
+
+import numpy as np
+from scipy import stats
 from tabulate import tabulate
+
+from . import _localutil, core, util
+
 
 """
 Standard metrics for Agent Learning (RL tasks)
 """
-
 
 class AgentMetric(core.Metric, ABC):
     """

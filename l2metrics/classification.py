@@ -15,15 +15,19 @@
 # USER OF THE MATERIAL FOR ANY ACTUAL, INDIRECT, CONSEQUENTIAL, SPECIAL OR OTHER
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
-from abc import ABC
-from . import core, util, _localutil
-import numpy as np
+
 import os
+from abc import ABC
+
+import numpy as np
 from tabulate import tabulate
+
+from . import _localutil, core, util
+
+
 """
 Standard metrics for Classification tasks
 """
-
 
 class ClassificationMetric(core.Metric, ABC):
     def __init__(self):

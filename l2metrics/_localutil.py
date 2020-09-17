@@ -16,9 +16,10 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
-import pandas as pd
 import re
+
 import numpy as np
+import pandas as pd
 
 
 def parse_blocks(data):

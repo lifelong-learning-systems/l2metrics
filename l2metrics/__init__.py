@@ -16,6 +16,6 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
-from .core import Metric, MetricsReport
 from .agent import *
 from .classification import *
+from .core import Metric, MetricsReport

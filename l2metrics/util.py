@@ -18,11 +18,14 @@
 
 import glob
 import json
+import os
+
 import matplotlib.pyplot as plt
 import pandas as pd
-import os
-from . import _localutil
+
 from learnkit.data_util.utils import get_l2data_root
+
+from . import _localutil
 
 
 def get_l2root_base_dirs(directory_to_append, sub_to_get=None):

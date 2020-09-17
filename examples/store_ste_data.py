@@ -9,7 +9,7 @@ def run():
     # We assume that the logs are found in a subdirectory under $L2DATA/logs
     # This subdirectory must be passed as a parameter in order to locate the logs
     # which will be parsed by this code
-    parser.add_argument('-log_dir', default=None, help='Subdirectory under $L2DATA/logs for the log files')
+    parser.add_argument('-l', '--log_dir', help='Subdirectory under $L2DATA/logs for the log files')
 
     args = parser.parse_args()
 

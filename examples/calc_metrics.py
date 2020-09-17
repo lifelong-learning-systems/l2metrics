@@ -5,72 +5,12 @@ import os
 import traceback
 
 
-class MyCustomAgentMetric(l2metrics.AgentMetric):
-    name = "An Example Custom Metric for illustration"
-    capability = "continual_learning"
-    requires = {'syllabus_type': 'agent'}
-    description = "Records the maximum value per block in the dataframe"
-    
-    def calculate(self, dataframe, phase_info, metrics_df):
-        max_values = {}
-
-        for idx in range(phase_info.loc[:, 'block'].max() + 1):
-            max_block_value = dataframe.loc[dataframe["block"] == idx, 'reward'].max()
-            max_values[idx] = max_block_value
-
-        # This is the line that fills the metric into the dataframe. Comment it out to suppress this behavior
-        metrics_df = _localutil.fill_metrics_df(max_values, 'max_value', metrics_df)
-        return metrics_df
-
-    def plot(self, result):
-        pass
-
-    def validate(self, phase_info):
-        pass
-
-
-class MyCustomClassMetric(l2metrics.ClassificationMetric):
-    name = "An Example Custom Metric for illustration"
-    capability = "continual_learning"
-    requires = {'syllabus_type': 'class'}
-    description = "Records the maximum value per block in the dataframe"
-
-    def calculate(self, dataframe, phase_info, metrics_df):
-        max_values = {}
-
-        # This could be moved to the validate method in the future
-        source_column = "GET_LABELS"
-        relevant_columns = _localutil.extract_relevant_columns(dataframe, keyword='score')
-        if len(relevant_columns) < 1:
-            raise Exception('Not enough performance columns!')
-
-        for col in relevant_columns:
-            data_rows = dataframe.loc[dataframe["source"] == source_column]
-            for idx in range(phase_info.loc[:, 'block'].max() + 1):
-                max_values[idx] = data_rows.loc[dataframe['block'] == idx, col].max()
-
-            # This is the line that fills the metric into the dataframe. Comment it out to suppress this behavior
-            metrics_df = _localutil.fill_metrics_df(max_values, 'max_value', metrics_df, dict_key=col)
-
-        return metrics_df
-
-    def plot(self, result):
-        pass
-
-    def validate(self, phase_info):
-        pass
-
-
 def run():
     parser = argparse.ArgumentParser(description='Run L2Metrics from the command line')
 
     # We assume that the logs are found in a subdirectory under $L2DATA/logs - this subdirectory must be passed as a
     # parameter in order to locate the logs which will be parsed by this code
     parser.add_argument('-l', '--log_dir', help='Subdirectory under $L2DATA/logs for the log files')
-
-    # Choose syllabus type "agent" for Agent-based environments, and "class" for Classification-based environments
-    parser.add_argument('-t', '--syllabus_type', choices=["agent", "class"],  default="agent",
-                        help='Type of learner used in the syllabus')
 
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf_measure', default="reward",
@@ -83,14 +23,7 @@ def run():
 
     # TODO: Check if performance measure is in list of application measures
 
-    if args.syllabus_type == "class":
-        metrics_report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir)
-        # Here is where you add your custom metric to the list of metrics already being calculated
-        metrics_report.add(MyCustomClassMetric())
-    else:
-        metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure)
-        # Here is where you add your custom metric to the list of metrics already being calculated
-        metrics_report.add(MyCustomAgentMetric())
+    metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure)
 
     # Calculate metrics in order of their addition to the metrics list.
     metrics_report.calculate()

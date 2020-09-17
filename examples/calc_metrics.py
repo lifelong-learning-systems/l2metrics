@@ -1,8 +1,8 @@
 import argparse
+import os
+
 import l2metrics
 from l2metrics import _localutil
-import os
-import traceback
 
 
 def run():
@@ -21,8 +21,6 @@ def run():
     if args.log_dir is None:
         raise Exception('Log directory must be specified!')
 
-    # TODO: Check if performance measure is in list of application measures
-
     metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure)
 
     # Calculate metrics in order of their addition to the metrics list.
@@ -38,5 +36,5 @@ def run():
 if __name__ == "__main__":
     try:
         run()
-    except:
-        traceback.print_exc()
+    except Exception as e:
+        print(f'Error: {e}')

@@ -425,7 +425,7 @@ class STERelativePerf(AgentMetric):
             self.validate(block_info)
 
             # Initialize metric column
-            metrics_df['ste_rel_perf'] = np.full_like(metrics_df[regime_num], np.nan, dtype=np.double)
+            metrics_df['ste_rel_perf'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
             ste_rel_perf = {}
 
             # Iterate through unique tasks and STE
@@ -502,23 +502,24 @@ class SampleEfficiency(AgentMetric):
                 # Load STE data
                 ste_data = util.load_ste_data(task)
 
-                # Get task saturation value and episodes to saturation
-                window = int(task_data.shape[0] * 0.2)
-                custom_window = min(window, self.max_window_size)
-                task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                    task_data, column_to_use=self.perf_measure, window_len=custom_window)
+                if ste_data is not None:
+                    # Get task saturation value and episodes to saturation
+                    window = int(task_data.shape[0] * 0.2)
+                    custom_window = min(window, self.max_window_size)
+                    task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
+                        task_data, column_to_use=self.perf_measure, window_len=custom_window)
 
-                # Get STE saturation value and episodes to saturation
-                window = int(ste_data.shape[0] * 0.2)
-                custom_window = min(window, self.max_window_size)
-                ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                    ste_data, column_to_use=self.perf_measure, window_len=custom_window)
+                    # Get STE saturation value and episodes to saturation
+                    window = int(ste_data.shape[0] * 0.2)
+                    custom_window = min(window, self.max_window_size)
+                    ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
+                        ste_data, column_to_use=self.perf_measure, window_len=custom_window)
 
-                # Compute sample efficiency
-                se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
-                se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
-                sample_efficiency[task_data['regime_num'].iloc[-1]] = \
-                    (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
+                    # Compute sample efficiency
+                    se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
+                    se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
+                    sample_efficiency[task_data['regime_num'].iloc[-1]] = \
+                        (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
 
             metrics_df = _localutil.fill_metrics_df(se_saturation, 'se_saturation', metrics_df)
             metrics_df = _localutil.fill_metrics_df(se_eps_to_sat, 'se_eps_to_sat', metrics_df)

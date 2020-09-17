@@ -62,7 +62,7 @@ def parse_blocks(data):
                 # Every task in this block has the same parameter set
                 block_info['param_set'] = param_set[0]
             else:
-                raise Exception("Error parsing the parameter set for this task: {:s}".format(param_set))
+                raise Exception(f"Error parsing the parameter set for this task: {param_set}")
 
             block_list.append(block_info)
 
@@ -218,8 +218,8 @@ def simplify_classification_task_names(unique_task_names, block_info):
         # Then get the base class name by finding the block/task type annotation and getting the string that comes after
         x = re.search(r'(train|test)(\w+)', t)
         if x.re.groups != 2:
-            raise Exception('Improperly formatted task names! Classification tasks should include '
-                            '"train" or "test," but this one was: {:s}'.format(t))
+            raise Exception(f'Improperly formatted task names! Classification tasks should include \
+                "train" or "test," but this one was: {t}')
 
         task_type = x.group(1)
         task_name = x.group(2)
@@ -254,8 +254,8 @@ def get_simple_class_task_names(task_names):
         # Get the base class name by finding the block/task type annotation and getting the string that comes after
         x = re.search(r'(train|test)(\w+)', t)
         if x.re.groups != 2:
-            raise Exception('Improperly formatted task names! Classification tasks should include '
-                            '"train" or "test," but this one was: {:s}'.format(t))
+            raise Exception(f'Improperly formatted task names! Classification tasks should include \
+                "train" or "test," but this one was: {t}')
 
         task_name = x.group(2)
         all_name_list[idx] = task_name

@@ -344,7 +344,7 @@ class TransferMatrix(AgentMetric):
                 test_phase_nums = phase_nums[phase_types == 'test']
 
                 if len(train_phase_nums) > 1:
-                    raise Exception('Too many training instances of task: {:s}'.format(task))
+                    raise Exception(f'Too many training instances of task: {task}')
 
                 train_phase_num = train_phase_nums[0]
 
@@ -356,7 +356,7 @@ class TransferMatrix(AgentMetric):
                         blocks_to_add = tmp.loc[tmp['block_num'] == str(num), 'regime_num']
 
                         if len(blocks_to_add) > 1:
-                            raise Exception('Too many eval instances of task: {:s}'.format(task))
+                            raise Exception(f'Too many eval instances of task: {task}')
 
                         block_to_add = blocks_to_add.values[0]
                         tasks_for_transfer_matrix['forward'].append((task, block_to_add))
@@ -369,7 +369,7 @@ class TransferMatrix(AgentMetric):
                         blocks_to_add = tmp.loc[tmp['block_num'] == str(num), regime_num]
 
                         if len(blocks_to_add) > 1:
-                            raise Exception('Too many eval instances of task: {:s}'.format(task))
+                            raise Exception(f'Too many eval instances of task: {task}')
 
                         block_to_add = blocks_to_add.values[0]
                         tasks_for_transfer_matrix['reverse'].append((task, block_to_add))
@@ -387,12 +387,12 @@ class TransferMatrix(AgentMetric):
 
             # Calculate, for each task, (task eval saturation / ste saturation)
             for task, block in tasks_to_compute['forward']:
-                print('Computing forward transfer for {:s}'.format(task))
+                print(f'Computing forward transfer for {task}')
                 this_transfer_val = metrics_df['term_performance'][block] / ste_dict[task]
                 forward_transfer[block] = this_transfer_val
 
             for task, block in tasks_to_compute['reverse']:
-                print('Computing reverse transfer for {:s}'.format(task))
+                print(f'Computing reverse transfer for {task}')
                 this_transfer_val = metrics_df['term_performance'][block] / ste_dict[task]
                 reverse_transfer[block] = this_transfer_val
 

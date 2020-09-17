@@ -373,7 +373,7 @@ class TransferMatrix(ClassificationMetric):
 
                 # TODO: Are multiple training blocks of the same task ok for transfer matrix calculation? Right now, no
                 if len(train_block_nums) > 1:
-                    raise Exception('Too many training instances of task: {:s}'.format(task))
+                    raise Exception(f'Too many training instances of task: {task}')
                 train_phase_num = train_phase_nums[0]
 
                 if any(test_phase_nums < train_phase_num):
@@ -397,12 +397,12 @@ class TransferMatrix(ClassificationMetric):
         # Calculate, for each task, (task eval saturation / ste saturation)
         for col in relevant_columns:
             for task, block in tasks_to_compute['forward']:
-                print('Computing forward transfer for {:s}'.format(task))
+                print(f'Computing forward transfer for {task}')
                 this_transfer_val = metrics_df[col]['saturation_value'][block] / ste_dict[task_name_map[task]]
                 forward_transfer[block] = this_transfer_val
 
             for task, block in tasks_to_compute['reverse']:
-                print('Computing reverse transfer for {:s}'.format(task))
+                print(f'Computing reverse transfer for {task}')
                 this_transfer_val = metrics_df[col]['saturation_value'][block] / ste_dict[task_name_map[task]]
                 reverse_transfer[block] = this_transfer_val
 

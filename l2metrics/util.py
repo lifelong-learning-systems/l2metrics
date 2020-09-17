@@ -170,7 +170,7 @@ def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_
             if not input_title:
                 plot_filename = 'plot.png'
 
-        print('Saving figure with name: {:s}'.format(plot_filename))
+        print(f'Saving figure with name: {plot_filename}')
 
         fig.savefig(plot_filename)
     else:

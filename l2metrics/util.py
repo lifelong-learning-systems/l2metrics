@@ -201,7 +201,7 @@ def read_log_data(input_dir, analysis_variables=None):
                 has_data = True
                 if analysis_variables is not None:
                     df = pd.read_csv(os.path.join(root, file), sep='\t')[
-                        ['timestamp', 'block_num', 'regime_num', 'exp_num', 'worker'] + analysis_variables]
+                        ['timestamp', 'block_num', 'regime_num', 'exp_num'] + analysis_variables]
                 else:
                     df = pd.read_csv(os.path.join(root, file), sep='\t')
                 if logs is None:
@@ -215,7 +215,7 @@ def read_log_data(input_dir, analysis_variables=None):
                 else:
                     blocks = pd.concat([blocks, df])
 
-    return logs.merge(blocks, on=['block_num', 'regime_num', 'worker'])
+    return logs.merge(blocks, on=['block_num', 'regime_num'])
 
 
 def read_column_info(input_dir):

@@ -71,7 +71,7 @@ class WithinBlockSaturation(AgentMetric):
         # Iterate over all of the blocks and compute the within block performance
         for idx in range(block_info.loc[:, 'regime_num'].max() + 1):
             # Need to get the part of the data corresponding to the block
-            block_data = dataframe.loc[dataframe["regime_num"] == idx]
+            block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
             # Get block window size for smoothing
             window = int(block_data.size * 0.2)
@@ -112,7 +112,7 @@ class MostRecentTerminalPerformance(AgentMetric):
         # Iterate over all of the blocks and compute the within block performance
         for idx in range(block_info.loc[:, 'regime_num'].max() + 1):
             # Need to get the part of the data corresponding to the block
-            block_data = dataframe.loc[dataframe["regime_num"] == idx]
+            block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
             window = int(block_data.size * 0.2)
             custom_window = min(window, self.max_window_size)
@@ -366,7 +366,7 @@ class TransferMatrix(AgentMetric):
 
                     for num in phase_nums_to_add:
                         tmp = types_per_this_task.loc[types_per_this_task['block_type'] == 'test']
-                        blocks_to_add = tmp.loc[tmp['block_num'] == str(num), regime_num]
+                        blocks_to_add = tmp.loc[tmp['block_num'] == str(num), 'regime_num']
 
                         if len(blocks_to_add) > 1:
                             raise Exception(f'Too many eval instances of task: {task}')

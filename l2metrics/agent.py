@@ -596,9 +596,6 @@ class AgentMetricsReport(core.MetricsReport):
             else:
                 filename = 'agent'
 
-            # Save collated log data to file
-            self._log_data.to_csv(filename + '_data.tsv', sep='\t')
-
             # Save metrics to file
             self._metrics_df.to_csv(filename + '_metrics.tsv', sep='\t')
 

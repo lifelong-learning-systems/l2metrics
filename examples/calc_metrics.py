@@ -22,6 +22,33 @@ import os
 import l2metrics
 from l2metrics import _localutil
 
+class MyCustomAgentMetric(l2metrics.AgentMetric):
+    name = "An Example Custom Metric for illustration"
+    capability = "continual_learning"
+    requires = {'syllabus_type': 'agent'}
+    description = "Records the maximum value per regime in the dataframe"
+    
+    def __init__(self, perf_measure):
+        super().__init__()
+        self.perf_measure = perf_measure
+
+    def calculate(self, dataframe, block_info, metrics_df):
+        max_values = {}
+
+        for idx in range(block_info.loc[:, 'regime_num'].max() + 1):
+            max_regime_value = dataframe.loc[dataframe['regime_num'] == idx, self.perf_measure].max()
+            max_values[idx] = max_regime_value
+
+        # This is the line that fills the metric into the dataframe. Comment it out to suppress this behavior
+        metrics_df = _localutil.fill_metrics_df(max_values, 'max_value', metrics_df)
+        return metrics_df
+
+    def plot(self, result):
+        pass
+
+    def validate(self, block_info):
+        pass
+
 
 def run():
     parser = argparse.ArgumentParser(description='Run L2Metrics from the command line')
@@ -39,7 +66,11 @@ def run():
     if args.log_dir is None:
         raise Exception('Log directory must be specified!')
 
+    # Initialize metrics report
     metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure)
+
+    # Add example of custom metric
+    metrics_report.add(MyCustomAgentMetric(args.perf_measure))
 
     # Calculate metrics in order of their addition to the metrics list.
     metrics_report.calculate()

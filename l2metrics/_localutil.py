@@ -101,7 +101,7 @@ def smooth(x, window_len=11, window='hanning'):
     # y[(window_len/2-1):-(window_len/2)] instead of just y.
 
     if x.ndim != 1:
-        raise(ValueError, "smooth only accepts 1 dimension arrays.")
+        raise ValueError("smooth only accepts 1 dimension arrays.")
 
     if x.size < window_len:
         # raise(ValueError, "Input vector needs to be bigger than window size.")
@@ -111,7 +111,7 @@ def smooth(x, window_len=11, window='hanning'):
         return x
 
     if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise(ValueError, "Window is one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+        raise ValueError("Window is one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
     s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
 

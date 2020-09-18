@@ -227,7 +227,7 @@ class PerformanceRecovery(AgentMetric):
             # Get linear regression
             x = np.array(range(len(r)))
             y = np.array(r)
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+            slope, _, _, _, _ = stats.linregress(x, y)
 
             pr_values = {}
 
@@ -265,7 +265,6 @@ class PerformanceMaintenance(AgentMetric):
             previously_trained_tasks = np.array([])
             previously_trained_task_ids = np.array([])
             performance_difference = {}
-            eps_to_sat_dif = {}
 
             # Iterate over the blocs, just the evaluation portion. We need to do this in order.
             for block in block_info.sort_index().loc[:, 'block_num'].unique():

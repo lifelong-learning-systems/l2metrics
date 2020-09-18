@@ -195,10 +195,9 @@ def read_log_data(input_dir, analysis_variables=None):
 
     fully_qualified_dir = get_fully_qualified_name(input_dir)
 
-    for root, dirs, files in os.walk(fully_qualified_dir):
+    for root, _, files in os.walk(fully_qualified_dir):
         for file in files:
             if file == 'data-log.tsv':
-                has_data = True
                 if analysis_variables is not None:
                     df = pd.read_csv(os.path.join(root, file), sep='\t')[
                         ['timestamp', 'block_num', 'regime_num', 'exp_num'] + analysis_variables]

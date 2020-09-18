@@ -212,8 +212,6 @@ class PerformanceRecovery(AgentMetric):
             raise Exception('Not enough recovery times to assess performance recovery')
         elif r_count != metrics_df["block_type"].value_counts()["train"] - 1:
             raise Exception('There are blocks where the system did not recover')
-        elif np.any(r.str.contains('No Recovery')):
-            raise Exception('There are blocks where the system did not recover')
 
         return
 

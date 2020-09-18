@@ -26,27 +26,32 @@ def run():
 
     # We assume that the logs are found in a subdirectory under $L2DATA/logs - this subdirectory must be passed as a
     # parameter in order to locate the logs which will be parsed by this code
-    parser.add_argument('-log_dir', default=None, help='Subdirectory under $L2DATA/logs for the log files')
+    parser.add_argument('-l', '--log_dir', help='Subdirectory under $L2DATA/logs for the log files')
 
-    # Choose syllabus type "agent" for Agent-based environments, and "class" for Classification-based environments
-    parser.add_argument('-syllabus_type', choices=["agent", "class"],  default="agent", help='Type of learner '
-                                                                                             'used in the syllabus')
+    # Choose application measure to use as performance column
+    parser.add_argument('-p', '--perf_measure', default="reward",
+                        help='Name of column to use for metrics calculations')
 
     args = parser.parse_args()
 
     if args.log_dir is None:
         raise Exception('Log directory must be specified!')
-    
-    if args.syllabus_type == "class":
-        report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir)
-    else:
-        report = l2metrics.AgentMetricsReport(log_dir=args.log_dir)
-    
+
+    # Initialize metrics report
+    report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure)
+
+    # Calculate metrics in order of their addition to the metrics list.
     report.calculate()
-    # Comment this line out to supress the performance plot
-    report.plot()
-    report.report()
+
+    # Plot metrics
+    report.plot(save=True)
+
+    # Print table of metrics and save values to file
+    report.report(save=True)
 
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    except Exception as e:
+        print(f'Error: {e}')

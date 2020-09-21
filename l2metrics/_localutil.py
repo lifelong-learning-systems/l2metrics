@@ -128,11 +128,11 @@ def smooth(x, window_len=11, window='hanning'):
     return y[start_ind:end_ind]
 
 
-def get_block_saturation_perf(data, column_to_use=None, previous_saturation_value=None, window_len=11):
+def get_block_saturation_perf(data, col_to_use=None, prev_sat_val=None, window_len=11):
     # Calculate the "saturation" value
     # Calculate the number of episodes to "saturation"
 
-    mean_reward_per_episode = data.loc[:, ['exp_num', column_to_use]].groupby('exp_num').mean()
+    mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
     mean_data = np.ravel(mean_reward_per_episode.values)
 
     # Take the moving average of the mean of the per episode reward
@@ -144,8 +144,8 @@ def get_block_saturation_perf(data, column_to_use=None, previous_saturation_valu
     episodes_to_saturation = inds[0][0]
     episodes_to_recovery = np.nan
 
-    if previous_saturation_value:
-        inds = np.where(smoothed_data >= previous_saturation_value)
+    if prev_sat_val:
+        inds = np.where(smoothed_data >= prev_sat_val)
         if len(inds[0]):
             episodes_to_recovery = inds[0][0]
         else:
@@ -154,23 +154,25 @@ def get_block_saturation_perf(data, column_to_use=None, previous_saturation_valu
     return saturation_value, episodes_to_saturation, episodes_to_recovery
 
 
-def get_terminal_perf(data, column_to_use=None, previous_value=None, window_len=11, term_window_ratio=0.1):
+def get_terminal_perf(data, col_to_use=None, prev_val=None, do_smoothing=False, window_len=11, term_window_ratio=0.1):
     # Calculate the terminal performance value
     # Calculate the number of episodes to terminal performance
 
-    mean_reward_per_episode = data.loc[:, ['exp_num', column_to_use]].groupby('exp_num').mean()
+    mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
     mean_data = np.ravel(mean_reward_per_episode.values)
 
     # Take the moving average of the mean of the per episode reward
-    smoothed_data = smooth(mean_data, window_len=window_len, window='flat')
-    terminal_value = np.mean(smoothed_data[int((1-0.1)*smoothed_data.size):])
+    if do_smoothing:
+        mean_data = smooth(mean_data, window_len=window_len, window='flat')
+
+    terminal_value = np.mean(mean_data[int((1-0.1)*mean_data.size):])
 
     # Calculate the number of episodes to terminal performance
-    episodes_to_terminal_perf = int((1-(0.1/2))*smoothed_data.size)
+    episodes_to_terminal_perf = int((1-(0.1/2))*mean_data.size)
     episodes_to_recovery = np.nan
 
-    if previous_value is not None:
-        inds = np.where(smoothed_data >= previous_value)
+    if prev_val is not None:
+        inds = np.where(mean_data >= prev_val)
         if len(inds[0]):
             episodes_to_recovery = inds[0][0]
         else:

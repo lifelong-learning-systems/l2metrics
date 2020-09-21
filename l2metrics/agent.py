@@ -79,7 +79,7 @@ class WithinBlockSaturation(AgentMetric):
 
             # Make within block calculations
             sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                block_data, column_to_use=self.perf_measure, window_len=custom_window)
+                block_data, col_to_use=self.perf_measure, window_len=custom_window)
 
             # Record them
             saturation_values[idx] = sat_value
@@ -104,7 +104,7 @@ class MostRecentTerminalPerformance(AgentMetric):
         pass
 
     def calculate(self, dataframe, block_info, metrics_df):
-        metrics_df['term_performance'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+        metrics_df['term_perf'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
         metrics_df['eps_to_term_perf'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
         terminal_perf_values = {}
         eps_to_terminal_perf = {}
@@ -114,18 +114,19 @@ class MostRecentTerminalPerformance(AgentMetric):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
+            # Get block window size for smoothing
             window = int(block_data.size * 0.2)
             custom_window = min(window, self.max_window_size)
 
             # Make within block calculations
-            term_performance, eps_to_term_perf, _ = _localutil.get_terminal_perf(
-                block_data, column_to_use=self.perf_measure, window_len=custom_window)
+            term_perf, eps_to_term_perf, _ = _localutil.get_terminal_perf(
+                block_data, col_to_use=self.perf_measure, window_len=custom_window)
 
             # Record them
-            terminal_perf_values[idx] = term_performance
+            terminal_perf_values[idx] = term_perf
             eps_to_terminal_perf[idx] = eps_to_term_perf
 
-        metrics_df = _localutil.fill_metrics_df(terminal_perf_values, 'term_performance', metrics_df)
+        metrics_df = _localutil.fill_metrics_df(terminal_perf_values, 'term_perf', metrics_df)
         return _localutil.fill_metrics_df(eps_to_terminal_perf, 'eps_to_term_perf', metrics_df)
 
 
@@ -178,11 +179,12 @@ class RecoveryTime(AgentMetric):
             custom_window = max(window, self.max_window_size)
 
             for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
-                prev_val = metrics_df['term_performance'][use_ind]
+                prev_val = metrics_df['term_perf'][use_ind]
                 block_data = dataframe.loc[assess_ind]
+
                 _, _, eps_to_rec = _localutil.get_terminal_perf(block_data,
-                                                                column_to_use=self.perf_measure,
-                                                                previous_value=prev_val,
+                                                                col_to_use=self.perf_measure,
+                                                                prev_val=prev_val,
                                                                 window_len=custom_window)
                 recovery_time[assess_ind] = eps_to_rec
 
@@ -264,7 +266,7 @@ class PerformanceMaintenance(AgentMetric):
             # relative to the previously trained ones
             previously_trained_tasks = np.array([])
             previously_trained_task_ids = np.array([])
-            performance_difference = {}
+            perf_dif = {}
 
             # Iterate over the blocs, just the evaluation portion. We need to do this in order.
             for block in block_info.sort_index().loc[:, 'block_num'].unique():
@@ -299,20 +301,20 @@ class PerformanceMaintenance(AgentMetric):
 
                         # TODO: Handle multiple comparison points
                         block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
-                        most_recent_term_perf = metrics_df['term_performance'][block_ids_for_comparison[0]]
-                        new_term_performance = metrics_df['term_performance'][test_task_ids[idx]]
-                        perf_diff = new_term_performance - most_recent_term_perf
+                        most_recent_term_perf = metrics_df['term_perf'][block_ids_for_comparison[0]]
+                        new_term_perf = metrics_df['term_perf'][test_task_ids[idx]]
+                        perf_diff = new_term_perf - most_recent_term_perf
                         block_id = test_task_ids[idx]
-                        performance_difference[block_id] = perf_diff
+                        perf_dif[block_id] = perf_diff
 
-            return _localutil.fill_metrics_df(performance_difference, 'performance_difference', metrics_df)
+            return _localutil.fill_metrics_df(perf_dif, 'perf_dif', metrics_df)
         except:
             print("Cannot compute", self.name)
             return metrics_df
 
 
 class TransferMatrix(AgentMetric):
-    name = "Transfer Matrix - both forward and reverse transfer"
+    name = "Forward and Backward Transfer"
     capability = "adapt_to_new_tasks"
     requires = {'syllabus_type': 'agent'}
     description = "Calculates a transfer matrix for all trained tasks"
@@ -385,12 +387,12 @@ class TransferMatrix(AgentMetric):
             # Calculate, for each task, (task eval saturation / ste saturation)
             for task, block in tasks_to_compute['forward']:
                 print(f'Computing forward transfer for {task}')
-                this_transfer_val = metrics_df['term_performance'][block] / ste_dict[task]
+                this_transfer_val = metrics_df['term_perf'][block]
                 forward_transfer[block] = this_transfer_val
 
             for task, block in tasks_to_compute['reverse']:
                 print(f'Computing reverse transfer for {task}')
-                this_transfer_val = metrics_df['term_performance'][block] / ste_dict[task]
+                this_transfer_val = metrics_df['term_perf'][block]
                 reverse_transfer[block] = this_transfer_val
 
             metrics_df = _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
@@ -443,7 +445,7 @@ class STERelativePerf(AgentMetric):
                 ste_data = util.load_ste_data(task)
 
                 if ste_data is not None:
-                    # Compute relative performance
+                    # Compute relative performance with no smoothing on data
                     min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
                     task_perf = task_data.head(min_exp)[self.perf_measure].sum()
                     ste_perf = ste_data.head(min_exp)[self.perf_measure].sum()
@@ -506,14 +508,16 @@ class SampleEfficiency(AgentMetric):
                     # Get task saturation value and episodes to saturation
                     window = int(task_data.shape[0] * 0.2)
                     custom_window = min(window, self.max_window_size)
+
                     task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                        task_data, column_to_use=self.perf_measure, window_len=custom_window)
+                        task_data, col_to_use=self.perf_measure, window_len=custom_window)
 
                     # Get STE saturation value and episodes to saturation
                     window = int(ste_data.shape[0] * 0.2)
                     custom_window = min(window, self.max_window_size)
+
                     ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                        ste_data, column_to_use=self.perf_measure, window_len=custom_window)
+                        ste_data, col_to_use=self.perf_measure, window_len=custom_window)
 
                     # Compute sample efficiency
                     se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation

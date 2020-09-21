@@ -99,7 +99,7 @@ class WithinBlockSaturation(ClassificationMetric):
                 # Get the part of the data corresponding to the relevant block
                 block_data = dataframe.loc[dataframe["block"] == idx]
                 # Make within block calculations
-                sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(block_data, column_to_use=col)
+                sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(block_data, col_to_use=col)
                 # Record them
                 saturation_values[idx] = sat_value
                 eps_to_saturation[idx] = eps_to_sat
@@ -207,8 +207,8 @@ class RecoveryTime(ClassificationMetric):
                 prev_val = metrics_df[col]['saturation_value'][use_ind]
                 block_data = dataframe.loc[dataframe['regime_num'] == assess_ind]
                 _, _, eps_to_rec = _localutil.get_block_saturation_perf(block_data,
-                                                                        column_to_use=col,
-                                                                        previous_saturation_value=prev_val)
+                                                                        col_to_use=col,
+                                                                        prev_sat_val=prev_val)
 
                 recovery_time[assess_ind] = eps_to_rec
 

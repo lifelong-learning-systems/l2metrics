@@ -233,7 +233,7 @@ class PerformanceRecovery(AgentMetric):
 
             for idx in range(block_info.loc[:, 'regime_num'].max()):
                 pr_values[idx] = 0
-            
+
             pr_values[idx + 1] = slope
 
             return _localutil.fill_metrics_df(pr_values, 'perf_recovery', metrics_df)

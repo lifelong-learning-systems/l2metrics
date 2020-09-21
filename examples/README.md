@@ -19,13 +19,13 @@ Replace the log directory with logs for other STE tasks and repeat until all STE
 
 To generate a metrics plot and report, run the following command from the project source:
 
-> `python examples/calc_metrics.py --log_dir=examples/syllabus_ANT_harder-1582671493-285338 --perf_measure=reward`
+> `python examples/calc_metrics.py --log_dir=examples/syllabus_ANT_multiple_tasks-1600709972-1635876 --perf_measure=reward`
 
 If you do not wish to provide a fully qualified path to your log directory, you may copy it to your $L2DATA/logs directory. This is the default location for logs generated using the TEF.
 
 The output figure of reward over episodes (saved by default) should look like this:
 
-![diagram](syllabus_ANT_harder-1582671493-285338_example.png)
+![diagram](syllabus_ANT_multiple_tasks-1600709972-1635876.png)
 
 Writing a Custom Metric
 ==

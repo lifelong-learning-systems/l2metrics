@@ -56,8 +56,8 @@ def run():
     print('Stored STE data for', task_name[0])
 
     # Plot data
-    util.plot_performance(log_data, do_smoothing=True, do_task_colors=True, do_save_fig=False,
-                          max_smoothing_window=100, input_title=args.log_dir)
+    util.plot_performance(log_data, do_smoothing=True, do_save_fig=False, max_smoothing_window=100,
+                          input_title=args.log_dir)
 
 
 if __name__ == "__main__":

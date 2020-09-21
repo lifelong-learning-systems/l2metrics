@@ -76,7 +76,7 @@ def parse_blocks(data):
     return test_task_nums, blocks_df
 
 
-def smooth(x, window_len=11, window='hanning'):
+def smooth(x, window_len=100, window='hanning'):
     # """smooth the data using a window with requested size.
     # Code from https://scipy-cookbook.readthedocs.io/items/SignalSmooth.html
     # This method is based on the convolution of a scaled window with the signal.
@@ -128,7 +128,7 @@ def smooth(x, window_len=11, window='hanning'):
     return y[start_ind:end_ind]
 
 
-def get_block_saturation_perf(data, col_to_use=None, prev_sat_val=None, window_len=11):
+def get_block_saturation_perf(data, col_to_use=None, prev_sat_val=None, window_len=100):
     # Calculate the "saturation" value
     # Calculate the number of episodes to "saturation"
 
@@ -154,7 +154,7 @@ def get_block_saturation_perf(data, col_to_use=None, prev_sat_val=None, window_l
     return saturation_value, episodes_to_saturation, episodes_to_recovery
 
 
-def get_terminal_perf(data, col_to_use=None, prev_val=None, do_smoothing=False, window_len=11, term_window_ratio=0.1):
+def get_terminal_perf(data, col_to_use=None, prev_val=None, do_smoothing=True, window_len=100, term_window_ratio=0.1):
     # Calculate the terminal performance value
     # Calculate the number of episodes to terminal performance
 

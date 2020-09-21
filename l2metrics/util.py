@@ -96,9 +96,10 @@ def load_default_random_agent_data():
     return random_agent_dict
 
 
-def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_col='exp_num', input_title=None,
-                     do_save_fig=True, plot_filename=None, input_xlabel='Episodes', input_ylabel='Performance',
-                     show_block_boundary=True, do_task_colors=True, shade_test_blocks=True, max_smoothing_window=100):
+def plot_performance(dataframe, block_info, do_smoothing=False, col_to_plot='reward',
+                     x_axis_col='exp_num', input_title=None, do_save_fig=True, plot_filename=None,
+                     input_xlabel='Episodes', input_ylabel='Performance', show_block_boundary=True,
+                     shade_test_blocks=True, max_smoothing_window=100):
     # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
     # directory and/or customize the title, axes labeling, filename, etc. Color is supported for agent tasks only.
 
@@ -106,34 +107,26 @@ def plot_performance(dataframe, do_smoothing=True, col_to_plot='reward', x_axis_
     fig = plt.figure(figsize=(12, 6))
     ax = fig.add_subplot(111)
 
-    if do_task_colors:
-        color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'cyan', 'orange', 'purple']
-        if len(unique_tasks) < len(color_selection):
-            task_colors = color_selection[:len(unique_tasks)]
-        else:
-            task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
-
-        for c, t in zip(task_colors, unique_tasks):
-            data = dataframe.loc[dataframe['task_name'] == t, col_to_plot].values
-            x_axis = dataframe.loc[dataframe['task_name'] == t, x_axis_col].values
-
-            if do_smoothing:               
-                window = int(x_axis.size * 0.2)
-                custom_window = min(window, max_smoothing_window)
-                data = _localutil.smooth(data, window_len=custom_window)
-
-            ax.scatter(x_axis, data, color=c, marker='*', linestyle='None')
+    color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'cyan', 'orange', 'purple']
+    if len(unique_tasks) < len(color_selection):
+        task_colors = color_selection[:len(unique_tasks)]
     else:
-        for task in unique_tasks:
-            data = dataframe.loc[dataframe['task_name'] == task, col_to_plot].values
-            x_axis = dataframe.loc[dataframe['task_name'] == task, x_axis_col].values
+        task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
 
-            if do_smoothing:
-                window = int(x_axis.size * 0.2)
-                custom_window = min(window, max_smoothing_window)
-                data = _localutil.smooth(data, window_len=max_smoothing_window)
+    for c, t in zip(task_colors, unique_tasks):
+        for regime in block_info['regime_num']:
+            if block_info.loc[regime, :]['task_name'] == t:
+                x = dataframe.loc[(dataframe['task_name'] == t) & (
+                    dataframe['regime_num'] == regime), x_axis_col].values
+                y = dataframe.loc[(dataframe['task_name'] == t) & (
+                    dataframe['regime_num'] == regime), col_to_plot].values
 
-            ax.scatter(x_axis, data, marker='*', linestyle='None')
+                if do_smoothing:               
+                    window = int(len(y) * 0.2)
+                    custom_window = min(window, max_smoothing_window)
+                    y = _localutil.smooth(y, window_len=custom_window)
+
+                ax.scatter(x, y, color=c, marker='*', linestyle='None')
 
     ax.legend(unique_tasks)
 

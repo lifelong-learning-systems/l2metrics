@@ -74,7 +74,7 @@ class WithinBlockSaturation(AgentMetric):
             block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
             # Get block window size for smoothing
-            window = int(block_data.size * 0.2)
+            window = int(len(block_data) * 0.2)
             custom_window = min(window, self.max_window_size)
 
             # Make within block calculations
@@ -115,7 +115,7 @@ class MostRecentTerminalPerformance(AgentMetric):
             block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
             # Get block window size for smoothing
-            window = int(block_data.size * 0.2)
+            window = int(len(block_data) * 0.2)
             custom_window = min(window, self.max_window_size)
 
             # Make within block calculations
@@ -175,12 +175,13 @@ class RecoveryTime(AgentMetric):
             metrics_df['recovery_time'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
             recovery_time = {}
 
-            window = int(np.floor(len(dataframe) * 0.02))
-            custom_window = max(window, self.max_window_size)
-
             for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
                 prev_val = metrics_df['term_perf'][use_ind]
                 block_data = dataframe.loc[assess_ind]
+
+                # Get block window size for smoothing
+                window = int(len(block_data) * 0.2)
+                custom_window = min(window, self.max_window_size)
 
                 _, _, eps_to_rec = _localutil.get_terminal_perf(block_data,
                                                                 col_to_use=self.perf_measure,
@@ -506,14 +507,14 @@ class SampleEfficiency(AgentMetric):
 
                 if ste_data is not None:
                     # Get task saturation value and episodes to saturation
-                    window = int(task_data.shape[0] * 0.2)
+                    window = int(len(task_data) * 0.2)
                     custom_window = min(window, self.max_window_size)
 
                     task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
                         task_data, col_to_use=self.perf_measure, window_len=custom_window)
 
                     # Get STE saturation value and episodes to saturation
-                    window = int(ste_data.shape[0] * 0.2)
+                    window = int(len(ste_data) * 0.2)
                     custom_window = min(window, self.max_window_size)
 
                     ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
@@ -605,8 +606,9 @@ class AgentMetricsReport(core.MetricsReport):
 
     def plot(self, save=False):
         print('Plotting a smoothed reward curve')
-        util.plot_performance(self._log_data, do_smoothing=True, do_save_fig=save,
-                              max_smoothing_window=100, input_title=self.log_dir)
+        util.plot_performance(self._log_data, self.block_info, do_smoothing=True, do_save_fig=save,
+                              max_smoothing_window=AgentMetric.max_window_size,
+                              input_title=self.log_dir)
 
     def add(self, metrics_list):
         self._metrics.append(metrics_list)

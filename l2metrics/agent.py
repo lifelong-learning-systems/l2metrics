@@ -211,7 +211,7 @@ class PerformanceRecovery(AgentMetric):
         r = r[r.notna()]
         r_count = r.count()
 
-        if r_count <= 1:
+        if r_count <= 1 or np.any(r.str.contains('No Recovery').values):
             raise Exception('Not enough recovery times to assess performance recovery')
         elif r_count != metrics_df["block_type"].value_counts()["train"] - 1:
             raise Exception('There are blocks where the system did not recover')
@@ -263,50 +263,29 @@ class PerformanceMaintenance(AgentMetric):
 
     def calculate(self, dataframe, block_info, metrics_df):
         try:
-            # This metric must compute in each evaluation block the performance of the tasks
-            # relative to the previously trained ones
-            previously_trained_tasks = np.array([])
-            previously_trained_task_ids = np.array([])
+            # Initialize metric column
+            metrics_df['perf_diff'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
             perf_diff = {}
 
-            # Iterate over the blocs, just the evaluation portion. We need to do this in order.
-            for block in block_info.sort_index().loc[:, 'block_num'].unique():
-                # Get the task names that were used for the train portion of the block
-                trained_task = block_info[(block_info.block_type == 'train') &
-                                          (block_info.block_num == block)].loc[:, 'task_name'].to_numpy()
+            # Iterate over the regimes
+            for _, regime in block_info.iterrows():
 
-                # Skip block if not training block
-                if len(trained_task) == 0:
-                    continue
+                # Check for evaluation or test block
+                if regime['block_type'] == 'test':
 
-                trained_task = trained_task[0]
-                trained_task_ids = block_info[(block_info.block_type == 'train') &
-                                            (block_info.block_num == block)].loc[:, 'regime_num'].to_numpy()
+                    # Get the most recent terminal learning performance of the current task
+                    training_tasks = block_info[(block_info['task_name'] == regime['task_name']) &
+                                                  (block_info['block_type'] == 'train')]
 
-                # Validation will have ensured that the training block has exactly one training block
-                previously_trained_tasks = np.append(previously_trained_tasks, trained_task)
-                previously_trained_task_ids = np.append(previously_trained_task_ids, trained_task_ids)
+                    # Check to make sure the task has been trained on
+                    if len(training_tasks) > 0:
 
-                test_tasks = block_info[(block_info.block_type == 'test') &
-                                        (block_info.block_num == block)].loc[:, 'task_name'].to_numpy()
-                test_task_ids = block_info[(block_info.block_type == 'test') &
-                                           (block_info.block_num == block)].loc[:, 'regime_num'].to_numpy()
-
-                for idx, task in enumerate(test_tasks):
-                    # Skip the evaluation block immediately following a train task
-                    if task == trained_task:
-                        continue
-                    if task in previously_trained_tasks:
-                        # Get the inds in the previously_trained_tasks array to get the saturation values for comparison
-                        inds_where_task = np.where(previously_trained_tasks == task)
-
-                        # TODO: Handle multiple comparison points
-                        block_ids_for_comparison = previously_trained_task_ids[inds_where_task]
-                        most_recent_term_perf = metrics_df['term_perf'][block_ids_for_comparison[0]]
-                        new_term_perf = metrics_df['term_perf'][test_task_ids[idx]]
-                        perf_diff = new_term_perf - most_recent_term_perf
-                        block_id = test_task_ids[idx]
-                        perf_diff[block_id] = perf_diff
+                        # Check that current train block occurred after last training, but not
+                        # immediately after
+                        if training_tasks.iloc[-1]['block_num'] < regime['block_num'] - 1:
+                            mrtp = metrics_df['term_perf'][training_tasks.iloc[-1]['regime_num']]
+                            test_perf = metrics_df['term_perf'][regime['regime_num']]
+                            perf_diff[regime['regime_num']] = test_perf - mrtp
 
             return _localutil.fill_metrics_df(perf_diff, 'perf_diff', metrics_df)
         except:

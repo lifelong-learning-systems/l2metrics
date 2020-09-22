@@ -19,6 +19,7 @@
 import glob
 import json
 import os
+from collections import OrderedDict
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -126,9 +127,11 @@ def plot_performance(dataframe, block_info, do_smoothing=False, col_to_plot='rew
                     custom_window = min(window, max_smoothing_window)
                     y = _localutil.smooth(y, window_len=custom_window)
 
-                ax.scatter(x, y, color=c, marker='*', linestyle='None')
+                ax.scatter(x, y, color=c, marker='*', linestyle='None', label=t)
 
-    ax.legend(unique_tasks)
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys())
 
     if show_block_boundary:
         unique_blocks = dataframe.loc[:, 'regime_num'].unique()

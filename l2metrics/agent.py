@@ -412,9 +412,13 @@ class STERelativePerf(AgentMetric):
         unique_tasks = block_info.loc[:, 'task_name'].unique()
         ste_names = util.get_ste_data_names()
 
-        # Make sure STE baselines are available for all tasks, else complain
+        # Make sure STE baselines are available for all tasks, else send warning
         if ~np.all(np.isin(unique_tasks, ste_names)):
             Warning('STE data not available for all tasks')
+
+        # Raise exception if none of the tasks have STE data
+        if ~np.any(np.isin(unique_tasks, ste_names)):
+            raise Exception('No STE data available for any task')
 
     def calculate(self, dataframe, block_info, metrics_df):
         try:
@@ -468,9 +472,13 @@ class SampleEfficiency(AgentMetric):
         unique_tasks = block_info.loc[:, 'task_name'].unique()
         ste_names = util.get_ste_data_names()
 
-        # Make sure STE baselines are available for all tasks, else complain
+        # Make sure STE baselines are available for all tasks, else send warning
         if ~np.all(np.isin(unique_tasks, ste_names)):
             Warning('STE data not available for all tasks')
+
+        # Raise exception if none of the tasks have STE data
+        if ~np.any(np.isin(unique_tasks, ste_names)):
+            raise Exception('No STE data available for any task')
 
     def calculate(self, dataframe, block_info, metrics_df):
         try:

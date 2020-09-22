@@ -263,9 +263,9 @@ class PerformanceMaintenance(AgentMetric):
 
     def calculate(self, dataframe, block_info, metrics_df):
         try:
-            # Initialize metric column
-            metrics_df['perf_diff'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-            perf_diff = {}
+            # Initialize metric columns
+            maintenance_values = {}
+            pm_values = {}
 
             # Iterate over the regimes
             for _, regime in block_info.iterrows():
@@ -285,9 +285,24 @@ class PerformanceMaintenance(AgentMetric):
                         if training_tasks.iloc[-1]['block_num'] < regime['block_num'] - 1:
                             mrtp = metrics_df['term_perf'][training_tasks.iloc[-1]['regime_num']]
                             test_perf = metrics_df['term_perf'][regime['regime_num']]
-                            perf_diff[regime['regime_num']] = test_perf - mrtp
+                            maintenance_values[regime['regime_num']] = test_perf - mrtp
 
-            return _localutil.fill_metrics_df(perf_diff, 'perf_diff', metrics_df)
+            # Fill metrics dataframe with performance differences
+            _localutil.fill_metrics_df(maintenance_values, 'maintenance_val', metrics_df)
+
+            # Iterate over task performance differences for performance maintenance
+            for task in block_info.loc[:, 'task_name'].unique():
+
+                # Get the task maintence values
+                m = metrics_df[metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
+                    [task])[0]]['maintenance_val'].values
+
+                # Remove NaNs
+                m = m[~np.isnan(m)]
+
+                pm_values[block_info.index[block_info['task_name'] == task][-1]] = np.mean(m)
+
+            return _localutil.fill_metrics_df(pm_values, 'perf_maintenance', metrics_df)
         except:
             print("Cannot compute", self.name)
             return metrics_df

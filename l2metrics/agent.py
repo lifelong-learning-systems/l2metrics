@@ -267,7 +267,7 @@ class PerformanceMaintenance(AgentMetric):
             # relative to the previously trained ones
             previously_trained_tasks = np.array([])
             previously_trained_task_ids = np.array([])
-            perf_dif = {}
+            perf_diff = {}
 
             # Iterate over the blocs, just the evaluation portion. We need to do this in order.
             for block in block_info.sort_index().loc[:, 'block_num'].unique():
@@ -306,9 +306,9 @@ class PerformanceMaintenance(AgentMetric):
                         new_term_perf = metrics_df['term_perf'][test_task_ids[idx]]
                         perf_diff = new_term_perf - most_recent_term_perf
                         block_id = test_task_ids[idx]
-                        perf_dif[block_id] = perf_diff
+                        perf_diff[block_id] = perf_diff
 
-            return _localutil.fill_metrics_df(perf_dif, 'perf_dif', metrics_df)
+            return _localutil.fill_metrics_df(perf_diff, 'perf_diff', metrics_df)
         except:
             print("Cannot compute", self.name)
             return metrics_df

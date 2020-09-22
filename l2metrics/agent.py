@@ -300,7 +300,9 @@ class PerformanceMaintenance(AgentMetric):
                 # Remove NaNs
                 m = m[~np.isnan(m)]
 
-                pm_values[block_info.index[block_info['task_name'] == task][-1]] = np.mean(m)
+                # Calculate performance maintenance value
+                if m.size:
+                    pm_values[block_info.index[block_info['task_name'] == task][-1]] = np.mean(m)
 
             return _localutil.fill_metrics_df(pm_values, 'perf_maintenance', metrics_df)
         except:

@@ -596,7 +596,7 @@ class AgentMetricsReport(core.MetricsReport):
                 self._log_data, self.block_info, self._metrics_df)
 
     def report(self, save=False):
-        print(tabulate(self._metrics_df, headers='keys', tablefmt='psql'))
+        print(tabulate(self._metrics_df.reset_index(drop=True), headers='keys', tablefmt='psql'))
 
         if save:
             # Generate filename
@@ -606,7 +606,7 @@ class AgentMetricsReport(core.MetricsReport):
                 filename = 'agent'
 
             # Save metrics to file
-            self._metrics_df.to_csv(filename + '_metrics.tsv', sep='\t')
+            self._metrics_df.reset_index(drop=True).to_csv(filename + '_metrics.tsv', sep='\t')
 
     def plot(self, save=False):
         print('Plotting a smoothed reward curve')

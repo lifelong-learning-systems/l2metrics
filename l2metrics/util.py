@@ -105,6 +105,8 @@ def save_ste_data(log_dir, perf_measure):
     # Store ste data in task info directory
     ste_data.to_pickle(filename)
 
+    print(f'Stored STE data for {task_name[0]}')
+
 
 def plot_performance(dataframe, block_info, do_smoothing=False, col_to_plot='reward',
                      x_axis_col='exp_num', input_title=None, do_save_fig=True, plot_filename=None,

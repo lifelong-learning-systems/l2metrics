@@ -1,27 +1,8 @@
-# Getting Started with Lifelong Learning Metrics (L2Metrics)
+# Custom Metrics with Lifelong Learning Metrics (L2Metrics)
 
-This directory contains two Python files:
-
-* `store_ste_data.py`:
-  * A script for storing single task expert log data used by a few of the metric calculations
-
-  ```bash
-  usage: store_ste_data.py [-h] [-l LOG_DIR] [-p PERF_MEASURE]
-  
-  Store single task expert data from the command line
-
-  required arguments:
-
-    -l  --log_dir       Log directory of scenario
-
-  optional arguments:
-
-    -p  --perf_measure  Name of column to use for metrics calculations
-
-  ```
+This directory contains a Python script with an example for creating custom metrics, plotting, and generating a metrics report:
 
 * `calc_metrics.py`:
-  * The main script for calculating lifelong learning metrics, plotting, and generating a metrics report
 
   ```bash
   usage: store_ste_data.py [-h] [-l LOG_DIR] [-p PERF_MEASURE]
@@ -37,42 +18,6 @@ This directory contains two Python files:
     -p  --perf_measure  Name of column to use for metrics calculations
 
   ```
-
-## Example Usage
-
-### Storing STE Data
-
-To store STE data, run the following command from the root L2Metrics directory:
-
-```bash
-python examples/store_ste_data.py --log_dir=examples/ste_example/ste_syllabus-1600829944-8467104
-```
-
-The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single task expert data is pickled and saved.
-
-Replace the log directory with logs for other STE tasks and repeat until all STE data is stored.
-
-### Generating Metrics Report
-
-To generate a metrics plot and report, run the following command from the root L2Metrics directory:
-
-```bash
-python examples/calc_metrics.py --log_dir=examples/ant_example/syllabus_ANT-1600830032-0285285 --perf_measure=reward
-```
-
-If you do not wish to provide a fully qualified path to your log directory, you may copy it to your `$L2DATA/logs` directory. This is the default location for logs generated using the TEF.
-
-The output figure of reward over episodes (saved by default) should look like this:
-
-![diagram](ant_example/syllabus_ANT-1600830032-0285285.png)
-
-The white areas represent blocks in which learning is occurring while the gray areas represent evaluation blocks.
-
-Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following figure shows an example of a truncated metrics report:
-
-![diagram](ant_example/syllabus_ANT-1600830032-0285285_metrics_report.png)
-
-**Note**: Currently there are metrics that are filled in every row and some that are not. This is a result of different contexts for the calculated metric. For example, each regime will have its own saturation and terminal performance values (regime-level metrics) while each task will have associated performance maintenance, forward/backward transfer, relative performance to STE, and sample efficiency values (task-level). Additionally, performance recovery will only have one value for the entire scenario (scenario-level). The format of the metrics report is still a work in progress and will be cleaned up in the future to more clearly convey results.
 
 ## Writing a Custom Metric
 

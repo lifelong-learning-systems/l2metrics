@@ -18,3 +18,4 @@
 
 from .agent import *
 from .core import Metric, MetricsReport
+from .util import *

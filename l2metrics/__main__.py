@@ -28,26 +28,34 @@ def run():
     # Log directories can be absolute paths, relative paths, or paths found in $L2DATA/logs
     parser.add_argument('-l', '--log_dir', required=True, help='Log directory of scenario')
 
+    # Flag for storing log data as STE data
+    parser.add_argument('-s', '--store_ste_data', action='store_true',
+                        help='Flag for storing log data as STE')
+
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf_measure', default="reward",
                         help='Name of column to use for metrics calculations')
 
     args = parser.parse_args()
 
-    if args.log_dir is None:
-        raise Exception('Log directory must be specified!')
+    # Do a check to make sure the performance measure is been logged
+    if args.perf_measure not in l2metrics.util.read_column_info(args.log_dir):
+            raise Exception(f'Invalid performance measure: {args.perf_measure}')
 
-    # Initialize metrics report
-    report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure)
+    if args.store_ste_data:
+        l2metrics.util.save_ste_data(args.log_dir, args.perf_measure)
+    else:
+        # Initialize metrics report
+        report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure)
 
-    # Calculate metrics in order of their addition to the metrics list.
-    report.calculate()
+        # Calculate metrics in order of their addition to the metrics list.
+        report.calculate()
 
-    # Plot metrics
-    report.plot(save=True)
+        # Plot metrics
+        report.plot(save=True)
 
-    # Print table of metrics and save values to file
-    report.report(save=True)
+        # Print table of metrics and save values to file
+        report.report(save=True)
 
 
 if __name__ == "__main__":

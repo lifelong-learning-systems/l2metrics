@@ -64,9 +64,6 @@ def run():
 
     args = parser.parse_args()
 
-    if args.log_dir is None:
-        raise Exception('Log directory must be specified!')
-
     # Initialize metrics report
     metrics_report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure)
 

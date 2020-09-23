@@ -85,6 +85,27 @@ def load_ste_data(task_name):
         return None
 
 
+def save_ste_data(log_dir, perf_measure):
+    # Load data from ste logs
+    ste_data = read_log_data(log_dir, [perf_measure])
+    ste_data = ste_data.sort_values(by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
+    ste_data = ste_data[ste_data['block_type'] == 'train']
+    _, block_info = _localutil.parse_blocks(ste_data)
+
+    # Get task name
+    task_name = ste_data.task_name.unique()
+
+    # Check for number of tasks in scenario
+    if task_name.size != 1:
+        raise Exception('Scenario contains more than one task')
+
+    # Get base directory to store ste data
+    filename = get_l2root_base_dirs('taskinfo', task_name[0] + '.pkl')
+
+    # Store ste data in task info directory
+    ste_data.to_pickle(filename)
+
+
 def plot_performance(dataframe, block_info, do_smoothing=False, col_to_plot='reward',
                      x_axis_col='exp_num', input_title=None, do_save_fig=True, plot_filename=None,
                      input_xlabel='Episodes', input_ylabel='Performance', show_block_boundary=True,

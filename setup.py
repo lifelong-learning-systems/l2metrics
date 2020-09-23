@@ -24,7 +24,7 @@ HERE = pathlib.Path(__file__).parent
 
 setup(
     name='l2metrics',
-    version='0.3.0',
+    version='0.4.0',
     description='Metrics for Lifelong Learning',
     long_description=(HERE / 'README.md').read_text(),
     long_description_content_type='text/markdown',
@@ -35,13 +35,19 @@ setup(
         'Development Status :: 3 - Alpha',
         'License :: Other/Proprietary License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
+        'numpy',
+        'six',
+        'python-dateutil',
+        'pytz',
         'pandas',
-        'numpy'
+        'tabulate',
+        'scipy',
+        'matplotlib'
     ]
 )

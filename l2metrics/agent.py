@@ -18,6 +18,7 @@
 
 import os
 from abc import ABC
+from itertools import permutations
 
 import numpy as np
 from scipy import stats
@@ -275,7 +276,7 @@ class PerformanceMaintenance(AgentMetric):
 
                     # Get the most recent terminal learning performance of the current task
                     training_tasks = block_info[(block_info['task_name'] == regime['task_name']) &
-                                                  (block_info['block_type'] == 'train')]
+                                                (block_info['block_type'] == 'train')]
 
                     # Check to make sure the task has been trained on
                     if len(training_tasks) > 0:
@@ -321,79 +322,98 @@ class TransferMatrix(AgentMetric):
         self.perf_measure = perf_measure
 
     def validate(self, block_info):
-        # Load the single task experts and compare them to the ones in the logs
-        ste_dict = util.load_default_ste_data()
+
+        # Initialize variables for checking block type format
+        last_block_num = -1
+        last_block_type = ''
+
+        # Ensure alternating block types
+        for _, regime in block_info.iterrows():
+            if regime['block_num'] != last_block_num:
+                last_block_num = regime['block_num']
+
+                if regime['block_type'] == 'test':
+                    if last_block_type == 'test':
+                        raise Exception('Block types must be alternating')
+                    last_block_type = 'test'
+                elif regime['block_type'] == 'train':
+                    if last_block_type == 'train':
+                        raise Exception('Block types must be alternating')
+                    last_block_type = 'train'
+
+        # Find eligible tasks for forward and backward transfer
         unique_tasks = block_info.loc[:, 'task_name'].unique()
 
-        # Return tasks which have STE baselines
-        tasks_with_ste = [t for t in ste_dict.keys() if t in unique_tasks]
-        tasks_for_transfer_matrix = {'forward': [], 'reverse': []}
+        # Initialize list of tasks for transfer matrix
+        tasks_for_ft = dict.fromkeys(unique_tasks, {})
+        tasks_for_bt = dict.fromkeys(unique_tasks, {})
 
-        for task in tasks_with_ste:
-            types_per_this_task = block_info[block_info['task_name'] == task]
-            phase_types = types_per_this_task.loc[:, 'block_type'].to_numpy()
-            phase_nums = types_per_this_task.loc[:, 'block_num'].to_numpy(dtype=int)
+        # Determine valid transfer pairs
+        for task_pair in permutations(unique_tasks):
+            # Get testing and training indices for task pair
+            task_blocks = block_info[block_info['task_name'] == task_pair[0]]
+            training_blocks = task_blocks[task_blocks['block_type'] == 'train']['block_num'].values
 
-            if 'train' in phase_types and 'test' in phase_types:
-                # Check eligibility for both forward and reverse transfer
-                train_phase_nums = phase_nums[phase_types == 'train']
-                test_phase_nums = phase_nums[phase_types == 'test']
+            other_blocks = block_info[block_info['task_name'] == task_pair[1]]
+            other_test_blocks = other_blocks[other_blocks['block_type'] == 'test']['block_num'].values
+            other_training_blocks = other_blocks[other_blocks['block_type'] == 'train']['block_num'].values
 
-                if len(train_phase_nums) > 1:
-                    raise Exception(f'Too many training instances of task: {task}')
+            # FT - Must have tested task before training another task then more testing
+            if np.any(training_blocks < np.min(other_training_blocks)):
+                if len(other_test_blocks) >= 2:
+                    for idx in range(0, len(other_test_blocks) - 1):
+                        for t_idx in training_blocks[training_blocks < np.min(other_training_blocks)]:
+                            if other_test_blocks[idx] < t_idx < other_test_blocks[idx + 1]:
+                                tasks_for_ft[task_pair[0]] = {task_pair[1] : (
+                                    other_test_blocks[idx], other_test_blocks[idx + 1])}
 
-                train_phase_num = train_phase_nums[0]
+            # BT - Must have trained task with testing then training another task then more testing
+            if np.any(other_training_blocks < np.min(training_blocks)):
+                if len(other_test_blocks) >= 2:
+                    for idx in range(0, len(other_test_blocks) - 1):
+                        if other_test_blocks[idx] < np.min(training_blocks) < other_test_blocks[idx + 1]:
+                            tasks_for_bt[task_pair[0]] = {task_pair[1] : (
+                                    other_test_blocks[idx], other_test_blocks[idx + 1])}
 
-                if any(test_phase_nums < train_phase_num):
-                    phase_nums_to_add = test_phase_nums[np.where(test_phase_nums < train_phase_num)]
+        if np.sum([len(value) for key, value in tasks_for_ft.items()]) + np.sum([len(value) for key, value in tasks_for_bt.items()]) == 0:
+            raise Exception('No valid tasks for transfer matrix')
 
-                    for num in phase_nums_to_add:
-                        tmp = types_per_this_task.loc[types_per_this_task['block_type'] == 'test']
-                        blocks_to_add = tmp.loc[tmp['block_num'] == str(num), 'regime_num']
+        return tasks_for_ft, tasks_for_bt
 
-                        if len(blocks_to_add) > 1:
-                            raise Exception(f'Too many eval instances of task: {task}')
-
-                        block_to_add = blocks_to_add.values[0]
-                        tasks_for_transfer_matrix['forward'].append((task, block_to_add))
-
-                if any(test_phase_nums > train_phase_num):
-                    phase_nums_to_add = test_phase_nums[np.where(test_phase_nums > train_phase_num)]
-
-                    for num in phase_nums_to_add:
-                        tmp = types_per_this_task.loc[types_per_this_task['block_type'] == 'test']
-                        blocks_to_add = tmp.loc[tmp['block_num'] == str(num), 'regime_num']
-
-                        if len(blocks_to_add) > 1:
-                            raise Exception(f'Too many eval instances of task: {task}')
-
-                        block_to_add = blocks_to_add.values[0]
-                        tasks_for_transfer_matrix['reverse'].append((task, block_to_add))
-
-        return ste_dict, tasks_for_transfer_matrix
-
-    def calculate(self, data, metadata, metrics_df):
+    def calculate(self, dataframe, block_info, metrics_df):
         try:
             # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
-            ste_dict, tasks_to_compute = self.validate(metadata)
+            tasks_for_ft, tasks_for_bt = self.validate(block_info)
+            
             metrics_df['forward_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-            metrics_df['reverse_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-            reverse_transfer = {}
+            metrics_df['backward_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
             forward_transfer = {}
+            backward_transfer = {}
 
-            # Calculate, for each task, (task eval saturation / ste saturation)
-            for task, block in tasks_to_compute['forward']:
-                print(f'Computing forward transfer for {task}')
-                this_transfer_val = metrics_df['term_perf'][block]
-                forward_transfer[block] = this_transfer_val
+            # Calculate forward transfer for valid task pairs
+            for task, value in tasks_for_ft.items():
+                for trans_task, trans_blocks in value.items():
+                    tp_1 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
+                        [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
+                    tp_2 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
+                        [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
+                    idx = block_info[(block_info['task_name'] == trans_task) & (
+                        block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
+                    forward_transfer[idx] = tp_2 / tp_1
 
-            for task, block in tasks_to_compute['reverse']:
-                print(f'Computing reverse transfer for {task}')
-                this_transfer_val = metrics_df['term_perf'][block]
-                reverse_transfer[block] = this_transfer_val
+            # Calculate backward transfer for valid task pairs
+            for task, value in tasks_for_bt.items():
+                for trans_task, trans_blocks in value.items():
+                    tp_1 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
+                        [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
+                    tp_2 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
+                        [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
+                    idx = block_info[(block_info['task_name'] == trans_task) & (
+                        block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
+                    backward_transfer[idx] = tp_2 / tp_1
 
             metrics_df = _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
-            return _localutil.fill_metrics_df(reverse_transfer, 'reverse_transfer', metrics_df)
+            return _localutil.fill_metrics_df(backward_transfer, 'backward_transfer', metrics_df)
         except Exception as e:
             print(f"Cannot compute {self.name} - {e}")
             return metrics_df
@@ -592,8 +612,7 @@ class AgentMetricsReport(core.MetricsReport):
 
     def calculate(self):
         for metric in self._metrics:
-            self._metrics_df = metric.calculate(
-                self._log_data, self.block_info, self._metrics_df)
+            self._metrics_df = metric.calculate(self._log_data, self.block_info, self._metrics_df)
 
     def report(self, save=False):
         print(tabulate(self._metrics_df.reset_index(drop=True), headers='keys', tablefmt='psql'))

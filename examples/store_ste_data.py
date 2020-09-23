@@ -46,6 +46,7 @@ def run():
     # Load data from ste logs
     log_data = util.read_log_data(args.log_dir, [args.perf_measure])
     log_data = log_data.sort_values(by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
+    log_data = log_data[log_data['block_type'] == 'train']
     _, block_info = _localutil.parse_blocks(log_data)
 
     # Get task name

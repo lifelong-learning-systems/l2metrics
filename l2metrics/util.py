@@ -104,7 +104,7 @@ def load_ste_data(task_name):
     if task_name in get_ste_data_names():
         data_file_name = get_l2root_base_dirs('taskinfo', task_name + '.pkl')
         dataframe = pd.read_pickle(data_file_name)
-        return dataframe[dataframe['block_type'] == 'train']
+        return dataframe
     else:
         return None
 

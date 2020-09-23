@@ -192,7 +192,7 @@ def read_log_data(input_dir, analysis_variables=None):
                     logs = df
                 else:
                     logs = pd.concat([logs, df])
-            if file == 'block-report.tsv':
+            if file == 'block-info.tsv':
                 df = pd.read_csv(os.path.join(root, file), sep='\t')
                 if blocks is None:
                     blocks = df
@@ -207,5 +207,6 @@ def read_column_info(input_dir):
 
     fully_qualified_dir = get_fully_qualified_name(input_dir)
 
-    with open(fully_qualified_dir + '/column_metric_list.json') as json_file:
-        return json.load(json_file)
+    with open(fully_qualified_dir + '/column_info.json') as json_file:
+        column_info = json.load(json_file)
+        return column_info['metrics_columns']

@@ -72,6 +72,8 @@ Additionally, the script will print the metrics report to the console and save t
 
 ![diagram](ant_example/syllabus_ANT-1600830032-0285285_metrics_report.png)
 
+**Note**: Currently there are metrics that are filled in every row and some that are not. This is a result of different contexts for the calculated metric. For example, each regime will have its own saturation and terminal performance values (regime-level metrics) while each task will have associated performance maintenance, forward/backward transfer, relative performance to STE, and sample efficiency values (task-level). Additionally, performance recovery will only have one value for the entire scenario (scenario-level). The format of the metrics report is still a work in progress and will be cleaned up in the future to more clearly convey results.
+
 ## Writing a Custom Metric
 
 The file `calc_metrics.py` demonstrates how to add custom metrics to a metrics report. Data from the logs is provided to the calculate method, where the actual calculation of your metric should live. An example of an agent metric, max value, is provided for your edificiation. To add this metric to the default metrics calculated for a Metrics Report, simply invoke the following command:
@@ -98,8 +100,9 @@ Output:
 
 * :return: metrics_df: Pandas dataframe, updated with columns corresponding to previously calculated metrics
 
-## A few important notes
+## Notes
 
 1. The calculate methods for each metric in self._metrics are called **in the order they were added**. Thus, you may choose to leverage previously calculated metrics for your subsequent calculations.
 2. "NaN" is the default value in the metrics_df for blocks which do not receive a value.
 3. To avoid adding your computed metric to the metrics_df, simply do not include the call to _localutil.fill_metrics_df, which takes the values you pass and returns a dataframe with those values.
+4. The example log directories included in this repo contain some files that are generated during logging, but are not used for calculating metrics (e.g., syllabus.json). The are included to provide context for the data and can be in any format that is compatibile with an L2 environment.

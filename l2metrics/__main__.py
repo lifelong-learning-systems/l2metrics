@@ -17,6 +17,7 @@
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
 import argparse
+import traceback
 
 import l2metrics
 
@@ -55,3 +56,4 @@ if __name__ == "__main__":
         run()
     except Exception as e:
         print(f'Error: {e}')
+        traceback.print_exc()

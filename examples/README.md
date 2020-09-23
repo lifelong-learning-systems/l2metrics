@@ -45,7 +45,7 @@ This directory contains two Python files:
 To store STE data, run the following command from the root L2Metrics directory:
 
 ```bash
-python examples/store_ste_data.py --log_dir=examples/ste_syllabus-1600829944-8467104
+python examples/store_ste_data.py --log_dir=examples/ste_example/ste_syllabus-1600829944-8467104
 ```
 
 The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single task expert data is pickled and saved.
@@ -57,20 +57,20 @@ Replace the log directory with logs for other STE tasks and repeat until all STE
 To generate a metrics plot and report, run the following command from the root L2Metrics directory:
 
 ```bash
-python examples/calc_metrics.py --log_dir=examples/syllabus_ANT-1600830032-0285285 --perf_measure=reward
+python examples/calc_metrics.py --log_dir=examples/ant_example/syllabus_ANT-1600830032-0285285 --perf_measure=reward
 ```
 
 If you do not wish to provide a fully qualified path to your log directory, you may copy it to your `$L2DATA/logs` directory. This is the default location for logs generated using the TEF.
 
 The output figure of reward over episodes (saved by default) should look like this:
 
-![diagram](syllabus_ANT-1600830032-0285285.png)
+![diagram](ant_example/syllabus_ANT-1600830032-0285285.png)
 
 The white areas represent blocks in which learning is occurring while the gray areas represent evaluation blocks.
 
 Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following figure shows an example of a truncated metrics report:
 
-![diagram](syllabus_ANT-1600830032-0285285_metrics_report.png)
+![diagram](ant_example/syllabus_ANT-1600830032-0285285_metrics_report.png)
 
 ## Writing a Custom Metric
 

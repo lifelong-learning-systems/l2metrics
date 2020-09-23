@@ -25,9 +25,8 @@ import l2metrics
 def run():
     parser = argparse.ArgumentParser(description='Run L2Metrics from the command line')
 
-    # We assume that the logs are found in a subdirectory under $L2DATA/logs - this subdirectory must be passed as a
-    # parameter in order to locate the logs which will be parsed by this code
-    parser.add_argument('-l', '--log_dir', help='Subdirectory under $L2DATA/logs for the log files')
+    # Log directories can be absolute paths, relative paths, or paths found in $L2DATA/logs
+    parser.add_argument('-l', '--log_dir', required=True, help='Log directory of scenario')
 
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf_measure', default="reward",

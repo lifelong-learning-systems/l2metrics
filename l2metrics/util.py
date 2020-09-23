@@ -37,7 +37,7 @@ def get_l2data_root(warn=True):
         if warn:
             msg = "L2DATA directory not specified. Using ~/l2data as default.\n\n" \
                 "This module requires the environment variable 'L2DATA' be set to the top level folder under which\n" \
-                "all classification data is, or will be, stored. For example, consider the following commands:\n" \
+                "all data is, or will be, stored. For example, consider the following commands:\n" \
                 "\t(bash) export L2DATA=/path/to/data/l2data\n" \
                 "\t(Windows) set L2DATA=C:\\\\path\\\\to\\\\data\\\\l2data\n"
             logging.warning(msg)
@@ -67,30 +67,6 @@ def get_l2root_base_dirs(directory_to_append, sub_to_get=None):
     return file_info_to_return
 
 
-def load_chance_data():
-    # This function will return a dictionary of "chance" definitions for all of the available classification tasks
-    # stored in this JSON file, located at $L2DATA/taskinfo/chance.json
-    json_file = get_l2root_base_dirs('taskinfo', 'chance.json')
-
-    # Load the defaults from the json file, return them as a dictionary
-    with open(json_file) as f:
-        chance_dict = json.load(f)
-
-    return chance_dict
-
-
-def load_default_ste_data():
-    # This function will return a dictionary of the Single-Task-Expert data from all of the available single task
-    # baselines that have been stored in this JSON file, located at $L2DATA/taskinfo/info.json
-    json_file = get_l2root_base_dirs('taskinfo', 'info.json')
-
-    # Load the defaults from the json file, return them as a dictionary
-    with open(json_file) as f:
-        ste_dict = json.load(f)
-
-    return ste_dict
-
-
 def get_ste_data_names():
     # This function will return a list of the Single-Task-Expert data files names from all of
     # available single task baselines that have been stored in $L2DATA/taskinfo/
@@ -107,18 +83,6 @@ def load_ste_data(task_name):
         return dataframe
     else:
         return None
-
-
-def load_default_random_agent_data():
-    # This function will return a dictionary of the Random Agent data from all of the available baselines that have \
-    # been stored in this JSON file, located at $L2DATA/taskinfo/random_agent.json
-    json_file = get_l2root_base_dirs('taskinfo', 'random_agent.json')
-
-    # Load the defaults from the json file, return them as a dictionary
-    with open(json_file) as f:
-        random_agent_dict = json.load(f)
-
-    return random_agent_dict
 
 
 def plot_performance(dataframe, block_info, do_smoothing=False, col_to_plot='reward',

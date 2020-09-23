@@ -17,5 +17,4 @@
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
 from .agent import *
-from .classification import *
 from .core import Metric, MetricsReport

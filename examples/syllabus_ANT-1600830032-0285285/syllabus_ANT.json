@@ -1,0 +1,32 @@
+{
+    "name": "ANT Subtype A syllabus with MinigridKit episodes",
+    "author": "Megan Baker <megan.baker@jhuapl.edu>",
+    "contains": "episodes",
+    "default_params": {},
+    "instructions": [
+      {"$phase":  "1.train", "enable_updates" : true},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid5x5", "agent_pos": [1,1]}, "count": 1000},
+
+      {"$phase":  "1.test", "enable_updates" : false},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid5x5", "agent_pos": [1,1]}, "count": 100},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid6x6", "agent_pos": [1,1]}, "count": 100},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid8x8", "agent_pos": [1,1]}, "count": 100},
+
+      {"$phase":  "2.train", "enable_updates" : true},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid6x6", "agent_pos": [1,1]}, "count": 1000},
+
+      {"$phase":  "2.test", "enable_updates" : false},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid5x5", "agent_pos": [1,1]}, "count": 100},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid6x6", "agent_pos": [1,1]}, "count": 100},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid8x8", "agent_pos": [1,1]}, "count": 100},
+
+      {"$phase":  "3.train", "enable_updates" : true},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid8x8", "agent_pos": [1,1]}, "count": 1000},
+
+      {"$phase":  "3.test", "enable_updates" : false},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid5x5", "agent_pos": [1,1]}, "count": 100},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid6x6", "agent_pos": [1,1]}, "count": 100},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid8x8", "agent_pos": [1,1]}, "count": 100}
+    ]
+  }
+  

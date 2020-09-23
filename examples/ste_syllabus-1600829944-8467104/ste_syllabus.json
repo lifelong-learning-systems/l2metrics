@@ -1,0 +1,14 @@
+{
+    "name": "STE syllabus with MinigridKit episodes",
+    "author": "Megan Baker <megan.baker@jhuapl.edu>",
+    "contains": "episodes",
+    "default_params": {},
+    "instructions": [
+      {"$phase":  "1.train", "enable_updates": true},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid5x5"}, "count": 1000},
+
+      {"$phase":  "1.test", "enable_updates": false},
+      {"$repeat": { "$episode": "$minigridkit:Minigrid5x5"}, "count": 100}
+
+    ]
+ }

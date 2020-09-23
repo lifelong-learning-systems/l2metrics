@@ -682,10 +682,7 @@ class AgentMetricsReport(core.MetricsReport):
 
         if save:
             # Generate filename
-            if os.path.dirname(util.get_fully_qualified_name(self.log_dir)) != "":
-                _, filename = os.path.split(self.log_dir)
-            else:
-                filename = 'agent'
+            _, filename = os.path.split(self.log_dir)
 
             # Save metrics to file
             self._metrics_df.reset_index(drop=True).to_csv(filename + '_metrics.tsv', sep='\t')
@@ -694,7 +691,7 @@ class AgentMetricsReport(core.MetricsReport):
         print('Plotting a smoothed reward curve')
         util.plot_performance(self._log_data, self.block_info, do_smoothing=True, do_save_fig=save,
                               max_smoothing_window=AgentMetric.max_window_size,
-                              input_title=self.log_dir)
+                              input_title=os.path.split(self.log_dir)[-1])
 
     def add(self, metrics_list):
         self._metrics.append(metrics_list)

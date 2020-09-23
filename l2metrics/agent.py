@@ -311,11 +311,11 @@ class PerformanceMaintenance(AgentMetric):
             return metrics_df
 
 
-class TransferMatrix(AgentMetric):
-    name = "Forward and Backward Transfer"
+class ForwardTransfer(AgentMetric):
+    name = "Forward Transfer"
     capability = "adapt_to_new_tasks"
     requires = {'syllabus_type': 'agent'}
-    description = "Calculates a transfer matrix for all trained tasks"
+    description = "Calculates the forward transfer for valid task pairs"
 
     def __init__(self, perf_measure):
         super().__init__()
@@ -346,7 +346,6 @@ class TransferMatrix(AgentMetric):
 
         # Initialize list of tasks for transfer matrix
         tasks_for_ft = dict.fromkeys(unique_tasks, {})
-        tasks_for_bt = dict.fromkeys(unique_tasks, {})
 
         # Determine valid transfer pairs
         for task_pair in permutations(unique_tasks):
@@ -367,28 +366,18 @@ class TransferMatrix(AgentMetric):
                                 tasks_for_ft[task_pair[0]] = {task_pair[1] : (
                                     other_test_blocks[idx], other_test_blocks[idx + 1])}
 
-            # BT - Must have trained task with testing then training another task then more testing
-            if np.any(other_training_blocks < np.min(training_blocks)):
-                if len(other_test_blocks) >= 2:
-                    for idx in range(0, len(other_test_blocks) - 1):
-                        if other_test_blocks[idx] < np.min(training_blocks) < other_test_blocks[idx + 1]:
-                            tasks_for_bt[task_pair[0]] = {task_pair[1] : (
-                                    other_test_blocks[idx], other_test_blocks[idx + 1])}
+        if np.sum([len(value) for key, value in tasks_for_ft.items()]) == 0:
+            raise Exception('No valid task pairs for forward transfer')
 
-        if np.sum([len(value) for key, value in tasks_for_ft.items()]) + np.sum([len(value) for key, value in tasks_for_bt.items()]) == 0:
-            raise Exception('No valid tasks for transfer matrix')
-
-        return tasks_for_ft, tasks_for_bt
+        return tasks_for_ft
 
     def calculate(self, dataframe, block_info, metrics_df):
         try:
-            # Make sure to load Single Task Expert performance and figure out where we should calculate transfer
-            tasks_for_ft, tasks_for_bt = self.validate(block_info)
+            # Validate data and get pairs eligible for forward transfer
+            tasks_for_ft = self.validate(block_info)
             
             metrics_df['forward_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-            metrics_df['backward_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
             forward_transfer = {}
-            backward_transfer = {}
 
             # Calculate forward transfer for valid task pairs
             for task, value in tasks_for_ft.items():
@@ -401,6 +390,80 @@ class TransferMatrix(AgentMetric):
                         block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
                     forward_transfer[idx] = tp_2 / tp_1
 
+            return _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
+        except Exception as e:
+            print(f"Cannot compute {self.name} - {e}")
+            return metrics_df
+
+
+
+class BackwardTransfer(AgentMetric):
+    name = "Backward Transfer"
+    capability = "adapt_to_new_tasks"
+    requires = {'syllabus_type': 'agent'}
+    description = "Calculates the backward transfer for valid task pairs"
+
+    def __init__(self, perf_measure):
+        super().__init__()
+        self.perf_measure = perf_measure
+
+    def validate(self, block_info):
+
+        # Initialize variables for checking block type format
+        last_block_num = -1
+        last_block_type = ''
+
+        # Ensure alternating block types
+        for _, regime in block_info.iterrows():
+            if regime['block_num'] != last_block_num:
+                last_block_num = regime['block_num']
+
+                if regime['block_type'] == 'test':
+                    if last_block_type == 'test':
+                        raise Exception('Block types must be alternating')
+                    last_block_type = 'test'
+                elif regime['block_type'] == 'train':
+                    if last_block_type == 'train':
+                        raise Exception('Block types must be alternating')
+                    last_block_type = 'train'
+
+        # Find eligible tasks for forward and backward transfer
+        unique_tasks = block_info.loc[:, 'task_name'].unique()
+
+        # Initialize list of tasks for transfer matrix
+        tasks_for_bt = dict.fromkeys(unique_tasks, {})
+
+        # Determine valid transfer pairs
+        for task_pair in permutations(unique_tasks):
+            # Get testing and training indices for task pair
+            task_blocks = block_info[block_info['task_name'] == task_pair[0]]
+            training_blocks = task_blocks[task_blocks['block_type'] == 'train']['block_num'].values
+
+            other_blocks = block_info[block_info['task_name'] == task_pair[1]]
+            other_test_blocks = other_blocks[other_blocks['block_type'] == 'test']['block_num'].values
+            other_training_blocks = other_blocks[other_blocks['block_type'] == 'train']['block_num'].values
+
+            # BT - Must have trained task with testing then training another task then more testing
+            if np.any(other_training_blocks < np.min(training_blocks)):
+                if len(other_test_blocks) >= 2:
+                    for idx in range(0, len(other_test_blocks) - 1):
+                        if other_test_blocks[idx] < np.min(training_blocks) < other_test_blocks[idx + 1]:
+                            tasks_for_bt[task_pair[0]] = {task_pair[1] : (
+                                    other_test_blocks[idx], other_test_blocks[idx + 1])}
+
+        if np.sum([len(value) for key, value in tasks_for_bt.items()]) == 0:
+            raise Exception('No valid task pairs for backward transfer')
+
+        return tasks_for_bt
+
+    def calculate(self, dataframe, block_info, metrics_df):
+        try:
+            # Validate data and get pairs eligible for backward transfer
+            tasks_for_bt = self.validate(block_info)
+            
+            metrics_df['backward_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+            backward_transfer = {}
+
             # Calculate backward transfer for valid task pairs
             for task, value in tasks_for_bt.items():
                 for trans_task, trans_blocks in value.items():
@@ -412,7 +475,6 @@ class TransferMatrix(AgentMetric):
                         block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
                     backward_transfer[idx] = tp_2 / tp_1
 
-            metrics_df = _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
             return _localutil.fill_metrics_df(backward_transfer, 'backward_transfer', metrics_df)
         except Exception as e:
             print(f"Cannot compute {self.name} - {e}")
@@ -606,7 +668,8 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(RecoveryTime(perf_measure))
         self.add(PerformanceRecovery(perf_measure))
         self.add(PerformanceMaintenance(perf_measure))
-        self.add(TransferMatrix(perf_measure))
+        self.add(ForwardTransfer(perf_measure))
+        self.add(BackwardTransfer(perf_measure))
         self.add(STERelativePerf(perf_measure))
         self.add(SampleEfficiency(perf_measure))
 

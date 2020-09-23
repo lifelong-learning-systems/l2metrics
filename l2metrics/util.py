@@ -18,20 +18,44 @@
 
 import glob
 import json
+import logging
 import os
+import platform
 from collections import OrderedDict
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from learnkit.data_util.utils import get_l2data_root
-
 from . import _localutil
 
 
+def get_l2data_root(warn=True):
+    """Get the root directory where L2 data and logs are saved"""
+    try:
+        root_dir = os.environ['L2DATA']
+    except KeyError:
+        if warn:
+            msg = "L2DATA directory not specified. Using ~/l2data as default.\n\n" \
+                "This module requires the environment variable 'L2DATA' be set to the top level folder under which\n" \
+                "all classification data is, or will be, stored. For example, consider the following commands:\n" \
+                "\t(bash) export L2DATA=/path/to/data/l2data\n" \
+                "\t(Windows) set L2DATA=C:\\\\path\\\\to\\\\data\\\\l2data\n"
+            logging.warning(msg)
+        root_dir = 'l2data'
+        if platform.system().lower() == 'windows':
+            root_dir = os.path.join(os.environ['APPDATA'], root_dir)
+        else:
+            root_dir = os.path.join(os.path.expanduser('~'), root_dir)
+
+    if not os.path.exists(root_dir):
+        os.makedirs(root_dir, exist_ok=True)
+
+    return root_dir
+
+
 def get_l2root_base_dirs(directory_to_append, sub_to_get=None):
-    # This function uses a learnkit utility function to get the base $L2DATA path and goes one level down, with the
-    # option to return the path string for the directory or the file underneath:
+    # This function uses a utility function to get the base $L2DATA path and goes one level down
+    # with the option to return the path string for the directory or the file underneath:
     # e.g. $L2DATA/logs/some_log_directory
     # or   $L2DATA/taskinfo/info.json
     file_info_to_return = os.path.join(get_l2data_root(), directory_to_append)
@@ -122,7 +146,7 @@ def plot_performance(dataframe, block_info, do_smoothing=False, col_to_plot='rew
                 y = dataframe.loc[(dataframe['task_name'] == t) & (
                     dataframe['regime_num'] == regime), col_to_plot].values
 
-                if do_smoothing:               
+                if do_smoothing:
                     window = int(len(y) * 0.2)
                     custom_window = min(window, max_smoothing_window)
                     y = _localutil.smooth(y, window_len=custom_window)
@@ -146,7 +170,8 @@ def plot_performance(dataframe, block_info, do_smoothing=False, col_to_plot='rew
 
         for _, block in blocks.iterrows():
             if block['block_type'] == 'test':
-                df3 = df2[(df2['block_num'] == block['block_num']) & (df2['block_type'] == block['block_type'])]
+                df3 = df2[(df2['block_num'] == block['block_num']) &
+                          (df2['block_type'] == block['block_type'])]
                 x1 = df3.index[0]
                 x2 = df3.index[-1]
                 ax.axvspan(x1, x2, alpha=0.1, color='black')

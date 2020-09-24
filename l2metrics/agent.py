@@ -288,24 +288,27 @@ class PerformanceMaintenance(AgentMetric):
                             test_perf = metrics_df['term_perf'][regime['regime_num']]
                             maintenance_values[regime['regime_num']] = test_perf - mrtp
 
-            # Fill metrics dataframe with performance differences
-            _localutil.fill_metrics_df(maintenance_values, 'maintenance_val', metrics_df)
+            if len(maintenance_values):
+                # Fill metrics dataframe with performance differences
+                metrics_df = _localutil.fill_metrics_df(maintenance_values, 'maintenance_val', metrics_df)
 
-            # Iterate over task performance differences for performance maintenance
-            for task in block_info.loc[:, 'task_name'].unique():
+                # Iterate over task performance differences for performance maintenance
+                for task in block_info.loc[:, 'task_name'].unique():
 
-                # Get the task maintence values
-                m = metrics_df[metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
-                    [task])[0]]['maintenance_val'].values
+                    # Get the task maintence values
+                    m = metrics_df[metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
+                        [task])[0]]['maintenance_val'].values
 
-                # Remove NaNs
-                m = m[~np.isnan(m)]
+                    # Remove NaNs
+                    m = m[~np.isnan(m)]
 
-                # Calculate performance maintenance value
-                if m.size:
-                    pm_values[block_info.index[block_info['task_name'] == task][-1]] = np.mean(m)
+                    # Calculate performance maintenance value
+                    if m.size:
+                        pm_values[block_info.index[block_info['task_name'] == task][-1]] = np.mean(m)
 
-            return _localutil.fill_metrics_df(pm_values, 'perf_maintenance', metrics_df)
+                return _localutil.fill_metrics_df(pm_values, 'perf_maintenance', metrics_df)
+            else:
+                return metrics_df
         except:
             print("Cannot compute", self.name)
             return metrics_df

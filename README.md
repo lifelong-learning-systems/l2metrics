@@ -109,7 +109,7 @@ Once these logs are generated, you'll need to store Single Task Expert (STE) dat
 To store STE data, run the following command from the root L2Metrics directory:
 
 ```bash
-python -m l2metrics -s --log_dir=examples/ste_example/ste_syllabus-1600829944-8467104
+python -m l2metrics -s -l examples/ste_example/ste_syllabus-1600921217-488978 -p reward
 ```
 
 The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single task expert data is pickled and saved. Storing STE data assumes the provided log only contains data for a single task and only saves training data.
@@ -121,20 +121,20 @@ Replace the log directory with logs for other STE tasks and repeat until all STE
 To generate a metrics plot and report, run the following command from the root L2Metrics directory:
 
 ```bash
-python -m l2metrics --log_dir=examples/ant_example/syllabus_ANT-1600830032-0285285 --perf_measure=reward
+python -m l2metrics -- examples/perf_recovery_example/performance_recovery-1600921573-1708276 -p reward
 ```
 
 If you do not wish to provide a fully qualified path to your log directory, you may copy it to your `$L2DATA/logs` directory. This is the default location for logs generated using the TEF.
 
 The output figure of reward over episodes (saved by default) should look like this:
 
-![diagram](examples/ant_example/syllabus_ANT-1600830032-0285285.png)
+![diagram](examples/perf_recovery_example/performance_recovery-1600921573-1708276.png)
 
 The white areas represent blocks in which learning is occurring while the gray areas represent evaluation blocks.
 
 Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following figure shows an example of a truncated metrics report:
 
-![diagram](examples/ant_example/syllabus_ANT-1600830032-0285285_metrics_report.png)
+![diagram](examples/perf_recovery_example/performance_recovery-1600921573-1708276_metrics_report.png)
 
 **Note**: Currently there are metrics that are filled in every row and some that are not. This is a result of different contexts for the calculated metric. For example, each regime will have its own saturation and terminal performance values (regime-level metrics) while each task will have associated performance maintenance, forward/backward transfer, relative performance to STE, and sample efficiency values (task-level). Additionally, performance recovery will only have one value for the entire scenario (scenario-level). The format of the metrics report is still a work in progress and will be cleaned up in the future to more clearly convey results.
 

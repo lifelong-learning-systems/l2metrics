@@ -1,0 +1,51 @@
+block_num	regime_num	exp_num	status	timestamp	agent_dir	agent_pos	task_name	sub_task	worker	action_space	source	reward	seed	observation_space	steps
+0	1	50	DONE	20200924T002622.920415	1	[5 8]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	4024182462	Dict(image:Box(7, 7, 3))	1024
+0	1	51	DONE	20200924T002624.203417	0	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.52626953125	3437764266	Dict(image:Box(7, 7, 3))	539
+0	1	52	DONE	20200924T002626.815062	1	[11  8]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	28018871	Dict(image:Box(7, 7, 3))	1024
+0	1	53	DONE	20200924T002629.432701	0	[8 8]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	2525508933	Dict(image:Box(7, 7, 3))	1024
+0	1	54	DONE	20200924T002632.321933	2	[4 1]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	274491151	Dict(image:Box(7, 7, 3))	1024
+0	1	55	DONE	20200924T002635.431274	2	[4 1]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	60058000	Dict(image:Box(7, 7, 3))	1024
+0	1	56	DONE	20200924T002638.459594	3	[10  2]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	1900845196	Dict(image:Box(7, 7, 3))	1024
+0	1	57	DONE	20200924T002641.450948	3	[1 3]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	4236529720	Dict(image:Box(7, 7, 3))	1024
+0	1	58	DONE	20200924T002644.566746	3	[9 1]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	631020422	Dict(image:Box(7, 7, 3))	1024
+0	1	59	DONE	20200924T002647.527449	3	[10 10]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	336085709	Dict(image:Box(7, 7, 3))	1024
+0	1	60	DONE	20200924T002649.519130	0	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.38564453125	3392100786	Dict(image:Box(7, 7, 3))	699
+0	1	61	DONE	20200924T002650.935835	1	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.57109375	809419617	Dict(image:Box(7, 7, 3))	488
+0	1	62	DONE	20200924T002653.361461	0	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.27226562499999996	1665136460	Dict(image:Box(7, 7, 3))	828
+0	1	63	DONE	20200924T002653.935005	0	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.83388671875	2777433558	Dict(image:Box(7, 7, 3))	189
+0	1	64	DONE	20200924T002656.949822	0	[10 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	3599438794	Dict(image:Box(7, 7, 3))	1024
+0	1	65	DONE	20200924T002659.995370	2	[ 6 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	130035573	Dict(image:Box(7, 7, 3))	1024
+0	1	66	DONE	20200924T002703.123110	3	[8 7]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	3176658174	Dict(image:Box(7, 7, 3))	1024
+0	1	67	DONE	20200924T002706.367493	1	[9 1]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	2085189043	Dict(image:Box(7, 7, 3))	1024
+0	1	68	DONE	20200924T002709.326248	1	[11  5]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	3395991243	Dict(image:Box(7, 7, 3))	1024
+0	1	69	DONE	20200924T002712.344813	1	[4 3]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	3335445935	Dict(image:Box(7, 7, 3))	1024
+0	1	70	DONE	20200924T002715.350015	1	[8 9]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	2885097059	Dict(image:Box(7, 7, 3))	1024
+0	1	71	DONE	20200924T002727.215700	1	[14  8]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	4291342189	Dict(image:Box(7, 7, 3))	1024
+0	1	72	DONE	20200924T002729.124319	1	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.4287109375	3773347137	Dict(image:Box(7, 7, 3))	650
+0	1	73	DONE	20200924T002732.328950	2	[7 1]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	3894717308	Dict(image:Box(7, 7, 3))	1024
+0	1	74	DONE	20200924T002733.327523	0	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.6765625	1409935317	Dict(image:Box(7, 7, 3))	368
+0	1	75	DONE	20200924T002736.448691	1	[ 7 12]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	4284852996	Dict(image:Box(7, 7, 3))	1024
+0	1	76	DONE	20200924T002739.524014	1	[ 4 10]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	1929496198	Dict(image:Box(7, 7, 3))	1024
+0	1	77	DONE	20200924T002743.070234	2	[6 1]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	1243481141	Dict(image:Box(7, 7, 3))	1024
+0	1	78	DONE	20200924T002746.163040	0	[7 9]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	3603654663	Dict(image:Box(7, 7, 3))	1024
+0	1	79	DONE	20200924T002749.392817	3	[13  7]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	551155422	Dict(image:Box(7, 7, 3))	1024
+0	1	80	DONE	20200924T002751.170837	1	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.4515625	1811018734	Dict(image:Box(7, 7, 3))	624
+0	1	81	DONE	20200924T002754.317999	3	[11  1]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	1600557195	Dict(image:Box(7, 7, 3))	1024
+0	1	82	DONE	20200924T002757.369379	1	[14  2]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	3866081925	Dict(image:Box(7, 7, 3))	1024
+0	1	83	DONE	20200924T002800.530632	2	[8 8]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	4241856	Dict(image:Box(7, 7, 3))	1024
+0	1	84	DONE	20200924T002803.706020	2	[7 1]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	86778351	Dict(image:Box(7, 7, 3))	1024
+0	1	85	DONE	20200924T002804.793072	0	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.658984375	4119802894	Dict(image:Box(7, 7, 3))	388
+0	1	86	DONE	20200924T002807.722174	0	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.10966796874999996	141972528	Dict(image:Box(7, 7, 3))	1013
+0	1	87	DONE	20200924T002810.829000	0	[13  1]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	3715334167	Dict(image:Box(7, 7, 3))	1024
+0	1	88	DONE	20200924T002813.933688	1	[2 7]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	392472828	Dict(image:Box(7, 7, 3))	1024
+0	1	89	DONE	20200924T002814.587807	0	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.79873046875	1543492574	Dict(image:Box(7, 7, 3))	229
+0	1	90	DONE	20200924T002816.327751	0	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.46123046874999996	1049366151	Dict(image:Box(7, 7, 3))	613
+0	1	91	DONE	20200924T002819.471890	3	[14 12]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	3947389875	Dict(image:Box(7, 7, 3))	1024
+0	1	92	DONE	20200924T002822.475026	0	[1 5]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	1752993755	Dict(image:Box(7, 7, 3))	1024
+0	1	93	DONE	20200924T002825.490184	1	[3 3]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	848239992	Dict(image:Box(7, 7, 3))	1024
+0	1	94	DONE	20200924T002827.140744	1	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.48320312499999996	2442166348	Dict(image:Box(7, 7, 3))	588
+0	1	95	DONE	20200924T002839.866741	0	[8 8]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	2023383381	Dict(image:Box(7, 7, 3))	1024
+0	1	96	DONE	20200924T002841.958887	1	[14 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0.36103515624999993	3702276611	Dict(image:Box(7, 7, 3))	727
+0	1	97	DONE	20200924T002845.112251	1	[9 3]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	1384991236	Dict(image:Box(7, 7, 3))	1024
+0	1	98	DONE	20200924T002848.076562	1	[ 5 14]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	296659931	Dict(image:Box(7, 7, 3))	1024
+0	1	99	NOT_DONE	20200924T002848.413562	2	[4 1]	minigridkit_minigridkit_minigrid16x16	0	env-0	Discrete(7)	NEXT	0	1950347261	Dict(image:Box(7, 7, 3))	17

@@ -1,2 +1,0 @@
-block_num	regime_num	block_type	worker	task_name	params
-5	9	test	env-0	minigridkit_minigridkit_minigrid5x5	"{""agent_pos"": [1, 1]}"

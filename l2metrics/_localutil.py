@@ -148,8 +148,6 @@ def get_block_saturation_perf(data, col_to_use=None, prev_sat_val=None, window_l
         inds = np.where(smoothed_data >= prev_sat_val)
         if len(inds[0]):
             episodes_to_recovery = inds[0][0]
-        else:
-            episodes_to_recovery = "No Recovery"
 
     return saturation_value, episodes_to_saturation, episodes_to_recovery
 
@@ -175,8 +173,6 @@ def get_terminal_perf(data, col_to_use=None, prev_val=None, do_smoothing=True, w
         inds = np.where(mean_data >= prev_val)
         if len(inds[0]):
             episodes_to_recovery = inds[0][0]
-        else:
-            episodes_to_recovery = "No Recovery"
 
     return terminal_value, episodes_to_terminal_perf, episodes_to_recovery
 

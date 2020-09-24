@@ -212,7 +212,7 @@ class PerformanceRecovery(AgentMetric):
         r = r[r.notna()]
         r_count = r.count()
 
-        if r_count <= 1 or np.any(r.str.contains('No Recovery').values):
+        if r_count <= 1:
             raise Exception('Not enough recovery times to assess performance recovery')
         elif r_count != metrics_df["block_type"].value_counts()["train"] - 1:
             raise Exception('There are blocks where the system did not recover')
@@ -384,11 +384,13 @@ class ForwardTransfer(AgentMetric):
                 for trans_task, trans_blocks in value.items():
                     tp_1 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
                         [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
-                    tp_2 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
-                        [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
-                    idx = block_info[(block_info['task_name'] == trans_task) & (
-                        block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
-                    forward_transfer[idx] = tp_2 / tp_1
+
+                    if tp_1:
+                        tp_2 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
+                            [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
+                        idx = block_info[(block_info['task_name'] == trans_task) & (
+                            block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
+                        forward_transfer[idx] = tp_2 / tp_1
 
             return _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
         except Exception as e:

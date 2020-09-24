@@ -236,7 +236,7 @@ class PerformanceRecovery(AgentMetric):
             pr_values = {}
 
             for idx in range(block_info.loc[:, 'regime_num'].max()):
-                pr_values[idx] = 0
+                pr_values[idx] = np.nan
 
             pr_values[idx + 1] = slope
 

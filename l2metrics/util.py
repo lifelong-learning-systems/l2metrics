@@ -90,7 +90,6 @@ def save_ste_data(log_dir, perf_measure):
     ste_data = read_log_data(log_dir, [perf_measure])
     ste_data = ste_data.sort_values(by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
     ste_data = ste_data[ste_data['block_type'] == 'train']
-    _, block_info = _localutil.parse_blocks(ste_data)
 
     # Get task name
     task_name = ste_data.task_name.unique()
@@ -98,6 +97,10 @@ def save_ste_data(log_dir, perf_measure):
     # Check for number of tasks in scenario
     if task_name.size != 1:
         raise Exception('Scenario contains more than one task')
+
+    # Create task info directory if it doesn't exist
+    if not os.path.exists(get_l2root_base_dirs('taskinfo')):
+        os.makedirs(get_l2root_base_dirs('taskinfo'))
 
     # Get base directory to store ste data
     filename = get_l2root_base_dirs('taskinfo', task_name[0] + '.pkl')

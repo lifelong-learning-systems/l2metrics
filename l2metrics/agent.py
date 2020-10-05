@@ -678,21 +678,29 @@ class AgentMetricsReport(core.MetricsReport):
         for metric in self._metrics:
             self._metrics_df = metric.calculate(self._log_data, self.block_info, self._metrics_df)
 
-    def report(self, save=False):
+    def report(self, save=False, output=None):
         print(tabulate(self._metrics_df.reset_index(drop=True), headers='keys', tablefmt='psql'))
 
         if save:
             # Generate filename
-            _, filename = os.path.split(self.log_dir)
+            if output is None:
+                _, filename = os.path.split(self.log_dir)
+            else:
+                filename = output.replace(" ", "_")
 
             # Save metrics to file
             self._metrics_df.reset_index(drop=True).to_csv(filename + '_metrics.tsv', sep='\t')
 
-    def plot(self, save=False):
+    def plot(self, save=False, output=None):
+        if output is None:
+            input_title = os.path.split(self.log_dir)[-1]
+        else:
+            input_title = output
+
         print('Plotting a smoothed reward curve')
         util.plot_performance(self._log_data, self.block_info, do_smoothing=True, do_save_fig=save,
                               max_smoothing_window=AgentMetric.max_window_size,
-                              input_title=os.path.split(self.log_dir)[-1])
+                              input_title=input_title)
 
     def add(self, metrics_list):
         self._metrics.append(metrics_list)

@@ -36,9 +36,13 @@ def run():
     parser.add_argument('-p', '--perf_measure', default="reward",
                         help='Name of column to use for metrics calculations')
 
+    # Output filename
+    parser.add_argument('-o', '--output', default=None,
+                        help='Specify output filename for plot and results')
+
     args = parser.parse_args()
 
-    # Do a check to make sure the performance measure is been logged
+    # Do a check to make sure the performance measure has been logged
     if args.perf_measure not in l2metrics.util.read_column_info(args.log_dir):
             raise Exception(f'Invalid performance measure: {args.perf_measure}')
 
@@ -52,10 +56,10 @@ def run():
         report.calculate()
 
         # Plot metrics
-        report.plot(save=True)
+        report.plot(save=True, output=args.output)
 
         # Print table of metrics and save values to file
-        report.report(save=True)
+        report.report(save=True, output=args.output)
 
 
 if __name__ == "__main__":

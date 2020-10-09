@@ -662,6 +662,9 @@ class AgentMetricsReport(core.MetricsReport):
         self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(
             self._metrics_df.loc[:, 'task_name'].values)
 
+    def add(self, metrics_list):
+        self._metrics.append(metrics_list)
+
     def _add_default_metrics(self, perf_measure):
         # Default metrics no matter the syllabus type
         self.add(WithinBlockSaturation(perf_measure))
@@ -702,5 +705,3 @@ class AgentMetricsReport(core.MetricsReport):
                               max_smoothing_window=AgentMetric.max_window_size,
                               input_title=input_title)
 
-    def add(self, metrics_list):
-        self._metrics.append(metrics_list)

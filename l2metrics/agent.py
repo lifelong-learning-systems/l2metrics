@@ -349,7 +349,7 @@ class ForwardTransfer(AgentMetric):
         tasks_for_ft = dict.fromkeys(unique_tasks, {})
 
         # Determine valid transfer pairs
-        for task_pair in permutations(unique_tasks):
+        for task_pair in permutations(unique_tasks, 2):
             # Get testing and training indices for task pair
             task_blocks = block_info[block_info['task_name'] == task_pair[0]]
             training_blocks = task_blocks[task_blocks['block_type'] == 'train']['block_num'].values
@@ -436,7 +436,7 @@ class BackwardTransfer(AgentMetric):
         tasks_for_bt = dict.fromkeys(unique_tasks, {})
 
         # Determine valid transfer pairs
-        for task_pair in permutations(unique_tasks):
+        for task_pair in permutations(unique_tasks, 2):
             # Get testing and training indices for task pair
             task_blocks = block_info[block_info['task_name'] == task_pair[0]]
             training_blocks = task_blocks[task_blocks['block_type'] == 'train']['block_num'].values

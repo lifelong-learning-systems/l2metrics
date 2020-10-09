@@ -4,19 +4,25 @@ This directory contains a Python script with an example for creating custom metr
 
 * `calc_metrics.py`:
 
-  ```bash
-  usage: calc_metrics.py [-h] [-l LOG_DIR] [-p PERF_MEASURE]
+  ```
+  usage: calc_metrics.py [-h] [-l LOG_DIR] [-p PERF_MEASURE] [-o OUTPUT]
+                         [--no-plot] [--no-save]
   
   Run L2Metrics from the command line
 
   required arguments:
 
-    -l  --log_dir       Log directory of scenario
+    -l  --log-dir         Log directory of scenario
 
   optional arguments:
 
-    -p  --perf_measure  Name of column to use for metrics calculations
-
+    -s, --store-ste-data  Flag for storing log data as STE
+    -p PERF_MEASURE, --perf-measure PERF_MEASURE
+                          Name of column to use for metrics calculations
+    -o OUTPUT, --output OUTPUT
+                          Specify output filename for plot and results
+    --no-plot             Do not plot performance
+    --no-save             Do not save metrics outputs
   ```
 
 ## Writing a Custom Metric

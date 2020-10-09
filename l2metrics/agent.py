@@ -64,8 +64,7 @@ class WithinBlockSaturation(AgentMetric):
         pass
 
     def calculate(self, dataframe, block_info, metrics_df):
-        metrics_df['saturation'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-        metrics_df['eps_to_sat'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+        # Initialize metric dictionaries
         saturation_values = {}
         eps_to_saturation = {}
 
@@ -105,8 +104,7 @@ class MostRecentTerminalPerformance(AgentMetric):
         pass
 
     def calculate(self, dataframe, block_info, metrics_df):
-        metrics_df['term_perf'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-        metrics_df['eps_to_term_perf'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+        # Initialize metric dictionaries
         terminal_perf_values = {}
         eps_to_terminal_perf = {}
 
@@ -173,7 +171,7 @@ class RecoveryTime(AgentMetric):
         try:
             tr_inds_to_use, tr_inds_to_assess = self.validate(block_info)
 
-            metrics_df['recovery_time'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+            # Initialize metric dictionaries
             recovery_time = {}
 
             for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
@@ -378,8 +376,8 @@ class ForwardTransfer(AgentMetric):
         try:
             # Validate data and get pairs eligible for forward transfer
             tasks_for_ft = self.validate(block_info)
-            
-            metrics_df['forward_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+
+            # Initialize metric dictionaries
             forward_transfer = {}
 
             # Calculate forward transfer for valid task pairs
@@ -399,7 +397,6 @@ class ForwardTransfer(AgentMetric):
         except Exception as e:
             print(f"Cannot compute {self.name} - {e}")
             return metrics_df
-
 
 
 class BackwardTransfer(AgentMetric):
@@ -465,8 +462,8 @@ class BackwardTransfer(AgentMetric):
         try:
             # Validate data and get pairs eligible for backward transfer
             tasks_for_bt = self.validate(block_info)
-            
-            metrics_df['backward_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+
+            # Initialize metric dictionaries
             backward_transfer = {}
 
             # Calculate backward transfer for valid task pairs
@@ -514,8 +511,7 @@ class STERelativePerf(AgentMetric):
             # Validate the STE
             self.validate(block_info)
 
-            # Initialize metric column
-            metrics_df['ste_rel_perf'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+            # Initialize metric dictionaries
             ste_rel_perf = {}
 
             # Iterate through unique tasks and STE
@@ -574,10 +570,7 @@ class SampleEfficiency(AgentMetric):
             # Validate the STE
             self.validate(block_info)
 
-            # Initialize metric column
-            metrics_df['se_saturation'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-            metrics_df['se_eps_to_sat'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-            metrics_df['sample_efficiency'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+            # Initialize metric dictionaries
             se_saturation = {}
             se_eps_to_sat = {}
             sample_efficiency = {}

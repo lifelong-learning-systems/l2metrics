@@ -521,11 +521,11 @@ class STERelativePerf(AgentMetric):
 
             for task in unique_tasks:
                 # Get block info for task during training
-                task_phases = block_info[(block_info['task_name'] == task) & (
+                task_blocks = block_info[(block_info['task_name'] == task) & (
                     block_info['block_type'] == 'train')]
 
                 # Get data concatenated data for task
-                task_data = dataframe[dataframe['regime_num'].isin(task_phases['regime_num'])]
+                task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
 
                 # Load STE data
                 ste_data = util.load_ste_data(task)
@@ -582,11 +582,11 @@ class SampleEfficiency(AgentMetric):
 
             for task in unique_tasks:
                 # Get block info for task during training
-                task_phases = block_info[(block_info['task_name'] == task) & (
+                task_blocks = block_info[(block_info['task_name'] == task) & (
                     block_info['block_type'] == 'train')]
 
                 # Get data concatenated data for task
-                task_data = dataframe[dataframe['regime_num'].isin(task_phases['regime_num'])]
+                task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
 
                 # Load STE data
                 ste_data = util.load_ste_data(task)

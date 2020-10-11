@@ -693,13 +693,21 @@ class AgentMetricsReport(core.MetricsReport):
         task_metrics = ['perf_maintenance', 'forward_transfer',
                         'backward_transfer', 'ste_rel_perf', 'sample_efficiency']
         task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=task_metrics)
+        task_metrics_df.index.name = 'task_name'
 
         for task in self._unique_tasks:
             # Get task metrics
             tm = self._metrics_df[self._metrics_df['task_name'] == task]
 
             for metric in task_metrics:
-                task_metrics_df.at[task, metric] = tm[metric].dropna().values
+                values = tm[metric].dropna().values
+
+                if len(values) == 0:
+                    task_metrics_df.at[task, metric] = np.NaN
+                elif len(values) == 1:
+                    task_metrics_df.at[task, metric] = values[0]
+                else:
+                    task_metrics_df.at[task, metric] = values
         
         print(tabulate(task_metrics_df, headers='keys', tablefmt='psql'))
 

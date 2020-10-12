@@ -393,7 +393,7 @@ class ForwardTransfer(AgentMetric):
                             [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
                         idx = block_info[(block_info['task_name'] == trans_task) & (
                             block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
-                        forward_transfer[idx] = tp_2 / tp_1
+                        forward_transfer[idx] = [{_localutil.get_simple_rl_task_names([task])[0]: tp_2 / tp_1}]
 
             return _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
         except Exception as e:
@@ -477,7 +477,7 @@ class BackwardTransfer(AgentMetric):
                         [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
                     idx = block_info[(block_info['task_name'] == trans_task) & (
                         block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
-                    backward_transfer[idx] = tp_2 / tp_1
+                    backward_transfer[idx] = [{_localutil.get_simple_rl_task_names([task])[0]: tp_2 / tp_1}]
 
             return _localutil.fill_metrics_df(backward_transfer, 'backward_transfer', metrics_df)
         except Exception as e:
@@ -695,20 +695,39 @@ class AgentMetricsReport(core.MetricsReport):
         task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=task_metrics)
         task_metrics_df.index.name = 'task_name'
 
+        # Initialize transfer array to NaNs
+        num_tasks = len(self._unique_tasks)
+        task_metrics_df['forward_transfer'] = [[np.nan] * num_tasks] * num_tasks
+        task_metrics_df['backward_transfer'] = [[np.nan] * num_tasks] * num_tasks
+
+        # Fill task metrics dataframe
         for task in self._unique_tasks:
             # Get task metrics
             tm = self._metrics_df[self._metrics_df['task_name'] == task]
 
+            # Iterate over task metrics
             for metric in task_metrics:
-                values = tm[metric].dropna().values
+                # Drop NaN values
+                metric_values = tm[metric].dropna().values
 
-                if len(values) == 0:
-                    task_metrics_df.at[task, metric] = np.NaN
-                elif len(values) == 1:
-                    task_metrics_df.at[task, metric] = values[0]
+                # Create transfer matrix for forward and backward transfer
+                if metric in ['forward_transfer', 'backward_transfer']:
+                    # Iterate over transfer values
+                    if len(metric_values):
+                        for metric_value in metric_values:
+                            for key, value in metric_value.items():
+                                transfer_row = task_metrics_df.at[key, metric].copy()
+                                transfer_row[self._unique_tasks.index(task)] = value
+                                task_metrics_df.at[key, metric] = transfer_row
                 else:
-                    task_metrics_df.at[task, metric] = values
+                    if len(metric_values) == 0:
+                        task_metrics_df.at[task, metric] = np.NaN
+                    elif len(metric_values) == 1:
+                        task_metrics_df.at[task, metric] = metric_values[0]
+                    else:
+                        task_metrics_df.at[task, metric] = metric_values
         
+        print('Task Metrics:')
         print(tabulate(task_metrics_df, headers='keys', tablefmt='psql'))
 
         # Print regime-level metrics
@@ -716,6 +735,7 @@ class AgentMetricsReport(core.MetricsReport):
         regime_metrics_df = self._metrics_df[['block_num', 'block_type', 'task_name', 'param_set']
                                              + regime_metrics]
 
+        print('\nRegime Metrics:')
         print(tabulate(regime_metrics_df, headers='keys', tablefmt='psql'))
 
         if save:

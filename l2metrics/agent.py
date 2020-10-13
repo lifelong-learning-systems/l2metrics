@@ -734,6 +734,7 @@ class AgentMetricsReport(core.MetricsReport):
         regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
         regime_metrics_df = self._metrics_df[['block_num', 'block_type', 'task_name', 'param_set']
                                              + regime_metrics]
+        regime_metrics_df['param_set'] = regime_metrics_df['param_set'].apply(lambda x: x[:20] + '...')
 
         print('\nRegime Metrics:')
         print(tabulate(regime_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))

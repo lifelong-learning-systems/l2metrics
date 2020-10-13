@@ -687,7 +687,7 @@ class AgentMetricsReport(core.MetricsReport):
         perf_recovery = self._metrics_df['perf_recovery'].dropna().values
 
         if len(perf_recovery) == 1:
-            print(f'\nPerformance Recovery: {perf_recovery[0]}\n')
+            print(f'\nPerformance Recovery: {perf_recovery[0]:.2f}\n')
 
         # Print task-level metrics
         task_metrics = ['perf_maintenance', 'forward_transfer',
@@ -717,7 +717,7 @@ class AgentMetricsReport(core.MetricsReport):
                         for metric_value in metric_values:
                             for key, value in metric_value.items():
                                 transfer_row = task_metrics_df.at[key, metric].copy()
-                                transfer_row[self._unique_tasks.index(task)] = value
+                                transfer_row[self._unique_tasks.index(task)] = round(value, 2)
                                 task_metrics_df.at[key, metric] = transfer_row
                 else:
                     if len(metric_values) == 0:
@@ -728,7 +728,7 @@ class AgentMetricsReport(core.MetricsReport):
                         task_metrics_df.at[task, metric] = metric_values
         
         print('Task Metrics:')
-        print(tabulate(task_metrics_df, headers='keys', tablefmt='psql'))
+        print(tabulate(task_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
 
         # Print regime-level metrics
         regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
@@ -736,7 +736,7 @@ class AgentMetricsReport(core.MetricsReport):
                                              + regime_metrics]
 
         print('\nRegime Metrics:')
-        print(tabulate(regime_metrics_df, headers='keys', tablefmt='psql'))
+        print(tabulate(regime_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
 
         if save:
             # Generate filename

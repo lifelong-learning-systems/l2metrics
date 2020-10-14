@@ -643,7 +643,7 @@ class AgentMetricsReport(core.MetricsReport):
         self._log_data = util.read_log_data(self.log_dir, [perf_measure])
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
-        _, self.block_info = _localutil.parse_blocks(self._log_data)
+        _, self.block_info = util.parse_blocks(self._log_data)
 
         # Do a check to make sure the performance measure is logged
         if perf_measure not in self._log_data.columns:

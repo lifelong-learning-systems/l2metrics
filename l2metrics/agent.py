@@ -684,10 +684,11 @@ class AgentMetricsReport(core.MetricsReport):
         # TODO: Handle reporting custom metrics
 
         # Print scenario metric
-        perf_recovery = self._metrics_df['perf_recovery'].dropna().values
+        if 'perf_recovery' in self._metrics_df.keys():
+            perf_recovery = self._metrics_df['perf_recovery'].dropna().values
 
-        if len(perf_recovery) == 1:
-            print(f'\nPerformance Recovery: {perf_recovery[0]:.2f}\n')
+            if len(perf_recovery) == 1:
+                print(f'\nPerformance Recovery: {perf_recovery[0]:.2f}\n')
 
         # Print task-level metrics
         task_metrics = ['perf_maintenance', 'forward_transfer',
@@ -707,26 +708,27 @@ class AgentMetricsReport(core.MetricsReport):
 
             # Iterate over task metrics
             for metric in task_metrics:
-                # Drop NaN values
-                metric_values = tm[metric].dropna().values
+                if metric in tm.keys():
+                    # Drop NaN values
+                    metric_values = tm[metric].dropna().values
 
-                # Create transfer matrix for forward and backward transfer
-                if metric in ['forward_transfer', 'backward_transfer']:
-                    # Iterate over transfer values
-                    if len(metric_values):
-                        for metric_value in metric_values:
-                            for key, value in metric_value.items():
-                                transfer_row = task_metrics_df.at[key, metric].copy()
-                                transfer_row[self._unique_tasks.index(task)] = round(value, 2)
-                                task_metrics_df.at[key, metric] = transfer_row
-                else:
-                    if len(metric_values) == 0:
-                        task_metrics_df.at[task, metric] = np.NaN
-                    elif len(metric_values) == 1:
-                        task_metrics_df.at[task, metric] = metric_values[0]
+                    # Create transfer matrix for forward and backward transfer
+                    if metric in ['forward_transfer', 'backward_transfer']:
+                        # Iterate over transfer values
+                        if len(metric_values):
+                            for metric_value in metric_values:
+                                for key, value in metric_value.items():
+                                    transfer_row = task_metrics_df.at[key, metric].copy()
+                                    transfer_row[self._unique_tasks.index(task)] = round(value, 2)
+                                    task_metrics_df.at[key, metric] = transfer_row
                     else:
-                        task_metrics_df.at[task, metric] = metric_values
-        
+                        if len(metric_values) == 0:
+                            task_metrics_df.at[task, metric] = np.NaN
+                        elif len(metric_values) == 1:
+                            task_metrics_df.at[task, metric] = metric_values[0]
+                        else:
+                            task_metrics_df.at[task, metric] = metric_values
+
         print('Task Metrics:')
         print(tabulate(task_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
 

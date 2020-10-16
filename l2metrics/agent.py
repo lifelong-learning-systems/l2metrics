@@ -734,9 +734,10 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Print regime-level metrics
         regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
-        regime_metrics_df = self._metrics_df[['block_num', 'block_type', 'task_name', 'param_set']
-                                             + regime_metrics]
-        regime_metrics_df['param_set'] = regime_metrics_df['param_set'].apply(lambda x: x[:20] + '...')
+        regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'param_set']]
+        regime_metrics_df = pd.concat([regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
+        regime_metrics_df['param_set'] = regime_metrics_df['param_set'].apply(
+            lambda x: x[:20] + '...' if len(x) > 20 else x)
 
         print('\nRegime Metrics:')
         print(tabulate(regime_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))

@@ -89,19 +89,26 @@ Once these logs are generated, you'll need to store Single Task Expert (STE) dat
 
 ### Command-Line Execution
 
-  ```bash
-  usage: l2metrics [-h] -l LOG_DIR [-s] [-p PERF_MEASURE]
+  ```
+  usage: l2metrics [-h] -l LOG_DIR [-s] [-p PERF_MEASURE] [-o OUTPUT]
+                   [--no-plot] [--no-save]
   
   Run L2Metrics from the command line
 
   required arguments:
 
-    -l  --log_dir         Log directory of scenario
+    -l LOG_DIR --log-dir LOG_DIR
+                          Log directory of scenario
 
   optional arguments:
 
-    -s, --store_ste_data  Flag for storing log data as STE
-    -p  --perf_measure    Name of column to use for metrics calculations
+    -s, --store-ste-data  Flag for storing log data as STE
+    -p PERF_MEASURE, --perf-measure PERF_MEASURE
+                          Name of column to use for metrics calculations
+    -o OUTPUT, --output OUTPUT
+                          Specify output filename for plot and results
+    --no-plot             Do not plot performance
+    --no-save             Do not save metrics outputs
 ```
 
 ### Storing Single Task Expert Data
@@ -121,7 +128,7 @@ Replace the log directory with logs for other STE tasks and repeat until all STE
 To generate a metrics plot and report, run the following command from the root L2Metrics directory:
 
 ```bash
-python -m l2metrics -- examples/perf_recovery_example/performance_recovery-1600921573-1708276 -p reward
+python -m l2metrics -l examples/perf_recovery_example/performance_recovery-1600921573-1708276 -p reward
 ```
 
 If you do not wish to provide a fully qualified path to your log directory, you may copy it to your `$L2DATA/logs` directory. This is the default location for logs generated using the TEF.

@@ -18,14 +18,15 @@
 
 import os
 from abc import ABC
+from collections import defaultdict
 from itertools import permutations
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 from tabulate import tabulate
 
 from . import _localutil, core, util
-
 
 """
 Standard metrics for Agent Learning (RL tasks)
@@ -64,8 +65,7 @@ class WithinBlockSaturation(AgentMetric):
         pass
 
     def calculate(self, dataframe, block_info, metrics_df):
-        metrics_df['saturation'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-        metrics_df['eps_to_sat'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+        # Initialize metric dictionaries
         saturation_values = {}
         eps_to_saturation = {}
 
@@ -105,8 +105,7 @@ class MostRecentTerminalPerformance(AgentMetric):
         pass
 
     def calculate(self, dataframe, block_info, metrics_df):
-        metrics_df['term_perf'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-        metrics_df['eps_to_term_perf'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+        # Initialize metric dictionaries
         terminal_perf_values = {}
         eps_to_terminal_perf = {}
 
@@ -135,7 +134,8 @@ class RecoveryTime(AgentMetric):
     name = "Recovery Time"
     capability = "adapt_to_new_tasks"
     requires = {'syllabus_type': 'agent'}
-    description = "Calculates whether the system recovers after a change of task or parameters and calculate how long it takes if recovery is achieved"
+    description = "Calculates whether the system recovers after a change of task or parameters and \
+        calculate how long it takes if recovery is achieved"
 
     def __init__(self, perf_measure):
         super().__init__()
@@ -147,8 +147,8 @@ class RecoveryTime(AgentMetric):
         tr_bl_inds_to_assess = []
 
         # Get train blocks, in order of appearance
-        tr_bl_info = block_info.sort_index().loc[block_info['block_type'] == 'train', ['regime_num', 'task_name',
-                                                                                       'param_set']]
+        tr_bl_info = block_info.sort_index().loc[block_info['block_type'] == 'train',
+                                                 ['regime_num', 'task_name', 'param_set']]
         tb_inds = tr_bl_info.index
 
         # Blocks are defined as new combinations of task + params, but can repeat, so check for changes across blocks
@@ -173,7 +173,7 @@ class RecoveryTime(AgentMetric):
         try:
             tr_inds_to_use, tr_inds_to_assess = self.validate(block_info)
 
-            metrics_df['recovery_time'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+            # Initialize metric dictionaries
             recovery_time = {}
 
             for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
@@ -348,10 +348,10 @@ class ForwardTransfer(AgentMetric):
         unique_tasks = block_info.loc[:, 'task_name'].unique()
 
         # Initialize list of tasks for transfer matrix
-        tasks_for_ft = dict.fromkeys(unique_tasks, {})
+        tasks_for_ft = defaultdict(dict)
 
         # Determine valid transfer pairs
-        for task_pair in permutations(unique_tasks):
+        for task_pair in permutations(unique_tasks, 2):
             # Get testing and training indices for task pair
             task_blocks = block_info[block_info['task_name'] == task_pair[0]]
             training_blocks = task_blocks[task_blocks['block_type'] == 'train']['block_num'].values
@@ -366,8 +366,8 @@ class ForwardTransfer(AgentMetric):
                     for idx in range(0, len(other_test_blocks) - 1):
                         for t_idx in training_blocks[training_blocks < np.min(other_training_blocks)]:
                             if other_test_blocks[idx] < t_idx < other_test_blocks[idx + 1]:
-                                tasks_for_ft[task_pair[0]] = {task_pair[1] : (
-                                    other_test_blocks[idx], other_test_blocks[idx + 1])}
+                                tasks_for_ft[task_pair[0]][task_pair[1]] = (
+                                    other_test_blocks[idx], other_test_blocks[idx + 1])
 
         if np.sum([len(value) for key, value in tasks_for_ft.items()]) == 0:
             raise Exception('No valid task pairs for forward transfer')
@@ -378,8 +378,8 @@ class ForwardTransfer(AgentMetric):
         try:
             # Validate data and get pairs eligible for forward transfer
             tasks_for_ft = self.validate(block_info)
-            
-            metrics_df['forward_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+
+            # Initialize metric dictionaries
             forward_transfer = {}
 
             # Calculate forward transfer for valid task pairs
@@ -393,13 +393,12 @@ class ForwardTransfer(AgentMetric):
                             [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
                         idx = block_info[(block_info['task_name'] == trans_task) & (
                             block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
-                        forward_transfer[idx] = tp_2 / tp_1
+                        forward_transfer[idx] = [{_localutil.get_simple_rl_task_names([task])[0]: tp_2 / tp_1}]
 
             return _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
         except Exception as e:
             print(f"Cannot compute {self.name} - {e}")
             return metrics_df
-
 
 
 class BackwardTransfer(AgentMetric):
@@ -436,10 +435,10 @@ class BackwardTransfer(AgentMetric):
         unique_tasks = block_info.loc[:, 'task_name'].unique()
 
         # Initialize list of tasks for transfer matrix
-        tasks_for_bt = dict.fromkeys(unique_tasks, {})
+        tasks_for_bt = defaultdict(dict)
 
         # Determine valid transfer pairs
-        for task_pair in permutations(unique_tasks):
+        for task_pair in permutations(unique_tasks, 2):
             # Get testing and training indices for task pair
             task_blocks = block_info[block_info['task_name'] == task_pair[0]]
             training_blocks = task_blocks[task_blocks['block_type'] == 'train']['block_num'].values
@@ -453,8 +452,8 @@ class BackwardTransfer(AgentMetric):
                 if len(other_test_blocks) >= 2:
                     for idx in range(0, len(other_test_blocks) - 1):
                         if other_test_blocks[idx] < np.min(training_blocks) < other_test_blocks[idx + 1]:
-                            tasks_for_bt[task_pair[0]] = {task_pair[1] : (
-                                    other_test_blocks[idx], other_test_blocks[idx + 1])}
+                            tasks_for_bt[task_pair[0]][task_pair[1]] = (
+                                other_test_blocks[idx], other_test_blocks[idx + 1])
 
         if np.sum([len(value) for key, value in tasks_for_bt.items()]) == 0:
             raise Exception('No valid task pairs for backward transfer')
@@ -465,8 +464,8 @@ class BackwardTransfer(AgentMetric):
         try:
             # Validate data and get pairs eligible for backward transfer
             tasks_for_bt = self.validate(block_info)
-            
-            metrics_df['backward_transfer'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+
+            # Initialize metric dictionaries
             backward_transfer = {}
 
             # Calculate backward transfer for valid task pairs
@@ -478,7 +477,7 @@ class BackwardTransfer(AgentMetric):
                         [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
                     idx = block_info[(block_info['task_name'] == trans_task) & (
                         block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
-                    backward_transfer[idx] = tp_2 / tp_1
+                    backward_transfer[idx] = [{_localutil.get_simple_rl_task_names([task])[0]: tp_2 / tp_1}]
 
             return _localutil.fill_metrics_df(backward_transfer, 'backward_transfer', metrics_df)
         except Exception as e:
@@ -514,8 +513,7 @@ class STERelativePerf(AgentMetric):
             # Validate the STE
             self.validate(block_info)
 
-            # Initialize metric column
-            metrics_df['ste_rel_perf'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+            # Initialize metric dictionaries
             ste_rel_perf = {}
 
             # Iterate through unique tasks and STE
@@ -523,11 +521,11 @@ class STERelativePerf(AgentMetric):
 
             for task in unique_tasks:
                 # Get block info for task during training
-                task_phases = block_info[(block_info['task_name'] == task) & (
+                task_blocks = block_info[(block_info['task_name'] == task) & (
                     block_info['block_type'] == 'train')]
 
                 # Get data concatenated data for task
-                task_data = dataframe[dataframe['regime_num'].isin(task_phases['regime_num'])]
+                task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
 
                 # Load STE data
                 ste_data = util.load_ste_data(task)
@@ -574,10 +572,7 @@ class SampleEfficiency(AgentMetric):
             # Validate the STE
             self.validate(block_info)
 
-            # Initialize metric column
-            metrics_df['se_saturation'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-            metrics_df['se_eps_to_sat'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-            metrics_df['sample_efficiency'] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+            # Initialize metric dictionaries
             se_saturation = {}
             se_eps_to_sat = {}
             sample_efficiency = {}
@@ -587,11 +582,11 @@ class SampleEfficiency(AgentMetric):
 
             for task in unique_tasks:
                 # Get block info for task during training
-                task_phases = block_info[(block_info['task_name'] == task) & (
+                task_blocks = block_info[(block_info['task_name'] == task) & (
                     block_info['block_type'] == 'train')]
 
                 # Get data concatenated data for task
-                task_data = dataframe[dataframe['regime_num'].isin(task_phases['regime_num'])]
+                task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
 
                 # Load STE data
                 ste_data = util.load_ste_data(task)
@@ -645,6 +640,9 @@ class AgentMetricsReport(core.MetricsReport):
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
         _, self.block_info = util.parse_blocks(self._log_data)
 
+        self._unique_tasks = _localutil.get_simple_rl_task_names(
+            self.block_info.loc[:, 'task_name'].unique())
+
         # Do a check to make sure the performance measure is logged
         if perf_measure not in self._log_data.columns:
             raise Exception(f'Performance measure ({perf_measure}) not found in the log data')
@@ -662,6 +660,9 @@ class AgentMetricsReport(core.MetricsReport):
         self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(
             self._metrics_df.loc[:, 'task_name'].values)
 
+    def add(self, metrics_list):
+        self._metrics.append(metrics_list)
+
     def _add_default_metrics(self, perf_measure):
         # Default metrics no matter the syllabus type
         self.add(WithinBlockSaturation(perf_measure))
@@ -678,21 +679,91 @@ class AgentMetricsReport(core.MetricsReport):
         for metric in self._metrics:
             self._metrics_df = metric.calculate(self._log_data, self.block_info, self._metrics_df)
 
-    def report(self, save=False):
-        print(tabulate(self._metrics_df.reset_index(drop=True), headers='keys', tablefmt='psql'))
+    def report(self, save=False, output=None):
+        # TODO: Handle reporting custom metrics
+
+        # Print scenario metric
+        if 'perf_recovery' in self._metrics_df.keys():
+            perf_recovery = self._metrics_df['perf_recovery'].dropna().values
+
+            if len(perf_recovery) == 1:
+                print(f'\nPerformance Recovery: {perf_recovery[0]:.2f}\n')
+
+        # Print task-level metrics
+        task_metrics = ['perf_maintenance', 'forward_transfer',
+                        'backward_transfer', 'ste_rel_perf', 'sample_efficiency']
+        task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=task_metrics)
+        task_metrics_df.index.name = 'task_name'
+
+        # Initialize transfer array to NaNs
+        num_tasks = len(self._unique_tasks)
+        task_metrics_df['forward_transfer'] = [[np.nan] * num_tasks] * num_tasks
+        task_metrics_df['backward_transfer'] = [[np.nan] * num_tasks] * num_tasks
+
+        # Fill task metrics dataframe
+        for task in self._unique_tasks:
+            # Get task metrics
+            tm = self._metrics_df[self._metrics_df['task_name'] == task]
+
+            # Iterate over task metrics
+            for metric in task_metrics:
+                if metric in tm.keys():
+                    # Drop NaN values
+                    metric_values = tm[metric].dropna().values
+
+                    # Create transfer matrix for forward and backward transfer
+                    if metric in ['forward_transfer', 'backward_transfer']:
+                        # Iterate over transfer values
+                        if len(metric_values):
+                            for metric_value in metric_values:
+                                for key, value in metric_value.items():
+                                    transfer_row = task_metrics_df.at[key, metric].copy()
+                                    transfer_row[self._unique_tasks.index(task)] = round(value, 2)
+                                    task_metrics_df.at[key, metric] = transfer_row
+                    else:
+                        if len(metric_values) == 0:
+                            task_metrics_df.at[task, metric] = np.NaN
+                        elif len(metric_values) == 1:
+                            task_metrics_df.at[task, metric] = metric_values[0]
+                        else:
+                            task_metrics_df.at[task, metric] = metric_values
+
+        print('Task Metrics:')
+        print(tabulate(task_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
+
+        # Print regime-level metrics
+        regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
+        regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'param_set']]
+        regime_metrics_df = pd.concat([regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
+        regime_metrics_df['param_set'] = regime_metrics_df['param_set'].apply(
+            lambda x: x[:20] + '...' if len(x) > 20 else x)
+
+        print('\nRegime Metrics:')
+        print(tabulate(regime_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
 
         if save:
             # Generate filename
-            _, filename = os.path.split(self.log_dir)
+            if output is None:
+                _, filename = os.path.split(self.log_dir)
+            else:
+                filename = output.replace(" ", "_")
 
             # Save metrics to file
-            self._metrics_df.reset_index(drop=True).to_csv(filename + '_metrics.tsv', sep='\t')
+            with open(filename + '_metrics.tsv', 'w', newline='\n') as metrics_file:
+                if 'perf_recovery' in self._metrics_df.keys():
+                    metrics_file.write(f'perf_recovery\t{perf_recovery[0]}\n\n')
+                task_metrics_df.to_csv(metrics_file, sep='\t')
+                metrics_file.write('\n')
+                regime_metrics_df.to_csv(metrics_file, sep='\t')
 
-    def plot(self, save=False):
+    def plot(self, save=False, output=None):
+        if output is None:
+            input_title = os.path.split(self.log_dir)[-1]
+        else:
+            input_title = output
+
         print('Plotting a smoothed reward curve')
         util.plot_performance(self._log_data, self.block_info, do_smoothing=True, do_save_fig=save,
                               max_smoothing_window=AgentMetric.max_window_size,
-                              input_title=os.path.split(self.log_dir)[-1])
+                              input_title=input_title)
 
-    def add(self, metrics_list):
-        self._metrics.append(metrics_list)

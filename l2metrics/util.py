@@ -137,12 +137,11 @@ def plot_performance(dataframe, block_info, do_smoothing=False, col_to_plot='rew
     ax.grid()
 
     if do_save_fig:
-        if not plot_filename:
-            if not input_title:
-                plot_filename = 'plot.png'
+        if not plot_filename and not input_title:
+            plot_filename = 'plot.png'
 
-        print(f'Saving figure with name: {plot_filename}')
+        print(f'Saving figure with name: {plot_filename.replace(" ", "_")}')
 
-        fig.savefig(plot_filename)
+        fig.savefig(plot_filename.replace(" ", "_"))
     else:
         plt.show()

@@ -750,7 +750,12 @@ class AgentMetricsReport(core.MetricsReport):
                 filename = output.replace(" ", "_")
 
             # Save metrics to file
-            self._metrics_df.reset_index(drop=True).to_csv(filename + '_metrics.tsv', sep='\t')
+            with open(filename + '_metrics.tsv', 'w', newline='\n') as metrics_file:
+                if 'perf_recovery' in self._metrics_df.keys():
+                    metrics_file.write(f'perf_recovery\t{perf_recovery[0]}\n\n')
+                task_metrics_df.to_csv(metrics_file, sep='\t')
+                metrics_file.write('\n')
+                regime_metrics_df.to_csv(metrics_file, sep='\t')
 
     def plot(self, save=False, output=None):
         if output is None:

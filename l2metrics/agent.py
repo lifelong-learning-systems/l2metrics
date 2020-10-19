@@ -228,10 +228,9 @@ class PerformanceRecovery(AgentMetric):
             r = metrics_df['recovery_time']
             r = r[r.notna()]
 
-            # Get linear regression
-            x = np.array(range(len(r)))
+            # Get Theil-Sen slope
             y = np.array(r)
-            slope, _, _, _, _ = stats.linregress(x, y)
+            slope, _, _, _ = stats.theilslopes(y)
 
             pr_values = {}
 

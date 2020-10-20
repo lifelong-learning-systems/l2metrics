@@ -146,3 +146,29 @@ def get_simple_rl_task_names(task_names):
         simple_names.append(splits[-1])
 
     return simple_names
+
+
+def fill_regime_num(df):
+    # Initialize regime number column
+    df['regime_num'] = np.full_like(df['block_num'], 0, dtype=np.int)
+    
+    # Initialize variables
+    regime_num = -1
+    prev_block_type = ''
+    prev_task_name = ''
+    prev_task_params = ''
+
+    # Set exp number as index
+    df = df.set_index('exp_num', drop=False)
+
+    # Determine regime changes by looking at block type, task name, and parameter combinations
+    for index, row in df.iterrows():
+        if row['block_type'] != prev_block_type or row['task_name'] != prev_task_name or row['task_params'] != prev_task_params:
+            regime_num = regime_num + 1
+            prev_block_type = row['block_type']
+            prev_task_name = row['task_name']
+            prev_task_params = row['task_params']
+
+        df.at[index, 'regime_num'] = regime_num
+
+    return df.reset_index(drop=True)

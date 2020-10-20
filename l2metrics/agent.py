@@ -151,7 +151,7 @@ class RecoveryTime(AgentMetric):
             # Get train blocks in order of appearance
             tr_block_info = block_info.sort_index().loc[(block_info['block_type'] == 'train') &
                                                         (block_info['task_name'] == task),
-                                                        ['task_name', 'param_set']]
+                                                        ['task_name', 'task_params']]
             tr_inds = tr_block_info.index
 
             # Regimes are defined as new combinations of tasks and params, but can repeat, 
@@ -646,6 +646,7 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(self.log_dir)
+        self._log_data = _localutil.fill_regime_num(self._log_data)
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
         _, self.block_info = util.parse_blocks(self._log_data)
@@ -663,8 +664,8 @@ class AgentMetricsReport(core.MetricsReport):
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
         block_info_keys_to_include = ['block_num', 'block_type', 'task_name', 'regime_num']
-        if len(self.block_info.loc[:, 'param_set'].unique()) > 1:
-            block_info_keys_to_include.append('param_set')
+        if len(self.block_info.loc[:, 'task_params'].unique()) > 1:
+            block_info_keys_to_include.append('task_params')
 
         self._metrics_df = self.block_info[block_info_keys_to_include].copy()
         self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(
@@ -736,9 +737,9 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Print regime-level metrics
         regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
-        regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'param_set']]
+        regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'task_params']]
         regime_metrics_df = pd.concat([regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
-        regime_metrics_df['param_set'] = regime_metrics_df['param_set'].apply(
+        regime_metrics_df['task_params'] = regime_metrics_df['task_params'].apply(
             lambda x: x[:20] + '...' if len(x) > 20 else x)
 
         print('\nRegime Metrics:')

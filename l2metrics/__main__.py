@@ -40,7 +40,7 @@ def run():
     # Output filename
     parser.add_argument('-o', '--output', default=None,
                         help='Specify output filename for plot and results')
-    
+
     # Flag for disabling plotting
     parser.add_argument('--no-plot', action='store_true', help='Do not plot performance')
 

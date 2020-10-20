@@ -37,17 +37,15 @@ class AgentMetric(core.Metric, ABC):
     A single metric for an Agent (aka. Reinforcement Learning) learner
     """
 
-    max_window_size = 100
+    max_window_size = 100   # Max window size for moving average and smoothing
 
     def __init__(self):
         pass
-        # self.validate()
 
     def plot(self, result):
         pass
 
     def validate(self, block_info):
-        # TODO: Add structure validation of block_info
         pass
 
 
@@ -142,53 +140,58 @@ class RecoveryTime(AgentMetric):
         self.perf_measure = perf_measure
 
     def validate(self, block_info):
-        # Determine where we need to assess recovery time
-        tr_bl_inds_to_use = []
-        tr_bl_inds_to_assess = []
+        # Get unique tasks
+        unique_tasks = block_info.loc[:, 'task_name'].unique()
 
-        # Get train blocks, in order of appearance
-        tr_bl_info = block_info.sort_index().loc[block_info['block_type'] == 'train',
-                                                 ['regime_num', 'task_name', 'param_set']]
-        tb_inds = tr_bl_info.index
+        # Determine where we need to assess recovery time for each task
+        ref_inds = defaultdict(list)
+        assess_inds = defaultdict(list)
 
-        # Blocks are defined as new combinations of task + params, but can repeat, so check for changes across blocks
-        first = True
-        for idx, block_idx in enumerate(tb_inds):
-            if first:
-                first = False
-                continue
-            # Either the task name or the param set must be different
-            if tr_bl_info.loc[block_idx, 'task_name'] != tr_bl_info.loc[tb_inds[idx - 1], 'task_name'] or \
-                    tr_bl_info.loc[block_idx, 'param_set'] != tr_bl_info.loc[tb_inds[idx - 1], 'param_set']:
-                tr_bl_inds_to_assess.append(block_idx)
-                tr_bl_inds_to_use.append(tb_inds[idx - 1])
+        for task in unique_tasks:
+            # Get train blocks in order of appearance
+            tr_block_info = block_info.sort_index().loc[(block_info['block_type'] == 'train') &
+                                                        (block_info['task_name'] == task),
+                                                        ['task_name', 'param_set']]
+            tr_inds = tr_block_info.index
 
-        if tr_bl_inds_to_assess is None or tr_bl_inds_to_use is None:
-            raise Exception('No changes across training blocks to assess recovery time')
+            # Regimes are defined as new combinations of tasks and params, but can repeat, 
+            # so check for changes across regimes
+            first = True
+            for idx, block_idx in enumerate(tr_inds):
+                if first:
+                    first = False
+                    continue
+                assess_inds[task].append(block_idx)
+                ref_inds[task].append(tr_inds[idx - 1])
 
-        return tr_bl_inds_to_use, tr_bl_inds_to_assess
+        if not ref_inds or not assess_inds:
+            raise Exception('Not enough blocks to assess recovery time')
+
+        return ref_inds, assess_inds
 
     def calculate(self, dataframe, block_info, metrics_df):
-        # Get the places where we should calculate recovery time
         try:
-            tr_inds_to_use, tr_inds_to_assess = self.validate(block_info)
+            # Get the places where we should calculate recovery time
+            ref_inds, assess_inds = self.validate(block_info)
 
-            # Initialize metric dictionaries
+            # Initialize metric dictionary
             recovery_time = {}
 
-            for use_ind, assess_ind in zip(tr_inds_to_use, tr_inds_to_assess):
-                prev_val = metrics_df['term_perf'][use_ind]
-                block_data = dataframe.loc[assess_ind]
+            # Iterate over indices for computing recovery time
+            for (task, ref_vals), (_, assess_vals) in zip(ref_inds.items(), assess_inds.items()):
+                for ref_ind, assess_ind in zip(ref_vals, assess_vals):
+                    prev_val = metrics_df['term_perf'][ref_ind]
+                    block_data = dataframe.loc[assess_ind]
 
-                # Get block window size for smoothing
-                window = int(len(block_data) * 0.2)
-                custom_window = min(window, self.max_window_size)
+                    # Get block window size for smoothing
+                    window = int(len(block_data) * 0.2)
+                    custom_window = min(window, self.max_window_size)
 
-                _, _, eps_to_rec = _localutil.get_terminal_perf(block_data,
-                                                                col_to_use=self.perf_measure,
-                                                                prev_val=prev_val,
-                                                                window_len=custom_window)
-                recovery_time[assess_ind] = eps_to_rec
+                    _, _, eps_to_rec = _localutil.get_terminal_perf(block_data,
+                                                                    col_to_use=self.perf_measure,
+                                                                    prev_val=prev_val,
+                                                                    window_len=custom_window)
+                    recovery_time[assess_ind] = eps_to_rec
 
             return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
         except Exception as e:
@@ -214,30 +217,30 @@ class PerformanceRecovery(AgentMetric):
 
         if r_count <= 1:
             raise Exception('Not enough recovery times to assess performance recovery')
-        elif r_count != metrics_df["block_type"].value_counts()["train"] - 1:
-            raise Exception('There are blocks where the system did not recover')
 
         return
 
     def calculate(self, dataframe, block_info, metrics_df):
-        # Get the places where we should calculate recovery time
         try:
+            # Get the places where we should calculate recovery time
             self.validate(metrics_df)
 
-            # Get recovery times
-            r = metrics_df['recovery_time']
-            r = r[r.notna()]
-
-            # Get Theil-Sen slope
-            y = np.array(r)
-            slope, _, _, _ = stats.theilslopes(y)
-
+            # Initialize metric dictionary
             pr_values = {}
 
-            for idx in range(block_info.loc[:, 'regime_num'].max()):
-                pr_values[idx] = np.nan
+            # Calculate performance recovery for each task
+            for task in block_info.loc[:, 'task_name'].unique():
+                r = metrics_df[metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
+                        [task])[0]]['recovery_time']
+                r = r[r.notna()]
 
-            pr_values[idx + 1] = slope
+                # Get Theil-Sen slope
+                y = np.array(r)
+                slope, _, _, _ = stats.theilslopes(y)
+
+                # Set performance recovery value as slope
+                idx = block_info[block_info['task_name'] == task]['regime_num'].max()
+                pr_values[idx] = slope
 
             return _localutil.fill_metrics_df(pr_values, 'perf_recovery', metrics_df)
         except Exception as e:
@@ -681,15 +684,8 @@ class AgentMetricsReport(core.MetricsReport):
     def report(self, save=False, output=None):
         # TODO: Handle reporting custom metrics
 
-        # Print scenario metric
-        if 'perf_recovery' in self._metrics_df.keys():
-            perf_recovery = self._metrics_df['perf_recovery'].dropna().values
-
-            if len(perf_recovery) == 1:
-                print(f'\nPerformance Recovery: {perf_recovery[0]:.2f}\n')
-
         # Print task-level metrics
-        task_metrics = ['perf_maintenance', 'forward_transfer',
+        task_metrics = ['perf_recovery', 'perf_maintenance', 'forward_transfer',
                         'backward_transfer', 'ste_rel_perf', 'sample_efficiency']
         task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=task_metrics)
         task_metrics_df.index.name = 'task_name'
@@ -749,8 +745,6 @@ class AgentMetricsReport(core.MetricsReport):
 
             # Save metrics to file
             with open(filename + '_metrics.tsv', 'w', newline='\n') as metrics_file:
-                if 'perf_recovery' in self._metrics_df.keys():
-                    metrics_file.write(f'perf_recovery\t{perf_recovery[0]}\n\n')
                 task_metrics_df.to_csv(metrics_file, sep='\t')
                 metrics_file.write('\n')
                 regime_metrics_df.to_csv(metrics_file, sep='\t')

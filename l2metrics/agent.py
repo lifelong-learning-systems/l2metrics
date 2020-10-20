@@ -236,11 +236,15 @@ class PerformanceRecovery(AgentMetric):
 
                 # Get Theil-Sen slope
                 y = np.array(r)
-                slope, _, _, _ = stats.theilslopes(y)
 
-                # Set performance recovery value as slope
-                idx = block_info[block_info['task_name'] == task]['regime_num'].max()
-                pr_values[idx] = slope
+                if len(y) > 1:
+                    slope, _, _, _ = stats.theilslopes(y)
+
+                    # Set performance recovery value as slope
+                    idx = block_info[block_info['task_name'] == task]['regime_num'].max()
+                    pr_values[idx] = slope
+                else:
+                    print(f"Cannot compute {self.name} for task {task} - Not enough recovery times")
 
             return _localutil.fill_metrics_df(pr_values, 'perf_recovery', metrics_df)
         except Exception as e:
@@ -547,6 +551,8 @@ class STERelativePerf(AgentMetric):
                     ste_perf = ste_data.head(min_exp)[self.perf_measure].sum()
                     rel_perf = task_perf / ste_perf
                     ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
+                else:
+                    print(f"Cannot compute {self.name} for task {task} - No STE data available")
 
             return _localutil.fill_metrics_df(ste_rel_perf, 'ste_rel_perf', metrics_df)
         except Exception as e:
@@ -621,6 +627,8 @@ class SampleEfficiency(AgentMetric):
                     se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
                     sample_efficiency[task_data['regime_num'].iloc[-1]] = \
                         (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
+                else:
+                    print(f"Cannot compute {self.name} for task {task} - No STE data available")
 
             metrics_df = _localutil.fill_metrics_df(se_saturation, 'se_saturation', metrics_df)
             metrics_df = _localutil.fill_metrics_df(se_eps_to_sat, 'se_eps_to_sat', metrics_df)

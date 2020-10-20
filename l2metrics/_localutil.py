@@ -113,7 +113,9 @@ def get_terminal_perf(data, col_to_use=None, prev_val=None, do_smoothing=True, w
 
     # Calculate the number of episodes to terminal performance
     episodes_to_terminal_perf = int((1-(0.1/2))*mean_data.size)
-    episodes_to_recovery = np.nan
+
+    # Initialize recovery time to very large number
+    episodes_to_recovery = np.Inf
 
     if prev_val is not None:
         inds = np.where(mean_data >= prev_val)

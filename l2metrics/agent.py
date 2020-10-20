@@ -355,8 +355,8 @@ class ForwardTransfer(AgentMetric):
         # Determine valid transfer pairs
         for task_pair in permutations(unique_tasks, 2):
             # Get testing and training indices for task pair
-            task_blocks = block_info[block_info['task_name'] == task_pair[0]]
-            training_blocks = task_blocks[task_blocks['block_type'] == 'train']['block_num'].values
+            training_blocks = block_info[(block_info['task_name'] == task_pair[0]) & (
+                block_info['block_type'] == 'train')]['block_num'].values
 
             other_blocks = block_info[block_info['task_name'] == task_pair[1]]
             other_test_blocks = other_blocks[other_blocks['block_type'] == 'test']['block_num'].values
@@ -365,11 +365,15 @@ class ForwardTransfer(AgentMetric):
             # FT - Must have tested task before training another task then more testing
             if np.any(training_blocks < np.min(other_training_blocks)):
                 if len(other_test_blocks) >= 2:
-                    for idx in range(0, len(other_test_blocks) - 1):
+                    for idx in range(len(other_test_blocks) - 1):
                         for t_idx in training_blocks[training_blocks < np.min(other_training_blocks)]:
                             if other_test_blocks[idx] < t_idx < other_test_blocks[idx + 1]:
                                 tasks_for_ft[task_pair[0]][task_pair[1]] = (
                                     other_test_blocks[idx], other_test_blocks[idx + 1])
+                                break   # Only compute one value per task pair
+                        else:
+                            continue
+                        break
 
         if np.sum([len(value) for key, value in tasks_for_ft.items()]) == 0:
             raise Exception('No valid task pairs for forward transfer')
@@ -442,8 +446,8 @@ class BackwardTransfer(AgentMetric):
         # Determine valid transfer pairs
         for task_pair in permutations(unique_tasks, 2):
             # Get testing and training indices for task pair
-            task_blocks = block_info[block_info['task_name'] == task_pair[0]]
-            training_blocks = task_blocks[task_blocks['block_type'] == 'train']['block_num'].values
+            training_blocks = block_info[(block_info['task_name'] == task_pair[0]) & (
+                block_info['block_type'] == 'train')]['block_num'].values
 
             other_blocks = block_info[block_info['task_name'] == task_pair[1]]
             other_test_blocks = other_blocks[other_blocks['block_type'] == 'test']['block_num'].values
@@ -452,10 +456,14 @@ class BackwardTransfer(AgentMetric):
             # BT - Must have trained task with testing then training another task then more testing
             if np.any(other_training_blocks < np.min(training_blocks)):
                 if len(other_test_blocks) >= 2:
-                    for idx in range(0, len(other_test_blocks) - 1):
+                    for idx in range(len(other_test_blocks) - 1):
                         if other_test_blocks[idx] < np.min(training_blocks) < other_test_blocks[idx + 1]:
                             tasks_for_bt[task_pair[0]][task_pair[1]] = (
                                 other_test_blocks[idx], other_test_blocks[idx + 1])
+                            break   # Only compute one value per task pair
+                        else:
+                            continue
+                        break
 
         if np.sum([len(value) for key, value in tasks_for_bt.items()]) == 0:
             raise Exception('No valid task pairs for backward transfer')

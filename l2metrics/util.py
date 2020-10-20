@@ -47,7 +47,7 @@ def load_ste_data(task_name):
 
 def save_ste_data(log_dir, perf_measure):
     # Load data from ste logs
-    ste_data = read_log_data(log_dir, [perf_measure])
+    ste_data = read_log_data(log_dir)
     ste_data = ste_data.sort_values(by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
     ste_data = ste_data[ste_data['block_type'] == 'train']
 

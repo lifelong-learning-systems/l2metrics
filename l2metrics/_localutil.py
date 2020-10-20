@@ -125,17 +125,6 @@ def get_terminal_perf(data, col_to_use=None, prev_val=None, do_smoothing=True, w
     return terminal_value, episodes_to_terminal_perf, episodes_to_recovery
 
 
-def extract_relevant_columns(dataframe, keyword):
-    # Parse the dataframe and get out the appropriate column names for Classification performance assessment
-    relevant_cols = []
-
-    for col in dataframe.columns:
-        if col.startswith(keyword):
-            relevant_cols.append(col)
-
-    return relevant_cols
-
-
 def fill_metrics_df(metric, metric_string_name, metrics_df, dict_key=None):
     if not dict_key:
         metrics_df[metric_string_name] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
@@ -147,66 +136,6 @@ def fill_metrics_df(metric, metric_string_name, metrics_df, dict_key=None):
             metrics_df[dict_key].loc[idx, metric_string_name] = metric[idx]
 
     return metrics_df
-
-
-def simplify_classification_task_names(unique_task_names, block_info):
-    # Capture the correspondence between the Classification Train/Test tasks
-    name_map = {'full_name_map': {}}
-    task_map = {}
-    type_map = {}
-    block_list = {}
-    all_name_list = []
-
-    # First find the blocks for each task
-    for t in unique_task_names:
-        this_instance_blocks = block_info.loc[block_info['task_name'] == t, 'regime_num']
-
-        # Then get the base class name by finding the block/task type annotation and getting the string that comes after
-        x = re.search(r'(train|test)(\w+)', t)
-        if x.re.groups != 2:
-            raise Exception(f'Improperly formatted task names! Classification tasks should include \
-                "train" or "test," but this one was: {t}')
-
-        task_type = x.group(1)
-        task_name = x.group(2)
-        all_name_list.append(task_name)
-
-        # Record which tasks were used for training for future metric computation
-        if task_type == 'train':
-            name_map[task_name] = t
-
-        name_map['full_name_map'][t] = task_name
-
-        # Add to the task map
-        if task_name not in task_map.keys():
-            task_map[task_name] = this_instance_blocks.values
-        else:
-            existing_blocks = task_map.get(task_name)
-            tmp = {task_name: np.append(existing_blocks, this_instance_blocks.values)}
-            task_map.update(tmp)
-
-        # And update the block and type lists
-        block_list.update({v: task_name for v in this_instance_blocks.values})
-        type_map.update({v: task_type for v in this_instance_blocks.values})
-
-    return task_map, block_list, name_map, type_map
-
-
-def get_simple_class_task_names(task_names):
-    all_name_list = {}
-
-    for idx, t in enumerate(task_names):
-
-        # Get the base class name by finding the block/task type annotation and getting the string that comes after
-        x = re.search(r'(train|test)(\w+)', t)
-        if x.re.groups != 2:
-            raise Exception(f'Improperly formatted task names! Classification tasks should include \
-                "train" or "test," but this one was: {t}')
-
-        task_name = x.group(2)
-        all_name_list[idx] = task_name
-
-    return all_name_list
 
 
 def get_simple_rl_task_names(task_names):

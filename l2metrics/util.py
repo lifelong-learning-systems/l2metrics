@@ -45,7 +45,7 @@ def load_ste_data(task_name):
         return None
 
 
-def save_ste_data(log_dir, perf_measure):
+def save_ste_data(log_dir):
     # Load data from ste logs
     ste_data = read_log_data(log_dir)
     ste_data = ste_data.sort_values(by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)

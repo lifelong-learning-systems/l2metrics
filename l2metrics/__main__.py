@@ -61,7 +61,7 @@ def run():
         raise Exception(f'Invalid performance measure: {args.perf_measure}')
 
     if args.store_ste_data:
-        l2metrics.util.save_ste_data(args.log_dir, args.perf_measure)
+        l2metrics.util.save_ste_data(args.log_dir)
     else:
         # Initialize metrics report
         report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,

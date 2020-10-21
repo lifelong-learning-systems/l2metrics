@@ -563,12 +563,16 @@ class STERelativePerf(AgentMetric):
                 ste_data = util.load_ste_data(task)
 
                 if ste_data is not None:
-                    # Compute relative performance with no smoothing on data
-                    min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
-                    task_perf = task_data.head(min_exp)[self.perf_measure].sum()
-                    ste_perf = ste_data.head(min_exp)[self.perf_measure].sum()
-                    rel_perf = task_perf / ste_perf
-                    ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
+                    # Check if performance measure exists in STE data
+                    if args.perf_measure in ste_data.columns:
+                        # Compute relative performance with no smoothing on data
+                        min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
+                        task_perf = task_data.head(min_exp)[self.perf_measure].sum()
+                        ste_perf = ste_data.head(min_exp)[self.perf_measure].sum()
+                        rel_perf = task_perf / ste_perf
+                        ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
+                    else:
+                        print(f"Cannot compute {self.name} for task {task} - Performance measure not in STE data")
                 else:
                     print(f"Cannot compute {self.name} for task {task} - No STE data available")
 
@@ -626,25 +630,29 @@ class SampleEfficiency(AgentMetric):
                 ste_data = util.load_ste_data(task)
 
                 if ste_data is not None:
-                    # Get task saturation value and episodes to saturation
-                    window = int(len(task_data) * 0.2)
-                    custom_window = min(window, self.max_window_size)
+                    # Check if performance measure exists in STE data
+                    if args.perf_measure in ste_data.columns:
+                        # Get task saturation value and episodes to saturation
+                        window = int(len(task_data) * 0.2)
+                        custom_window = min(window, self.max_window_size)
 
-                    task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                        task_data, col_to_use=self.perf_measure, window_len=custom_window)
+                        task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
+                            task_data, col_to_use=self.perf_measure, window_len=custom_window)
 
-                    # Get STE saturation value and episodes to saturation
-                    window = int(len(ste_data) * 0.2)
-                    custom_window = min(window, self.max_window_size)
+                        # Get STE saturation value and episodes to saturation
+                        window = int(len(ste_data) * 0.2)
+                        custom_window = min(window, self.max_window_size)
 
-                    ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                        ste_data, col_to_use=self.perf_measure, window_len=custom_window)
+                        ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
+                            ste_data, col_to_use=self.perf_measure, window_len=custom_window)
 
-                    # Compute sample efficiency
-                    se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
-                    se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
-                    sample_efficiency[task_data['regime_num'].iloc[-1]] = \
-                        (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
+                        # Compute sample efficiency
+                        se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
+                        se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
+                        sample_efficiency[task_data['regime_num'].iloc[-1]] = \
+                            (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
+                    else:
+                        print(f"Cannot compute {self.name} for task {task} - Performance measure not in STE data")
                 else:
                     print(f"Cannot compute {self.name} for task {task} - No STE data available")
 

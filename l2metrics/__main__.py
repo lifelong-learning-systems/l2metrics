@@ -56,13 +56,13 @@ def run():
     do_plot = not args.no_plot
     do_save = not args.no_save
 
-    # Do a check to make sure the performance measure has been logged
-    if args.perf_measure not in l2metrics.util.read_logger_info(args.log_dir):
-        raise Exception(f'Invalid performance measure: {args.perf_measure}')
-
     if args.store_ste_data:
         l2metrics.util.save_ste_data(args.log_dir)
     else:
+        # Do a check to make sure the performance measure has been logged
+        if args.perf_measure not in l2metrics.util.read_logger_info(args.log_dir):
+            raise Exception(f'Invalid performance measure: {args.perf_measure}')
+
         # Initialize metrics report
         report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
                                               transfer_method=args.transfer_method)

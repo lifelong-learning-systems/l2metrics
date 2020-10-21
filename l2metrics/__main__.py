@@ -53,8 +53,8 @@ def run():
     do_save = not args.no_save
 
     # Do a check to make sure the performance measure has been logged
-    if args.perf_measure not in l2metrics.util.read_column_info(args.log_dir):
-            raise Exception(f'Invalid performance measure: {args.perf_measure}')
+    if args.perf_measure not in l2metrics.util.read_logger_info(args.log_dir):
+        raise Exception(f'Invalid performance measure: {args.perf_measure}')
 
     if args.store_ste_data:
         l2metrics.util.save_ste_data(args.log_dir, args.perf_measure)

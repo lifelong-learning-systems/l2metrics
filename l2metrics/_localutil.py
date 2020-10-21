@@ -158,9 +158,6 @@ def fill_regime_num(df):
     prev_task_name = ''
     prev_task_params = ''
 
-    # Set exp number as index
-    df = df.set_index('exp_num', drop=False)
-
     # Determine regime changes by looking at block type, task name, and parameter combinations
     for index, row in df.iterrows():
         if row['block_type'] != prev_block_type or row['task_name'] != prev_task_name or row['task_params'] != prev_task_params:
@@ -171,4 +168,4 @@ def fill_regime_num(df):
 
         df.at[index, 'regime_num'] = regime_num
 
-    return df.reset_index(drop=True)
+    return df

@@ -676,7 +676,7 @@ class AgentMetricsReport(core.MetricsReport):
             self.transfer_method = 'contrast'
 
         # Gets all data from the relevant log files
-        self._log_data = util.read_log_data(self.log_dir)
+        self._log_data = util.read_log_data(self.log_dir, [self.perf_measure])
         self._log_data = _localutil.fill_regime_num(self._log_data)
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)

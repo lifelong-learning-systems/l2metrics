@@ -724,7 +724,7 @@ class AgentMetricsReport(core.MetricsReport):
     def report(self, save=False, output=None):
         # TODO: Handle reporting custom metrics
 
-        # Print task-level metrics
+        # Create dataframe for task-level metrics
         task_metrics = ['perf_recovery', 'perf_maintenance', 'forward_transfer',
                         'backward_transfer', 'ste_rel_perf', 'sample_efficiency']
         task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=task_metrics)
@@ -763,18 +763,45 @@ class AgentMetricsReport(core.MetricsReport):
                         else:
                             task_metrics_df.at[task, metric] = metric_values
 
-        print('Task Metrics:')
-        print(tabulate(task_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
+        # Calculate lifetime metrics from task metrics
+        ['perf_recovery', 'perf_maintenance', 'forward_transfer', 'backward_transfer', 'ste_rel_perf', 'sample_efficiency']
+        lifetime_metrics_df = pd.DataFrame(columns=task_metrics)
 
-        # Print regime-level metrics
+        for metric in task_metrics:
+            if metric in ['forward_transfer', 'backward_transfer']:
+                metric_vals = task_metrics_df[metric].values
+
+                # Flatten lists
+                metric_vals = np.asarray([item for sublist in metric_vals for item in sublist])
+
+                # Drop NaNs
+                metric_vals = metric_vals[~np.isnan(metric_vals)]
+            else:
+                metric_vals = task_metrics_df[metric].dropna().values
+
+            if len(metric_vals):
+                lifetime_metrics_df[metric] = [np.median(metric_vals)]
+
+        # Print lifetime metrics
+        print('\nLifetime Metrics:')
+        print(tabulate(lifetime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f", showindex=False))
+
+        # Print task-level metrics
+        print('\nTask Metrics:')
+        print(tabulate(task_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f"))
+
+        # Create dataframe for regime-level metrics
         regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
         regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'task_params']]
+
+        # Fill regime metrics dataframe
         regime_metrics_df = pd.concat([regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
         regime_metrics_df['task_params'] = regime_metrics_df['task_params'].apply(
             lambda x: x[:20] + '...' if len(x) > 20 else x)
 
+        # Print regime-level metrics
         print('\nRegime Metrics:')
-        print(tabulate(regime_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
+        print(tabulate(regime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f"))
 
         if save:
             # Generate filename

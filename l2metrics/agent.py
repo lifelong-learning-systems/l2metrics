@@ -211,12 +211,15 @@ class PerformanceRecovery(AgentMetric):
 
     def validate(self, metrics_df):
         # Get number of recovery times
-        r = metrics_df['recovery_time']
-        r = r[r.notna()]
-        r_count = r.count()
+        if 'recovery_time' in metrics_df.columns:
+            r = metrics_df['recovery_time']
+            r = r[r.notna()]
+            r_count = r.count()
 
-        if r_count <= 1:
-            raise Exception('Not enough recovery times to assess performance recovery')
+            if r_count <= 1:
+                raise Exception('Not enough recovery times to assess performance recovery')
+        else:
+            raise Exception('No recovery times')
 
         return
 

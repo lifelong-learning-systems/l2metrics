@@ -95,9 +95,10 @@ class MostRecentTerminalPerformance(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the terminal performance within each block"
 
-    def __init__(self, perf_measure):
+    def __init__(self, perf_measure, do_smoothing=True):
         super().__init__()
         self.perf_measure = perf_measure
+        self.do_smoothing = do_smoothing
 
     def validate(self, block_info):
         pass
@@ -118,7 +119,8 @@ class MostRecentTerminalPerformance(AgentMetric):
 
             # Make within block calculations
             term_perf, eps_to_term_perf, _ = _localutil.get_terminal_perf(
-                block_data, col_to_use=self.perf_measure, window_len=custom_window)
+                block_data, col_to_use=self.perf_measure, do_smoothing=self.do_smoothing,
+                window_len=custom_window)
 
             # Record them
             terminal_perf_values[idx] = term_perf
@@ -135,9 +137,10 @@ class RecoveryTime(AgentMetric):
     description = "Calculates whether the system recovers after a change of task or parameters and \
         calculate how long it takes if recovery is achieved"
 
-    def __init__(self, perf_measure):
+    def __init__(self, perf_measure, do_smoothing=True):
         super().__init__()
         self.perf_measure = perf_measure
+        self.do_smoothing = do_smoothing
 
     def validate(self, block_info):
         # Get unique tasks
@@ -189,6 +192,7 @@ class RecoveryTime(AgentMetric):
 
                     _, _, eps_to_rec = _localutil.get_terminal_perf(block_data,
                                                                     col_to_use=self.perf_measure,
+                                                                    do_smoothing=self.do_smoothing,
                                                                     prev_val=prev_val,
                                                                     window_len=custom_window)
                     recovery_time[assess_ind] = eps_to_rec
@@ -686,6 +690,11 @@ class AgentMetricsReport(core.MetricsReport):
         else:
             self.transfer_method = 'contrast'
 
+        if 'do_smoothing' in kwargs:
+            self.do_smoothing = kwargs['do_smoothing']
+        else:
+            self.do_smoothing = True
+
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(self.log_dir, [self.perf_measure])
         self._log_data = _localutil.fill_regime_num(self._log_data)
@@ -725,8 +734,8 @@ class AgentMetricsReport(core.MetricsReport):
     def _add_default_metrics(self):
         # Default metrics no matter the syllabus type
         self.add(WithinBlockSaturation(self.perf_measure))
-        self.add(MostRecentTerminalPerformance(self.perf_measure))
-        self.add(RecoveryTime(self.perf_measure))
+        self.add(MostRecentTerminalPerformance(self.perf_measure, self.do_smoothing))
+        self.add(RecoveryTime(self.perf_measure, self.do_smoothing))
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure))
         self.add(ForwardTransfer(self.perf_measure, self.transfer_method))
@@ -842,6 +851,6 @@ class AgentMetricsReport(core.MetricsReport):
             input_title = output
 
         print('Plotting a smoothed reward curve')
-        util.plot_performance(self._log_data, self.block_info, do_smoothing=True, col_to_plot=self.perf_measure,
-                              do_save_fig=save, max_smoothing_window=AgentMetric.max_window_size,
-                              input_title=input_title)
+        util.plot_performance(self._log_data, self.block_info, do_smoothing=self.do_smoothing,
+                              col_to_plot=self.perf_measure, do_save_fig=save,
+                              max_smoothing_window=AgentMetric.max_window_size, input_title=input_title)

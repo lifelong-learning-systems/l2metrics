@@ -45,6 +45,9 @@ def run():
     parser.add_argument('-o', '--output', default=None,
                         help='Specify output filename for plot and results')
 
+    # Flag for disabling smoothing
+    parser.add_argument('--no-smoothing', action='store_true', help='Do not smooth performance')
+
     # Flag for disabling plotting
     parser.add_argument('--no-plot', action='store_true', help='Do not plot performance')
 
@@ -53,6 +56,7 @@ def run():
 
     # Parse arguments
     args = parser.parse_args()
+    do_smoothing = not args.no_smoothing
     do_plot = not args.no_plot
     do_save = not args.no_save
 
@@ -65,7 +69,7 @@ def run():
 
         # Initialize metrics report
         report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
-                                              transfer_method=args.transfer_method)
+                                              transfer_method=args.transfer_method, do_smoothing=do_smoothing)
 
         # Calculate metrics in order of their addition to the metrics list.
         report.calculate()

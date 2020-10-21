@@ -805,7 +805,7 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Print task-level metrics
         print('\nTask Metrics:')
-        print(tabulate(task_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f"))
+        print(tabulate(task_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
 
         # Create dataframe for regime-level metrics
         regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']

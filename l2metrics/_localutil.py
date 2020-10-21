@@ -88,7 +88,7 @@ def get_block_saturation_perf(data, col_to_use=None, prev_sat_val=None, window_l
     # Calculate the number of episodes to "saturation", which we define as the max of the moving average
     inds = np.where(smoothed_data == saturation_value)
     episodes_to_saturation = inds[0][0]
-    episodes_to_recovery = np.nan
+    episodes_to_recovery = len(data) + 1
 
     if prev_sat_val:
         inds = np.where(smoothed_data >= prev_sat_val)
@@ -114,8 +114,8 @@ def get_terminal_perf(data, col_to_use=None, prev_val=None, do_smoothing=True, w
     # Calculate the number of episodes to terminal performance
     episodes_to_terminal_perf = int((1-(0.1/2))*mean_data.size)
 
-    # Initialize recovery time to very large number
-    episodes_to_recovery = np.Inf
+    # Initialize recovery time to one more than number of learning experiences in the data
+    episodes_to_recovery = len(data) + 1
 
     if prev_val is not None:
         inds = np.where(mean_data >= prev_val)

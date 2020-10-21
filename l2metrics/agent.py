@@ -680,8 +680,14 @@ class AgentMetricsReport(core.MetricsReport):
         self._log_data = _localutil.fill_regime_num(self._log_data)
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
+        self._log_data = self._log_data[self._log_data['exp_status'] == 'complete']
+
+        if len(self._log_data) == 0:
+            raise Exception('No valid log data to compute metrics')
+
         _, self.block_info = util.parse_blocks(self._log_data)
 
+        # Store unique task names
         self._unique_tasks = _localutil.get_simple_rl_task_names(
             self.block_info.loc[:, 'task_name'].unique())
 

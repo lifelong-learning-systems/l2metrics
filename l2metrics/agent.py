@@ -829,6 +829,8 @@ class AgentMetricsReport(core.MetricsReport):
 
             # Save metrics to file
             with open(filename + '_metrics.tsv', 'w', newline='\n') as metrics_file:
+                lifetime_metrics_df.to_csv(metrics_file, sep='\t', index=False)
+                metrics_file.write('\n')
                 task_metrics_df.to_csv(metrics_file, sep='\t')
                 metrics_file.write('\n')
                 regime_metrics_df.to_csv(metrics_file, sep='\t')

@@ -837,7 +837,6 @@ class AgentMetricsReport(core.MetricsReport):
             input_title = output
 
         print('Plotting a smoothed reward curve')
-        util.plot_performance(self._log_data, self.block_info, do_smoothing=True, do_save_fig=save,
-                              max_smoothing_window=AgentMetric.max_window_size,
+        util.plot_performance(self._log_data, self.block_info, do_smoothing=True, col_to_plot=self.perf_measure,
+                              do_save_fig=save, max_smoothing_window=AgentMetric.max_window_size,
                               input_title=input_title)
-

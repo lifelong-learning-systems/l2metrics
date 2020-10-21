@@ -648,9 +648,9 @@ class AgentMetricsReport(core.MetricsReport):
         super().__init__(**kwargs)
 
         if 'perf_measure' in kwargs:
-            perf_measure = kwargs['perf_measure']
+            self.perf_measure = kwargs['perf_measure']
         else:
-            perf_measure = 'reward'
+            self.perf_measure = 'reward'
 
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(self.log_dir)
@@ -663,11 +663,11 @@ class AgentMetricsReport(core.MetricsReport):
             self.block_info.loc[:, 'task_name'].unique())
 
         # Do a check to make sure the performance measure is logged
-        if perf_measure not in self._log_data.columns:
-            raise Exception(f'Performance measure ({perf_measure}) not found in the log data')
+        if self.perf_measure not in self._log_data.columns:
+            raise Exception(f'Performance measure ({self.perf_measure}) not found in the log data')
 
         # Adds default metrics
-        self._add_default_metrics(perf_measure)
+        self._add_default_metrics()
 
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
@@ -682,17 +682,17 @@ class AgentMetricsReport(core.MetricsReport):
     def add(self, metrics_list):
         self._metrics.append(metrics_list)
 
-    def _add_default_metrics(self, perf_measure):
+    def _add_default_metrics(self):
         # Default metrics no matter the syllabus type
-        self.add(WithinBlockSaturation(perf_measure))
-        self.add(MostRecentTerminalPerformance(perf_measure))
-        self.add(RecoveryTime(perf_measure))
-        self.add(PerformanceRecovery(perf_measure))
-        self.add(PerformanceMaintenance(perf_measure))
-        self.add(ForwardTransfer(perf_measure))
-        self.add(BackwardTransfer(perf_measure))
-        self.add(STERelativePerf(perf_measure))
-        self.add(SampleEfficiency(perf_measure))
+        self.add(WithinBlockSaturation(self.perf_measure))
+        self.add(MostRecentTerminalPerformance(self.perf_measure))
+        self.add(RecoveryTime(self.perf_measure))
+        self.add(PerformanceRecovery(self.perf_measure))
+        self.add(PerformanceMaintenance(self.perf_measure))
+        self.add(ForwardTransfer(self.perf_measure))
+        self.add(BackwardTransfer(self.perf_measure))
+        self.add(STERelativePerf(self.perf_measure))
+        self.add(SampleEfficiency(self.perf_measure))
 
     def calculate(self):
         for metric in self._metrics:

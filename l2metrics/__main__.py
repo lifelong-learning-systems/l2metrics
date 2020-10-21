@@ -34,7 +34,7 @@ def run():
                         help='Flag for storing log data as STE')
 
     # Choose application measure to use as performance column
-    parser.add_argument('-p', '--perf-measure', default="reward",
+    parser.add_argument('-p', '--perf-measure', default='reward',
                         help='Name of column to use for metrics calculations')
 
     # Output filename
@@ -73,7 +73,7 @@ def run():
         report.report(save=do_save, output=args.output)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     try:
         run()
     except Exception as e:

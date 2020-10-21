@@ -36,6 +36,10 @@ def run():
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf-measure', default='reward',
                         help='Name of column to use for metrics calculations')
+    
+    # Method for calculating forward and backward transfer
+    parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio'],
+                        help='Mathod for computing forward and backward transfer')
 
     # Output filename
     parser.add_argument('-o', '--output', default=None,
@@ -60,7 +64,8 @@ def run():
         l2metrics.util.save_ste_data(args.log_dir, args.perf_measure)
     else:
         # Initialize metrics report
-        report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure)
+        report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
+                                              transfer_method=args.transfer_method)
 
         # Calculate metrics in order of their addition to the metrics list.
         report.calculate()

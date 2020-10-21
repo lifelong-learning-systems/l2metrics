@@ -326,11 +326,15 @@ class ForwardTransfer(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the forward transfer for valid task pairs"
 
-    def __init__(self, perf_measure):
+    def __init__(self, perf_measure='reward', transfer_method='contrast'):
         super().__init__()
         self.perf_measure = perf_measure
+        self.transfer_method = transfer_method
 
     def validate(self, block_info):
+        # Check for valid transfer method
+        if self.transfer_method not in ['contrast', 'ratio']:
+            raise Exception(f'Invalid transfer method: {self.transfer_method}')
 
         # Initialize variables for checking block type format
         last_block_num = -1
@@ -397,13 +401,17 @@ class ForwardTransfer(AgentMetric):
                 for trans_task, trans_blocks in value.items():
                     tp_1 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
                         [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
+                    tp_2 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
+                        [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
+                    idx = block_info[(block_info['task_name'] == trans_task) & (
+                        block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
 
-                    if tp_1:
-                        tp_2 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
-                            [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
-                        idx = block_info[(block_info['task_name'] == trans_task) & (
-                            block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
-                        forward_transfer[idx] = [{_localutil.get_simple_rl_task_names([task])[0]: tp_2 / tp_1}]
+                    if self.transfer_method == 'contrast':
+                        forward_transfer[idx] = [
+                            {_localutil.get_simple_rl_task_names([task])[0]: (tp_2 - tp_1) / (tp_1 + tp_2)}]
+                    elif self.transfer_method == 'ratio':
+                        forward_transfer[idx] = [
+                            {_localutil.get_simple_rl_task_names([task])[0]: tp_2 / tp_1}]
 
             return _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
         except Exception as e:
@@ -417,11 +425,15 @@ class BackwardTransfer(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the backward transfer for valid task pairs"
 
-    def __init__(self, perf_measure):
+    def __init__(self, perf_measure='reward', transfer_method='contrast'):
         super().__init__()
         self.perf_measure = perf_measure
+        self.transfer_method = transfer_method
 
     def validate(self, block_info):
+        # Check for valid transfer method
+        if self.transfer_method not in ['contrast', 'ratio']:
+            raise Exception(f'Invalid transfer method: {self.transfer_method}')
 
         # Initialize variables for checking block type format
         last_block_num = -1
@@ -491,7 +503,13 @@ class BackwardTransfer(AgentMetric):
                         [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
                     idx = block_info[(block_info['task_name'] == trans_task) & (
                         block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
-                    backward_transfer[idx] = [{_localutil.get_simple_rl_task_names([task])[0]: tp_2 / tp_1}]
+                    
+                    if self.transfer_method == 'contrast':
+                        backward_transfer[idx] = [
+                            {_localutil.get_simple_rl_task_names([task])[0]: (tp_2 - tp_1) / (tp_1 + tp_2)}]
+                    elif self.transfer_method == 'ratio':
+                        backward_transfer[idx] = [
+                            {_localutil.get_simple_rl_task_names([task])[0]: tp_2 / tp_1}]
 
             return _localutil.fill_metrics_df(backward_transfer, 'backward_transfer', metrics_df)
         except Exception as e:
@@ -652,6 +670,11 @@ class AgentMetricsReport(core.MetricsReport):
         else:
             self.perf_measure = 'reward'
 
+        if 'transfer_method' in kwargs:
+            self.transfer_method = kwargs['transfer_method']
+        else:
+            self.transfer_method = 'contrast'
+
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(self.log_dir)
         self._log_data = _localutil.fill_regime_num(self._log_data)
@@ -689,8 +712,8 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(RecoveryTime(self.perf_measure))
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure))
-        self.add(ForwardTransfer(self.perf_measure))
-        self.add(BackwardTransfer(self.perf_measure))
+        self.add(ForwardTransfer(self.perf_measure, self.transfer_method))
+        self.add(BackwardTransfer(self.perf_measure, self.transfer_method))
         self.add(STERelativePerf(self.perf_measure))
         self.add(SampleEfficiency(self.perf_measure))
 

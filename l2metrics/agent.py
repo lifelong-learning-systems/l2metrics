@@ -405,20 +405,24 @@ class ForwardTransfer(AgentMetric):
 
             # Calculate forward transfer for valid task pairs
             for task, value in tasks_for_ft.items():
+                # Get simple task name
+                task_name = _localutil.get_simple_rl_task_names([task])[0]
+
                 for trans_task, trans_blocks in value.items():
-                    tp_1 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
-                        [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
-                    tp_2 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
-                        [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
+                    # Get simple task name
+                    trans_task_name = _localutil.get_simple_rl_task_names([trans_task])[0]
+
+                    tp_1 = metrics_df[(metrics_df['task_name'] == trans_task_name) & (
+                        metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
+                    tp_2 = metrics_df[(metrics_df['task_name'] == trans_task_name) & (
+                        metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
                     idx = block_info[(block_info['task_name'] == trans_task) & (
                         block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
 
                     if self.transfer_method == 'contrast':
-                        forward_transfer[idx] = [
-                            {_localutil.get_simple_rl_task_names([task])[0]: (tp_2 - tp_1) / (tp_1 + tp_2)}]
+                        forward_transfer[idx] = [{task_name: (tp_2 - tp_1) / (tp_1 + tp_2)}]
                     elif self.transfer_method == 'ratio':
-                        forward_transfer[idx] = [
-                            {_localutil.get_simple_rl_task_names([task])[0]: tp_2 / tp_1}]
+                        forward_transfer[idx] = [{task_name: tp_2 / tp_1}]
 
             return _localutil.fill_metrics_df(forward_transfer, 'forward_transfer', metrics_df)
         except Exception as e:
@@ -503,20 +507,24 @@ class BackwardTransfer(AgentMetric):
 
             # Calculate backward transfer for valid task pairs
             for task, value in tasks_for_bt.items():
+                # Get simple task name
+                task_name = _localutil.get_simple_rl_task_names([task])[0]
+
                 for trans_task, trans_blocks in value.items():
-                    tp_1 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
-                        [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
-                    tp_2 = metrics_df[(metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
-                        [trans_task])[0]) & (metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
+                    # Get simple task name
+                    trans_task_name = _localutil.get_simple_rl_task_names([trans_task])[0]
+
+                    tp_1 = metrics_df[(metrics_df['task_name'] == trans_task_name) & (
+                        metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
+                    tp_2 = metrics_df[(metrics_df['task_name'] == trans_task_name) & (
+                        metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
                     idx = block_info[(block_info['task_name'] == trans_task) & (
                         block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
                     
                     if self.transfer_method == 'contrast':
-                        backward_transfer[idx] = [
-                            {_localutil.get_simple_rl_task_names([task])[0]: (tp_2 - tp_1) / (tp_1 + tp_2)}]
+                        backward_transfer[idx] = [{task_name: (tp_2 - tp_1) / (tp_1 + tp_2)}]
                     elif self.transfer_method == 'ratio':
-                        backward_transfer[idx] = [
-                            {_localutil.get_simple_rl_task_names([task])[0]: tp_2 / tp_1}]
+                        backward_transfer[idx] = [{task_name: tp_2 / tp_1}]
 
             return _localutil.fill_metrics_df(backward_transfer, 'backward_transfer', metrics_df)
         except Exception as e:

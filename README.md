@@ -124,7 +124,7 @@ Once these logs are generated, you'll need to store Single Task Expert (STE) dat
 The following command is an example of how to store STE data, from the root L2Metrics directory:
 
 ```bash
-python -m l2metrics -s -l examples/ste_example/ste_syllabus-1600921217-488978
+python -m l2metrics -s -l examples/ste_example
 ```
 
 The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single task expert data is pickled and saved. Storing STE data assumes the provided log only contains data for a single task and only saves training data.

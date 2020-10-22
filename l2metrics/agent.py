@@ -697,14 +697,29 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(self.log_dir, [self.perf_measure])
+
+        # Get metric fields
+        metric_fields = util.read_logger_info(self.log_dir)
+
+         # Do a check to make sure the performance measure has been logged
+        if self.perf_measure not in metric_fields:
+            raise Exception(f'Invalid performance measure: {self.perf_measure}')
+
+        # Validate data format
+        util.validate_log(self._log_data, metric_fields)
+
+        # Fill in regime number and sort
         self._log_data = util.fill_regime_num(self._log_data)
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
+
+        # Filter data by completed experiences
         self._log_data = self._log_data[self._log_data['exp_status'] == 'complete']
 
         if len(self._log_data) == 0:
             raise Exception('No valid log data to compute metrics')
 
+        # Get block summary
         _, self.block_info = util.parse_blocks(self._log_data)
 
         # Store unique task names

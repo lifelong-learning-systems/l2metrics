@@ -48,7 +48,18 @@ def load_ste_data(task_name):
 def save_ste_data(log_dir):
     # Load data from ste logs
     ste_data = read_log_data(log_dir)
+
+    # Get metric fields
+    metric_fields = read_logger_info(log_dir)
+
+    # Validate data format
+    validate_log(ste_data, metric_fields)
+
+    # Fill in regime number and sort
+    ste_data = fill_regime_num(ste_data)
     ste_data = ste_data.sort_values(by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
+
+    # Filter out training only data
     ste_data = ste_data[ste_data['block_type'] == 'train']
 
     # Get task name

@@ -24,7 +24,7 @@ Lifelong Learning Metrics (L2Metrics) is a Python library containing foundationa
 
 ## Metrics
 
-The L2Metrics library supports the following lifelong learning metrics as defined in the Lifelong Learning Metrics for DARPA L2M version 0.64:
+The L2Metrics library supports the following lifelong learning metrics as defined in the Lifelong Learning Metrics for DARPA L2M specification version 0.64:
 
 * Performance Recovery (PR)
 * Performance Maintenance (PM)
@@ -41,6 +41,7 @@ L2Metrics is written in Python 3. It is recommended to use at least version Pyth
 
 This library depends on the following main Python packages, also listed in [setup.py](setup.py):
 
+* l2logger==1.0.0
 * numpy
 * pandas
 * tabulate
@@ -49,9 +50,10 @@ This library depends on the following main Python packages, also listed in [setu
 
 ### Installation
 
-#### 1. Clone the repo
+#### 1. Clone the L2Logger and L2Metrics repositories
 
   ```bash
+  git clone https://github.com/darpa-l2m/l2logger.git
   git clone https://github.com/darpa-l2m/l2metrics.git
   ```
 
@@ -75,9 +77,10 @@ Windows:
 <path_to_new_venv>/Scripts/Activate.ps1
 ```
 
-#### 3. Install the L2Metrics package
+#### 3. Install the L2Logger and L2Metrics packages
 
 ```bash
+pip install -e <path_to_l2logger>
 pip install -e <path_to_l2metrics>
 ```
 
@@ -85,12 +88,13 @@ pip install -e <path_to_l2metrics>
 
 To calculate metrics on the performance of your system, you must first generate log files in accordance with the L2Logger format version 1.0. Please refer to the L2Logger documentation for more details on how to generate compatible logs.
 
-Once these logs are generated, you'll need to store Single Task Expert (STE) data and pass the log directory as well as the performance measurement to run the metrics. Example log directories are provided to get you started.
+Once these logs are generated, you'll need to store Single Task Expert (STE) data and pass the log directory as a command-line argument to run the metrics. Example log directories are provided to get you started.
 
 ### Command-Line Execution
 
   ```
-  usage: l2metrics [-h] -l LOG_DIR [-s] [-p PERF_MEASURE] [-o OUTPUT]
+  usage: l2metrics [-h] -l LOG_DIR [-s] [-p PERF_MEASURE]
+                   [-m {contrast,ratio}] [-o OUTPUT] [--no-smoothing]
                    [--no-plot] [--no-save]
   
   Run L2Metrics from the command line
@@ -105,18 +109,22 @@ Once these logs are generated, you'll need to store Single Task Expert (STE) dat
     -s, --store-ste-data  Flag for storing log data as STE
     -p PERF_MEASURE, --perf-measure PERF_MEASURE
                           Name of column to use for metrics calculations
+    -m {contrast,ratio}, --transfer-method {contrast,ratio}
+                          Method for computing forward and backward transfer
     -o OUTPUT, --output OUTPUT
                           Specify output filename for plot and results
+    --no-smoothing        Do not smooth performance data for metrics and
+                          plotting
     --no-plot             Do not plot performance
     --no-save             Do not save metrics outputs
 ```
 
 ### Storing Single Task Expert Data
 
-To store STE data, run the following command from the root L2Metrics directory:
+The following command is an example of how to store STE data, from the root L2Metrics directory:
 
 ```bash
-python -m l2metrics -s -l examples/ste_example/ste_syllabus-1600921217-488978 -p reward
+python -m l2metrics -s -l examples/ste_example/ste_syllabus-1600921217-488978
 ```
 
 The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single task expert data is pickled and saved. Storing STE data assumes the provided log only contains data for a single task and only saves training data.
@@ -139,11 +147,9 @@ The output figure of reward over episodes (saved by default) should look like th
 
 The white areas represent blocks in which learning is occurring while the gray areas represent evaluation blocks.
 
-Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following figure shows an example of a truncated metrics report:
+Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following figure shows an example of a metrics report:
 
 ![diagram](examples/perf_recovery_example/performance_recovery-1600921573-1708276_metrics_report.png)
-
-**Note**: Currently there are metrics that are filled in every row and some that are not. This is a result of different contexts for the calculated metric. For example, each regime will have its own saturation and terminal performance values (regime-level metrics) while each task will have associated performance maintenance, forward/backward transfer, relative performance to STE, and sample efficiency values (task-level). Additionally, performance recovery will only have one value for the entire scenario (scenario-level). The format of the metrics report is still a work in progress and will be cleaned up in the future to more clearly convey results.
 
 ### Custom Metrics
 

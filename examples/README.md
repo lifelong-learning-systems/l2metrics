@@ -5,29 +5,35 @@ This directory contains a Python script with an example for creating custom metr
 * `calc_metrics.py`:
 
   ```
-  usage: calc_metrics.py [-h] [-l LOG_DIR] [-p PERF_MEASURE] [-o OUTPUT]
-                         [--no-plot] [--no-save]
+  usage: calc_metrics.py [-h] -l LOG_DIR [-s] [-p PERF_MEASURE]
+                   [-m {contrast,ratio}] [-o OUTPUT] [--no-smoothing]
+                   [--no-plot] [--no-save]
   
   Run L2Metrics from the command line
 
   required arguments:
 
-    -l  --log-dir         Log directory of scenario
+    -l LOG_DIR --log-dir LOG_DIR
+                          Log directory of scenario
 
   optional arguments:
 
     -s, --store-ste-data  Flag for storing log data as STE
     -p PERF_MEASURE, --perf-measure PERF_MEASURE
                           Name of column to use for metrics calculations
+    -m {contrast,ratio}, --transfer-method {contrast,ratio}
+                          Method for computing forward and backward transfer
     -o OUTPUT, --output OUTPUT
                           Specify output filename for plot and results
+    --no-smoothing        Do not smooth performance data for metrics and
+                          plotting
     --no-plot             Do not plot performance
     --no-save             Do not save metrics outputs
   ```
 
 ## Writing a Custom Metric
 
-The file `calc_metrics.py` demonstrates how to add custom metrics to a metrics report. Data from the logs is provided to the calculate method, where the actual calculation of your metric should live. An example of an agent metric, max value, is provided for your edificiation. To add this metric to the default metrics calculated for a metrics report, simply invoke the following method:
+The file `calc_metrics.py` demonstrates how to add custom metrics to a metrics report. Data from the logs is provided to the calculate method, where the actual calculation of your metric should live. An example of an agent metric, max value, is provided for your edificiation. To add this metric to the list of metrics calculated for a metrics report, simply invoke the following method:
 
 ```Python
 metrics_report.add(MyCustomAgentMetric(perf_measure))

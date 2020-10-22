@@ -2,6 +2,19 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.1.0 - 2020-10-21
+
+- Added log validation
+- Reformatted metrics report output
+- Updated metrics calculations per metrics specification version 0.64
+  - Switched to Theil-Sen slope instead of linear regression for performance recovery
+  - Added parameter for selecting transfer calculation method (contrast vs ratio)
+  - Use median instead of mean for aggregating lifetime metrics
+- Updated log data parsing per log format version 1.0
+- Added flag for disabling smoothing
+- Added flag for disabling plotting
+- Added flag for disabling saving
+
 ## 2.0.0 - 2020-09-23
 
 - Updated initial metrics to include all major identified lifelong learning metrics
@@ -16,7 +29,6 @@ All notable changes to this repository are documented here. We are using [Semant
 - Updated initial agent and classification metrics for both adapting to new tasks and continual learning
 - Updated reporting format, plots for metrics
 - Added getting started with custom metrics guide (`examples/README.md`), including example log files (`examples/syllabus_ANT_harder-1582671493-285338/`), and example output plot (`examples/syllabus_ANT_harder-1582671493-285338_example.png`)
-
 
 ## 0.2.0 - 2019-12-05
 

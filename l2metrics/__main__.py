@@ -17,7 +17,6 @@
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
 import argparse
-import traceback
 
 import l2metrics
 
@@ -39,14 +38,15 @@ def run():
     
     # Method for calculating forward and backward transfer
     parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio'],
-                        help='Mathod for computing forward and backward transfer')
+                        help='Method for computing forward and backward transfer')
 
     # Output filename
     parser.add_argument('-o', '--output', default=None,
                         help='Specify output filename for plot and results')
 
     # Flag for disabling smoothing
-    parser.add_argument('--no-smoothing', action='store_true', help='Do not smooth performance')
+    parser.add_argument('--no-smoothing', action='store_true',
+                        help='Do not smooth performance data for metrics and plotting')
 
     # Flag for disabling plotting
     parser.add_argument('--no-plot', action='store_true', help='Do not plot performance')
@@ -63,10 +63,6 @@ def run():
     if args.store_ste_data:
         l2metrics.util.save_ste_data(args.log_dir)
     else:
-        # Do a check to make sure the performance measure has been logged
-        if args.perf_measure not in l2metrics.util.read_logger_info(args.log_dir):
-            raise Exception(f'Invalid performance measure: {args.perf_measure}')
-
         # Initialize metrics report
         report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
                                               transfer_method=args.transfer_method, do_smoothing=do_smoothing)
@@ -87,4 +83,3 @@ if __name__ == '__main__':
         run()
     except Exception as e:
         print(f'Error: {e}')
-        traceback.print_exc()

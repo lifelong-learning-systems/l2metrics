@@ -571,7 +571,7 @@ class STERelativePerf(AgentMetric):
 
                 if ste_data is not None:
                     # Check if performance measure exists in STE data
-                    if args.perf_measure in ste_data.columns:
+                    if self.perf_measure in ste_data.columns:
                         # Compute relative performance with no smoothing on data
                         min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
                         task_perf = task_data.head(min_exp)[self.perf_measure].sum()
@@ -638,7 +638,7 @@ class SampleEfficiency(AgentMetric):
 
                 if ste_data is not None:
                     # Check if performance measure exists in STE data
-                    if args.perf_measure in ste_data.columns:
+                    if self.perf_measure in ste_data.columns:
                         # Get task saturation value and episodes to saturation
                         window = int(len(task_data) * 0.2)
                         custom_window = min(window, self.max_window_size)

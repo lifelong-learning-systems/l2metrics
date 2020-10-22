@@ -95,12 +95,12 @@ def run():
     # Calculate metrics in order of their addition to the metrics list.
     metrics_report.calculate()
 
+    # Print table of metrics and save values to file
+    metrics_report.report(save=do_save, output=args.output)
+
     # Plot metrics
     if do_plot:
         metrics_report.plot(save=do_save, output=args.output)
-
-    # Print table of metrics and save values to file
-    metrics_report.report(save=do_save, output=args.output)
 
 
 if __name__ == "__main__":

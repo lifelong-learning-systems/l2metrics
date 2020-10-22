@@ -88,7 +88,7 @@ pip install -e <path_to_l2metrics>
 
 To calculate metrics on the performance of your system, you must first generate log files in accordance with the L2Logger format version 1.0. Please refer to the L2Logger documentation for more details on how to generate compatible logs.
 
-Once these logs are generated, you'll need to store Single Task Expert (STE) data and pass the log directory as a command-line argument to run the metrics. Example log directories are provided to get you started.
+Once these logs are generated, you'll need to store Single Task Expert (STE) data and pass the log directory as a command-line argument to compute STE-related metrics. Example log directories are provided to get you started.
 
 ### Command-Line Execution
 
@@ -121,10 +121,10 @@ Once these logs are generated, you'll need to store Single Task Expert (STE) dat
 
 ### Storing Single Task Expert Data
 
-The following command is an example of how to store STE data, from the root L2Metrics directory:
+The following command is an example of how to store STE data, run from the root L2Metrics directory:
 
 ```bash
-python -m l2metrics -s -l examples/ste_example
+python -m l2metrics -s -l examples/ste
 ```
 
 The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single task expert data is pickled and saved. Storing STE data assumes the provided log only contains data for a single task and only saves training data.
@@ -136,20 +136,32 @@ Replace the log directory with logs for other STE tasks and repeat until all STE
 To generate a metrics plot and report, run the following command from the root L2Metrics directory:
 
 ```bash
-python -m l2metrics -l examples/perf_recovery_example/performance_recovery-1600921573-1708276 -p reward
+python -m l2metrics -l examples/multi_task -p performance
 ```
 
 If you do not wish to provide a fully qualified path to your log directory, you may copy it to your `$L2DATA/logs` directory. This is the default location for logs generated using the TEF.
 
-The output figure of reward over episodes (saved by default) should look like this:
+The output figure of performance over episodes (saved by default) should look like this:
 
-![diagram](examples/perf_recovery_example/performance_recovery-1600921573-1708276.png)
+![diagram](examples/multi_task/multi_task.png)
 
 The white areas represent blocks in which learning is occurring while the gray areas represent evaluation blocks.
 
-Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following figure shows an example of a metrics report:
+Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following tables show an example of a metrics report output:
 
-![diagram](examples/perf_recovery_example/performance_recovery-1600921573-1708276_metrics_report.png)
+### Lifetime Metrics
+
+| perf_recovery | perf_maintenance | forward_transfer | backward_transfer | ste_rel_perf | sample_efficiency |
+|---------------|------------------|------------------|-------------------|--------------|-------------------|
+| 0             | 0.22         | 0                | 0.07              | 1.06     | 1.66          |
+
+### Task Metrics
+
+| task_name | perf_recovery | perf_maintenance | forward_transfer | backward_transfer | ste_rel_perf | sample_efficiency |
+|-----------|---------------|------------------|------------------|-------------------|--------------|-------------------|
+| task1     | 0             | 0.19         | [nan, 0.0, 0.0]  | [nan, nan, nan]   | 1.06     | 1.66          |
+| task2     | 0             | 0.25         | [nan, nan, 0.0]  | [0.07, nan, nan]  |              |                   |
+| task3     | 0             |                  | [nan, nan, nan]  | [0.02, 0.12, nan] |              |                   |
 
 ### Custom Metrics
 

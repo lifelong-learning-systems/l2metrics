@@ -62,4 +62,4 @@ Output:
 1. The calculate methods for each metric in self._metrics are called **in the order they were added**. Thus, you may choose to leverage previously calculated metrics for your subsequent calculations.
 2. "NaN" is the default value in the metrics_df for blocks which do not receive a value.
 3. To avoid adding your computed metric to the metrics_df, simply do not include the call to _localutil.fill_metrics_df, which takes the values you pass and returns a dataframe with those values.
-4. The example log directories included in this repo contain some files that are generated during logging, but are not used for calculating metrics (e.g., syllabus.json). They are included to provide context for the data and can be in any format that is compatibile with an L2 environment.
+4. The scenario info files in the example log directories are generated during logging, but are not used for calculating metrics. This is typically where one would save any desired metadata from a scenario such as author, source of logs, scenario version, etc.

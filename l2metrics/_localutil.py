@@ -109,10 +109,10 @@ def get_terminal_perf(data, col_to_use=None, prev_val=None, do_smoothing=True, w
     if do_smoothing:
         mean_data = smooth(mean_data, window_len=window_len, window='flat')
 
-    terminal_value = np.mean(mean_data[int((1-0.1)*mean_data.size):])
+    terminal_value = np.mean(mean_data[int((1-term_window_ratio)*mean_data.size):])
 
     # Calculate the number of episodes to terminal performance
-    episodes_to_terminal_perf = int((1-(0.1/2))*mean_data.size)
+    episodes_to_terminal_perf = int((1-(term_window_ratio/2))*mean_data.size)
 
     # Initialize recovery time to one more than number of learning experiences in the data
     episodes_to_recovery = len(data) + 1

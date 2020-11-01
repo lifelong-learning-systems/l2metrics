@@ -308,7 +308,8 @@ class PerformanceMaintenance(AgentMetric):
 
                     # Get the most recent terminal learning performance of the current task
                     training_tasks = block_info[(block_info['task_name'] == regime['task_name']) &
-                                                (block_info['block_type'] == 'train')]
+                                                (block_info['block_type'] == 'train') & 
+                                                (block_info['block_num'] < regime['block_num'])]
 
                     # Check to make sure the task has been trained on
                     if len(training_tasks) > 0:

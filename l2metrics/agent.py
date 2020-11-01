@@ -271,12 +271,31 @@ class PerformanceMaintenance(AgentMetric):
         self.perf_measure = perf_measure
 
     def validate(self, block_info):
-        # TODO: Add structure validation of block_info
-        # Must ensure that the training block has only one regime or else handle multiple
-        pass
+        # Initialize variables for checking block type format
+        last_block_num = -1
+        last_block_type = ''
+
+        # Ensure alternating block types
+        for _, regime in block_info.iterrows():
+            if regime['block_num'] != last_block_num:
+                last_block_num = regime['block_num']
+
+                if regime['block_type'] == 'test':
+                    if last_block_type == 'test':
+                        raise Exception('Block types must be alternating')
+                    last_block_type = 'test'
+                elif regime['block_type'] == 'train':
+                    if last_block_type == 'train':
+                        raise Exception('Block types must be alternating')
+                    last_block_type = 'train'
+
+        return
 
     def calculate(self, dataframe, block_info, metrics_df):
         try:
+            # Validate block structure
+            self.validate(block_info)
+
             # Initialize metric columns
             maintenance_values = {}
             pm_values = {}
@@ -322,8 +341,8 @@ class PerformanceMaintenance(AgentMetric):
                 return _localutil.fill_metrics_df(pm_values, 'perf_maintenance', metrics_df)
             else:
                 return metrics_df
-        except:
-            print("Cannot compute", self.name)
+        except Exception as e:
+            print(f"Cannot compute {self.name} - {e}")
             return metrics_df
 
 
@@ -703,15 +722,15 @@ class AgentMetricsReport(core.MetricsReport):
         else:
             self.do_smoothing = True
 
-        # Gets all data from the relevant log files
-        self._log_data = util.read_log_data(self.log_dir, [self.perf_measure])
-
         # Get metric fields
         metric_fields = util.read_logger_info(self.log_dir)
 
          # Do a check to make sure the performance measure has been logged
         if self.perf_measure not in metric_fields:
-            raise Exception(f'Invalid performance measure: {self.perf_measure}')
+            raise Exception(f'Performance measure not found in metrics columns: {self.perf_measure}')
+
+        # Gets all data from the relevant log files
+        self._log_data = util.read_log_data(self.log_dir, [self.perf_measure])
 
         # Validate data format
         util.validate_log(self._log_data, metric_fields)

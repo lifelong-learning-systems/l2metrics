@@ -381,7 +381,7 @@ class ForwardTransfer(AgentMetric):
                         raise Exception('Block types must be alternating')
                     last_block_type = 'train'
 
-        # Find eligible tasks for forward and backward transfer
+        # Find eligible tasks for forward transfer
         unique_tasks = block_info.loc[:, 'task_name'].unique()
 
         # Initialize list of tasks for transfer matrix
@@ -470,49 +470,56 @@ class BackwardTransfer(AgentMetric):
         last_block_num = -1
         last_block_type = ''
 
-        # Ensure alternating block types
-        for _, regime in block_info.iterrows():
-            if regime['block_num'] != last_block_num:
-                last_block_num = regime['block_num']
+        # Find eligible tasks for backward transfer
+        unique_tasks = block_info.loc[:, 'task_name'].unique()
 
-                if regime['block_type'] == 'test':
+        # Initialize list of tasks for transfer matrix
+        tasks_for_bt = {}
+
+        # Iterate over all regimes in scenario
+        for _, regime in block_info.iterrows():
+            # Get regime info
+            block_num = regime['block_num']
+            block_type = regime['block_type']
+            task_name = regime['task_name']
+            regime_num = regime['regime_num']
+
+            # Ensure alternating block types
+            if block_num != last_block_num:
+                last_block_num = block_num
+
+                if block_type == 'test':
                     if last_block_type == 'test':
                         raise Exception('Block types must be alternating')
                     last_block_type = 'test'
-                elif regime['block_type'] == 'train':
+                elif block_type == 'train':
                     if last_block_type == 'train':
                         raise Exception('Block types must be alternating')
                     last_block_type = 'train'
 
-        # Find eligible tasks for forward and backward transfer
-        unique_tasks = block_info.loc[:, 'task_name'].unique()
+            # Check for valid backward transfer pair
+            if block_type == 'train':
+                # Compare with other tasks
+                other_tasks = np.delete(unique_tasks, np.where(unique_tasks == task_name))
 
-        # Initialize list of tasks for transfer matrix
-        tasks_for_bt = defaultdict(dict)
+                for other_task in other_tasks:
+                    other_blocks = block_info[block_info['task_name'] == other_task]
+                    other_test_regs = other_blocks[other_blocks['block_type'] == 'test']['regime_num'].values
+                    other_train_regs = other_blocks[other_blocks['block_type'] == 'train']['regime_num'].values
 
-        # Determine valid transfer pairs
-        for task_pair in permutations(unique_tasks, 2):
-            # Get testing and training indices for task pair
-            training_blocks = block_info[(block_info['task_name'] == task_pair[0]) & (
-                block_info['block_type'] == 'train')]['block_num'].values
+                    # BT - Other task must have been trained and tested before current regime, then
+                    # tested again after
+                    if np.any(other_train_regs < regime_num):
+                        if len(other_test_regs) >= 2:
+                            for idx in range(len(other_test_regs) - 1):
+                                if other_test_regs[idx] < regime['regime_num'] < other_test_regs[idx + 1]:
+                                    key = (task_name, other_task)
+                                    if key not in tasks_for_bt.keys():
+                                        tasks_for_bt[key] = [(other_test_regs[idx], other_test_regs[idx + 1])]
+                                    else:
+                                        tasks_for_bt[key].append((other_test_regs[idx], other_test_regs[idx + 1]))
 
-            other_blocks = block_info[block_info['task_name'] == task_pair[1]]
-            other_test_blocks = other_blocks[other_blocks['block_type'] == 'test']['block_num'].values
-            other_training_blocks = other_blocks[other_blocks['block_type'] == 'train']['block_num'].values
-
-            # BT - Must have trained task with testing then training another task then more testing
-            if np.any(other_training_blocks < np.min(training_blocks)):
-                if len(other_test_blocks) >= 2:
-                    for idx in range(len(other_test_blocks) - 1):
-                        if other_test_blocks[idx] < np.min(training_blocks) < other_test_blocks[idx + 1]:
-                            tasks_for_bt[task_pair[0]][task_pair[1]] = (
-                                other_test_blocks[idx], other_test_blocks[idx + 1])
-                            break   # Only compute one value per task pair
-                        else:
-                            continue
-                        break
-
-        if np.sum([len(value) for key, value in tasks_for_bt.items()]) == 0:
+        if not tasks_for_bt:
             raise Exception('No valid task pairs for backward transfer')
 
         return tasks_for_bt
@@ -526,25 +533,16 @@ class BackwardTransfer(AgentMetric):
             backward_transfer = {}
 
             # Calculate backward transfer for valid task pairs
-            for task, value in tasks_for_bt.items():
-                # Get simple task name
-                task_name = _localutil.get_simple_rl_task_names([task])[0]
+            for task_pair, regime_pairs in tasks_for_bt.items():
+                for regime_pair in regime_pairs:
+                    tp_1 = metrics_df[(metrics_df['regime_num'] == regime_pair[0])]['term_perf'].values[0]
+                    tp_2 = metrics_df[(metrics_df['regime_num'] == regime_pair[1])]['term_perf'].values[0]
+                    idx = regime_pair[1]
 
-                for trans_task, trans_blocks in value.items():
-                    # Get simple task name
-                    trans_task_name = _localutil.get_simple_rl_task_names([trans_task])[0]
-
-                    tp_1 = metrics_df[(metrics_df['task_name'] == trans_task_name) & (
-                        metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
-                    tp_2 = metrics_df[(metrics_df['task_name'] == trans_task_name) & (
-                        metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
-                    idx = block_info[(block_info['task_name'] == trans_task) & (
-                        block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
-                    
                     if self.transfer_method == 'contrast':
-                        backward_transfer[idx] = [{task_name: (tp_2 - tp_1) / (tp_1 + tp_2)}]
+                        backward_transfer[idx] = [{task_pair[0]: (tp_2 - tp_1) / (tp_1 + tp_2)}]
                     elif self.transfer_method == 'ratio':
-                        backward_transfer[idx] = [{task_name: tp_2 / tp_1}]
+                        backward_transfer[idx] = [{task_pair[0]: tp_2 / tp_1}]
 
             return _localutil.fill_metrics_df(backward_transfer, 'backward_transfer', metrics_df)
         except Exception as e:
@@ -799,10 +797,33 @@ class AgentMetricsReport(core.MetricsReport):
         task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=task_metrics)
         task_metrics_df.index.name = 'task_name'
 
-        # Initialize transfer array to NaNs
+        # Initialize transfer arrays to NaNs
         num_tasks = len(self._unique_tasks)
         task_metrics_df['forward_transfer'] = [[np.nan] * num_tasks] * num_tasks
         task_metrics_df['backward_transfer'] = [[np.nan] * num_tasks] * num_tasks
+
+        # Initialize transfer matrices
+        forward_transfers = defaultdict(dict)
+        backward_transfers = defaultdict(dict)
+
+        # Create data structures for transfer values
+        for index, row in self._metrics_df.iterrows():
+            if 'forward_transfer' in self._metrics_df:
+                if type(row['forward_transfer']) is dict:
+                    [(other_task, transfer_value)] = row['forward_transfer'].items()
+                    key = (self._unique_tasks.index(other_task), self._unique_tasks.index(row['task_name']))
+                    forward_transfers[key[0]][key[1]] = round(transfer_value, 2)
+            
+            if 'backward_transfer' in self._metrics_df:
+                if type(row['backward_transfer']) is dict:
+                    [(other_task, transfer_value)] = row['backward_transfer'].items()
+                    key = (self._unique_tasks.index(other_task), self._unique_tasks.index(row['task_name']))
+                    if key[0] not in backward_transfers.keys():
+                        backward_transfers[key[0]][key[1]] = [transfer_value]
+                    elif key[1] not in backward_transfers[key[0]].keys():
+                        backward_transfers[key[0]][key[1]] = [transfer_value]
+                    else:
+                        backward_transfers[key[0]][key[1]].append(transfer_value)
 
         # Fill task metrics dataframe
         for task in self._unique_tasks:
@@ -812,19 +833,21 @@ class AgentMetricsReport(core.MetricsReport):
             # Iterate over task metrics
             for metric in task_metrics:
                 if metric in tm.keys():
-                    # Drop NaN values
-                    metric_values = tm[metric].dropna().values
-
                     # Create transfer matrix for forward and backward transfer
-                    if metric in ['forward_transfer', 'backward_transfer']:
-                        # Iterate over transfer values
-                        if len(metric_values):
-                            for metric_value in metric_values:
-                                for key, value in metric_value.items():
-                                    transfer_row = task_metrics_df.at[key, metric].copy()
-                                    transfer_row[self._unique_tasks.index(task)] = round(value, 2)
-                                    task_metrics_df.at[key, metric] = transfer_row
+                    if metric == 'forward_transfer':
+                        transfer_row = task_metrics_df.at[task, metric].copy()
+                        for k, v in forward_transfers[self._unique_tasks.index(task)].items():
+                            transfer_row[k] = v
+                        task_metrics_df.at[task, metric] = transfer_row
+                    elif metric == 'backward_transfer':
+                        transfer_row = task_metrics_df.at[task, metric].copy()
+                        for k, v in backward_transfers[self._unique_tasks.index(task)].items():
+                            transfer_row[k] = round(np.mean(v), 2)
+                        task_metrics_df.at[task, metric] = transfer_row
                     else:
+                        # Drop NaN values
+                        metric_values = tm[metric].dropna().values
+
                         if len(metric_values) == 0:
                             task_metrics_df.at[task, metric] = np.NaN
                         elif len(metric_values) == 1:
@@ -833,11 +856,10 @@ class AgentMetricsReport(core.MetricsReport):
                             task_metrics_df.at[task, metric] = metric_values
 
         # Calculate lifetime metrics from task metrics
-        ['perf_recovery', 'perf_maintenance', 'forward_transfer', 'backward_transfer', 'ste_rel_perf', 'sample_efficiency']
         lifetime_metrics_df = pd.DataFrame(columns=task_metrics)
 
         for metric in task_metrics:
-            if metric in ['forward_transfer', 'backward_transfer']:
+            if metric == 'forward_transfer':
                 metric_vals = task_metrics_df[metric].values
 
                 # Flatten lists
@@ -845,6 +867,9 @@ class AgentMetricsReport(core.MetricsReport):
 
                 # Drop NaNs
                 metric_vals = metric_vals[~np.isnan(metric_vals)]
+            elif metric == 'backward_transfer':
+                # Get the first calculated backward transfer values for each task pair
+                metric_vals = [v2[0] for k, v in backward_transfers.items() for k2, v2 in v.items()]
             else:
                 metric_vals = task_metrics_df[metric].dropna().values
 

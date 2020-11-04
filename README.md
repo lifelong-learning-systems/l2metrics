@@ -121,10 +121,12 @@ Once these logs are generated, you'll need to store Single Task Expert (STE) dat
 
 ### Storing Single Task Expert Data
 
-The following command is an example of how to store STE data, run from the root L2Metrics directory:
+The following commands are examples of how to store STE data from the provided logs, run from the root L2Metrics directory:
 
 ```bash
-python -m l2metrics -s -l examples/ste
+python -m l2metrics -s -l examples/ste_task1
+python -m l2metrics -s -l examples/ste_task2
+python -m l2metrics -s -l examples/ste_task3
 ```
 
 The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single task expert data is pickled and saved. Storing STE data assumes the provided log only contains data for a single task and only saves training data.
@@ -153,15 +155,15 @@ Additionally, the script will print the metrics report to the console and save t
 
 | perf_recovery | perf_maintenance | forward_transfer | backward_transfer | ste_rel_perf | sample_efficiency |
 |---------------|------------------|------------------|-------------------|--------------|-------------------|
-| 0             | 0.22         | 0                | 0.07              | 1.06     | 1.66          |
+| 0             | -2.08            | 0.71             | -0.02             | 1.10         | 0.71              |
 
 ### Task Metrics
 
-| task_name | perf_recovery | perf_maintenance | forward_transfer | backward_transfer | ste_rel_perf | sample_efficiency |
-|-----------|---------------|------------------|------------------|-------------------|--------------|-------------------|
-| task1     | 0             | 0.19         | [nan, 0.0, 0.0]  | [nan, nan, nan]   | 1.06     | 1.66          |
-| task2     | 0             | 0.25         | [nan, nan, 0.0]  | [0.07, nan, nan]  |              |                   |
-| task3     | 0             |                  | [nan, nan, nan]  | [0.02, 0.12, nan] |              |                   |
+| task_name | perf_recovery | perf_maintenance | forward_transfer | backward_transfer  | ste_rel_perf | sample_efficiency |
+|-----------|---------------|------------------|------------------|--------------------|--------------|-------------------|
+| task1     | 0.00          | -5.62            | [nan, 0.83, 0.71]| [nan, 0.02, 0.0]   | 0.94         | 0.70              |
+| task2     | 0.00          | -2.08            | [nan, nan, 0.53] | [-0.02, nan, 0.01] | 1.10         | 0.71              |
+| task3     | 0.00          | 1.67             | [nan, nan, nan]  | [-0.04, -0.02, nan]| 1.20         | 0.71              |
 
 ### Custom Metrics
 

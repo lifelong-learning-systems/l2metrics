@@ -37,7 +37,7 @@ def run():
                         help='Name of column to use for metrics calculations')
     
     # Method for calculating forward and backward transfer
-    parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio'],
+    parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
     # Output filename

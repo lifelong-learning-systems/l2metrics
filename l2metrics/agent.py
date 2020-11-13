@@ -961,8 +961,8 @@ class AgentMetricsReport(core.MetricsReport):
             lambda x: x[:20] + '...' if len(x) > 20 else x)
 
         # Print regime-level metrics
-        print('\nRegime Metrics:')
-        print(tabulate(regime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f"))
+        # print('\nRegime Metrics:')
+        # print(tabulate(regime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f"))
 
         if save:
             # Generate filename

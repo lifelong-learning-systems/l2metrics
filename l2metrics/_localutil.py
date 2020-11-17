@@ -83,7 +83,7 @@ def get_block_saturation_perf(data, col_to_use=None, prev_sat_val=None, window_l
 
     # Take the moving average of the mean of the per episode reward
     smoothed_data = smooth(mean_data, window_len=window_len, window='flat')
-    saturation_value = np.max(smoothed_data)
+    saturation_value = np.nanmax(smoothed_data)
 
     # Calculate the number of episodes to "saturation", which we define as the max of the moving average
     inds = np.where(smoothed_data == saturation_value)

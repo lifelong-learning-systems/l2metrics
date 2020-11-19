@@ -2,6 +2,14 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.2.0 - 2020-11-19
+
+- Added validation to performance maintenance
+- Updated performance maintenance calculation, more specifically maintenance values
+- Updated backward transfer to compute multiple values for each task pair
+- Updated example logs and documentation with ideal learner scenario
+- Implemented option to compute transfer matrix with both contrast and ratio methods
+
 ## 2.1.0 - 2020-10-21
 
 - Added log validation

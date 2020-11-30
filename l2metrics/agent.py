@@ -770,6 +770,9 @@ class AgentMetricsReport(core.MetricsReport):
         # Gets all data from the relevant log files
         self._log_data = util.read_log_data(self.log_dir, [self.perf_measure])
 
+        # Validate scenario info
+        util.validate_scenario_info(self.log_dir)
+
         # Validate data format
         util.validate_log(self._log_data, metric_fields)
 

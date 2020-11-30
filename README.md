@@ -175,4 +175,4 @@ See [LICENSE](LICENSE) for license information.
 
 ## Notes
 
-There are aspects of L2Metrics still under development including support for distributed training and testing/validation. This repository is being released to faciliate experimentation and feedback regarding the overall approach.
+There are aspects of L2Metrics still under development including support for distributed training and testing/validation. This repository is being released to facilitate experimentation and feedback regarding the overall approach.

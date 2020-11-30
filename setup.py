@@ -42,13 +42,17 @@ setup(
     include_package_data=True,
     install_requires=[
         'l2logger==1.0.0',
+        'ipykernel',
+        'ipympl',
+        'matplotlib',
         'numpy',
-        'six',
+        'pandas',
         'python-dateutil',
         'pytz',
-        'pandas',
-        'tabulate',
         'scipy',
-        'matplotlib'
+        'seasbon',
+        'six',
+        'tabulate',
+        'tqdm'
     ]
 )

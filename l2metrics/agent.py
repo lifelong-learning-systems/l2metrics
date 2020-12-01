@@ -424,12 +424,9 @@ class ForwardTransfer(AgentMetric):
             do_contrast = False
             do_ratio = False
 
-            if self.transfer_method == 'contrast':
+            if self.transfer_method in ['contrast', 'both']:
                 do_contrast = True
-            if self.transfer_method == 'ratio':
-                do_ratio = True
-            elif self.transfer_method == 'both':
-                do_contrast = True
+            if self.transfer_method in ['ratio', 'both']:
                 do_ratio = True
 
             # Initialize metric dictionaries
@@ -550,12 +547,9 @@ class BackwardTransfer(AgentMetric):
             do_contrast = False
             do_ratio = False
 
-            if self.transfer_method == 'contrast':
+            if self.transfer_method in ['contrast', 'both']:
                 do_contrast = True
-            if self.transfer_method == 'ratio':
-                do_ratio = True
-            elif self.transfer_method == 'both':
-                do_contrast = True
+            if self.transfer_method in ['ratio', 'both']:
                 do_ratio = True
 
             # Initialize metric dictionaries
@@ -736,11 +730,6 @@ class AgentMetricsReport(core.MetricsReport):
     Aggregates a list of metrics for an Agent learner
     """
 
-    # Create dataframe for task-level metrics
-    task_metrics = ['perf_recovery', 'perf_maintenance', 'forward_transfer_contrast',
-                    'forward_transfer_ratio', 'backward_transfer_contrast',
-                    'backward_transfer_ratio', 'ste_rel_perf', 'sample_efficiency']
-
     def __init__(self, **kwargs):
         # Defines log_dir and initializes the metrics list
         super().__init__(**kwargs)
@@ -759,6 +748,14 @@ class AgentMetricsReport(core.MetricsReport):
             self.do_smoothing = kwargs['do_smoothing']
         else:
             self.do_smoothing = True
+
+        # Initialize list of LL metrics
+        self.task_metrics = ['perf_recovery', 'perf_maintenance']
+        if self.transfer_method in ['contrast', 'both']:
+            self.task_metrics.extend(['forward_transfer_contrast', 'backward_transfer_contrast'])
+        if self.transfer_method in ['ratio', 'both']:
+            self.task_metrics.extend(['forward_transfer_ratio', 'backward_transfer_ratio'])
+        self.task_metrics.extend(['ste_rel_perf', 'sample_efficiency'])
 
         # Get metric fields
         metric_fields = util.read_logger_info(self.log_dir)
@@ -840,15 +837,16 @@ class AgentMetricsReport(core.MetricsReport):
         # Initialize transfer arrays to NaNs
         num_tasks = len(self._unique_tasks)
 
-        self.task_metrics_df['forward_transfer_contrast'] = [[np.nan] * num_tasks] * num_tasks
-        self.task_metrics_df['forward_transfer_ratio'] = [[np.nan] * num_tasks] * num_tasks
-        self.task_metrics_df['backward_transfer_contrast'] = [[np.nan] * num_tasks] * num_tasks
-        self.task_metrics_df['backward_transfer_ratio'] = [[np.nan] * num_tasks] * num_tasks
-
-        self.forward_transfers_contrast = defaultdict(dict)
-        self.forward_transfers_ratio = defaultdict(dict)
-        self.backward_transfers_contrast = defaultdict(dict)
-        self.backward_transfers_ratio = defaultdict(dict)
+        if self.transfer_method in ['contrast', 'both']:
+            self.task_metrics_df['forward_transfer_contrast'] = [[np.nan] * num_tasks] * num_tasks
+            self.task_metrics_df['backward_transfer_contrast'] = [[np.nan] * num_tasks] * num_tasks
+            self.forward_transfers_contrast = defaultdict(dict)
+            self.backward_transfers_contrast = defaultdict(dict)
+        if self.transfer_method in ['ratio', 'both']:
+            self.task_metrics_df['forward_transfer_ratio'] = [[np.nan] * num_tasks] * num_tasks
+            self.task_metrics_df['backward_transfer_ratio'] = [[np.nan] * num_tasks] * num_tasks
+            self.forward_transfers_ratio = defaultdict(dict)
+            self.backward_transfers_ratio = defaultdict(dict)
 
         # Create data structures for transfer values
         for index, row in self._metrics_df.iterrows():

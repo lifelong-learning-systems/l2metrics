@@ -929,25 +929,26 @@ class AgentMetricsReport(core.MetricsReport):
         self.lifetime_metrics_df = pd.DataFrame(columns=self.task_metrics)
 
         for metric in self.task_metrics:
-            if metric in ['forward_transfer_contrast', 'forward_transfer_ratio']:
-                metric_vals = self.task_metrics_df[metric].values
+            if metric in self.task_metrics_df:
+                if metric in ['forward_transfer_contrast', 'forward_transfer_ratio']:
+                    metric_vals = self.task_metrics_df[metric].values
 
-                # Flatten lists
-                metric_vals = np.asarray([item for sublist in metric_vals for item in sublist])
+                    # Flatten lists
+                    metric_vals = np.asarray([item for sublist in metric_vals for item in sublist])
 
-                # Drop NaNs
-                metric_vals = metric_vals[~np.isnan(metric_vals)]
-            elif metric  == 'backward_transfer_contrast':
-                # Get the first calculated backward transfer values for each task pair
-                metric_vals = [v2[0] for k, v in self.backward_transfers_contrast.items() for k2, v2 in v.items()]
-            elif metric == 'backward_transfer_ratio':
-                # Get the first calculated backward transfer values for each task pair
-                metric_vals = [v2[0] for k, v in self.backward_transfers_ratio.items() for k2, v2 in v.items()]
-            else:
-                metric_vals = self.task_metrics_df[metric].dropna().values
+                    # Drop NaNs
+                    metric_vals = metric_vals[~np.isnan(metric_vals)]
+                elif metric  == 'backward_transfer_contrast':
+                    # Get the first calculated backward transfer values for each task pair
+                    metric_vals = [v2[0] for k, v in self.backward_transfers_contrast.items() for k2, v2 in v.items()]
+                elif metric == 'backward_transfer_ratio':
+                    # Get the first calculated backward transfer values for each task pair
+                    metric_vals = [v2[0] for k, v in self.backward_transfers_ratio.items() for k2, v2 in v.items()]
+                else:
+                    metric_vals = self.task_metrics_df[metric].dropna().values
 
-            if len(metric_vals):
-                self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
+                if len(metric_vals):
+                    self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
         
         self.lifetime_metrics_df = self.lifetime_metrics_df.dropna(axis=1)
 

@@ -2,6 +2,10 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.3.0 - 2020-12-02
+
+- Added scripts for multi-lifetime evaluation
+
 ## 2.2.0 - 2020-11-19
 
 - Added validation to performance maintenance

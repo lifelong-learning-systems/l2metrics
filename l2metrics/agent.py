@@ -578,7 +578,7 @@ class STERelativePerf(AgentMetric):
     name = "Performance relative to STE"
     capability = "adapt_to_new_tasks"
     requires = {'syllabus_type': 'agent'}
-    description = "Calculates the performance of each task relative to it's corresponding single task expert"
+    description = "Calculates the performance of each task relative to it's corresponding single-task expert"
 
     def __init__(self, perf_measure: str):
         super().__init__()
@@ -643,7 +643,7 @@ class SampleEfficiency(AgentMetric):
     name = "Sample Efficiency"
     capability = "adapt_to_new_tasks"
     requires = {'syllabus_type': 'agent'}
-    description = "Calculates the sample efficiency relative to the single task expert"
+    description = "Calculates the sample efficiency relative to the single-task expert"
 
     def __init__(self, perf_measure: str):
         super().__init__()

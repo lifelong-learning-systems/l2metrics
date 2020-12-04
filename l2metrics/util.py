@@ -29,7 +29,7 @@ from . import _localutil
 
 def get_ste_data_names() -> list:
     # This function will return a list of the Single-Task-Expert data files names from all of
-    # available single task baselines that have been stored in $L2DATA/taskinfo/
+    # available single-task baselines that have been stored in $L2DATA/taskinfo/
     return [os.path.splitext(os.path.basename(x))[0] for x in glob.glob(get_l2root_base_dirs('taskinfo') + "\\*.pkl")]
 
 

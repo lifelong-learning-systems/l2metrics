@@ -32,7 +32,7 @@ All notable changes to this repository are documented here. We are using [Semant
 - Updated initial metrics to include all major identified lifelong learning metrics
 - Removed dependence on learnkit
 - Refectored metrics calculations to integrate with different log format
-- Updated workflow for storing single task expert data
+- Updated workflow for storing single-task expert data
 - Updated READMEs and example scripts
 - Added new example logs along with their metrics outputs
 

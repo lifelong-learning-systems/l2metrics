@@ -9,7 +9,7 @@
   * [Installation](#installation)
 * [Usage](#usage)
   * [Command-Line Execution](#command-line-execution)
-  * [Storing Single Task Expert Data](#storing-single-task-expert-data)
+  * [Storing Single-Task Expert Data](#storing-single-task-expert-data)
   * [Generating a Metrics Report](#generating-a-metrics-report)
   * [Custom Metrics](#custom-metrics)
 * [License](#license)
@@ -30,7 +30,7 @@ The L2Metrics library supports the following lifelong learning metrics as define
 * Performance Maintenance (PM)
 * Forward Transfer (FT)
 * Backward Transfer (BT)
-* Performance Relative to a Single Task Expert (RP)
+* Performance Relative to a Single-Task Expert (RP)
 * Sample Efficiency (SE)
 
 ## Evaluation
@@ -99,7 +99,7 @@ pip install -e <path_to_l2metrics>
 
 To calculate metrics on the performance of your system, you must first generate log files in accordance with the L2Logger format version 1.0. Please refer to the L2Logger documentation for more details on how to generate compatible logs.
 
-Once these logs are generated, you'll need to store Single Task Expert (STE) data and pass the log directory as a command-line argument to compute STE-related metrics. Example log directories are provided to get you started.
+Once these logs are generated, you'll need to store Single-Task Expert (STE) data and pass the log directory as a command-line argument to compute STE-related metrics. Example log directories are provided to get you started.
 
 ### Command-Line Execution
 
@@ -129,7 +129,7 @@ Once these logs are generated, you'll need to store Single Task Expert (STE) dat
     --no-save             Do not save metrics outputs
 ```
 
-### Storing Single Task Expert Data
+### Storing Single-Task Expert Data
 
 The following commands are examples of how to store STE data from the provided logs, run from the root L2Metrics directory:
 
@@ -139,7 +139,7 @@ python -m l2metrics -s -l examples/ste_task2
 python -m l2metrics -s -l examples/ste_task3
 ```
 
-The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single task expert data is pickled and saved. Storing STE data assumes the provided log only contains data for a single task and only saves training data.
+The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single-task expert data is pickled and saved. Storing STE data assumes the provided log only contains data for a single task and only saves training data.
 
 Replace the log directory with logs for other STE tasks and repeat until all STE data is stored.
 

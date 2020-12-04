@@ -19,7 +19,7 @@
 import abc
 
 
-class Metric(abc.ABC):        
+class Metric(abc.ABC):
     """
     A single metric
     """
@@ -57,7 +57,7 @@ class Metric(abc.ABC):
         """
         return {}
 
-    @abc.abstractmethod    
+    @abc.abstractmethod
     def calculate(self, data, metadata, metrics_dict):
         """
         Returns a dict of values
@@ -76,6 +76,7 @@ class MetricsReport(object):
     """
     Aggregates a list of metrics for a learner
     """
+
     def __init__(self, **kwargs):
 
         self._metrics = []
@@ -84,12 +85,6 @@ class MetricsReport(object):
             self.log_dir = kwargs['log_dir']
         else:
             raise RuntimeError("log_dir is required")
-
-        if 'syllabus_subtype' in kwargs:
-            self.syllabus_subtype = kwargs['syllabus_subtype']
-        else:
-            # TODO: Log/warn that we are using the default syllabus_subtype = CL
-            self.syllabus_subtype = "CL"
 
     def calculate(self):
         pass

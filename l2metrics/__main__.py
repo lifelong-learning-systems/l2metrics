@@ -17,41 +17,69 @@
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
 import argparse
+
 import l2metrics
 
 
 def run():
+    # Instantiate parser
     parser = argparse.ArgumentParser(description='Run L2Metrics from the command line')
 
-    # We assume that the logs are found in a subdirectory under $L2DATA/logs - this subdirectory must be passed as a
-    # parameter in order to locate the logs which will be parsed by this code
-    parser.add_argument('-log_dir', default=None, help='Subdirectory under $L2DATA/logs for the log files')
+    # Log directories can be absolute paths, relative paths, or paths found in $L2DATA/logs
+    parser.add_argument('-l', '--log-dir', required=True, help='Log directory of scenario')
 
-    # Choose syllabus type "agent" for Agent-based environments, and "class" for Classification-based environments
-    parser.add_argument('-syllabus_type', choices=["agent", "class"],  default="agent", help='Type of learner '
-                                                                                             'used in the syllabus')
+    # Flag for storing log data as STE data
+    parser.add_argument('-s', '--store-ste-data', action='store_true',
+                        help='Flag for storing log data as STE')
 
-    # Syllabus_subtype refers to the structure of the syllabus and will determine the default list of metrics calculated
-    # where CL = Continual Learning; ANT_A = Adapting to New Tasks, type A; ANT_B = Adapting to New Tasks, type B; etc.
-    # Please refer to the documentation for more details on the distinction between these types.
-    parser.add_argument('-syllabus_subtype', choices=["CL", "ANT_A", "ANT_B", "ANT_C"],  default="ANT_A",
-                        help='Subtype of syllabus')
+    # Choose application measure to use as performance column
+    parser.add_argument('-p', '--perf-measure', default='reward',
+                        help='Name of column to use for metrics calculations')
+    
+    # Method for calculating forward and backward transfer
+    parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
+                        help='Method for computing forward and backward transfer')
 
+    # Output filename
+    parser.add_argument('-o', '--output', default=None,
+                        help='Specify output filename for plot and results')
+
+    # Flag for disabling smoothing
+    parser.add_argument('--no-smoothing', action='store_true',
+                        help='Do not smooth performance data for metrics and plotting')
+
+    # Flag for disabling plotting
+    parser.add_argument('--no-plot', action='store_true', help='Do not plot performance')
+
+    # Flag for disabling save
+    parser.add_argument('--no-save', action='store_true', help='Do not save metrics outputs')
+
+    # Parse arguments
     args = parser.parse_args()
+    do_smoothing = not args.no_smoothing
+    do_plot = not args.no_plot
+    do_save = not args.no_save
 
-    if args.log_dir is None:
-        raise Exception('Log directory must be specified!')
-    
-    if args.syllabus_type == "class":
-        report = l2metrics.ClassificationMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
+    if args.store_ste_data:
+        l2metrics.util.save_ste_data(args.log_dir)
     else:
-        report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, syllabus_subtype=args.syllabus_subtype)
-    
-    report.calculate()
-    # Comment this line out to supress the performance plot
-    report.plot()
-    report.report()
+        # Initialize metrics report
+        report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
+                                              transfer_method=args.transfer_method, do_smoothing=do_smoothing)
+
+        # Calculate metrics in order of their addition to the metrics list.
+        report.calculate()
+
+        # Print table of metrics and save values to file
+        report.report(save=do_save, output=args.output)
+
+        # Plot metrics
+        if do_plot:
+            report.plot(save=do_save, output=args.output)
 
 
-if __name__ == "__main__":
-    run()
+if __name__ == '__main__':
+    try:
+        run()
+    except Exception as e:
+        print(f'Error: {e}')

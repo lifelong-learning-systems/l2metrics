@@ -55,14 +55,14 @@ class WithinBlockSaturation(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the max performance within each block"
 
-    def __init__(self, perf_measure):
+    def __init__(self, perf_measure: str):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, block_info):
+    def validate(self, block_info) -> None:
         pass
 
-    def calculate(self, dataframe, block_info, metrics_df):
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         # Initialize metric dictionaries
         saturation_values = {}
         eps_to_saturation = {}
@@ -95,15 +95,15 @@ class MostRecentTerminalPerformance(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the terminal performance within each block"
 
-    def __init__(self, perf_measure, do_smoothing=True):
+    def __init__(self, perf_measure: str, do_smoothing: bool = True):
         super().__init__()
         self.perf_measure = perf_measure
         self.do_smoothing = do_smoothing
 
-    def validate(self, block_info):
+    def validate(self, block_info) -> None:
         pass
 
-    def calculate(self, dataframe, block_info, metrics_df):
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         # Initialize metric dictionaries
         terminal_perf_values = {}
         eps_to_terminal_perf = {}
@@ -137,12 +137,12 @@ class RecoveryTime(AgentMetric):
     description = "Calculates whether the system recovers after a change of task or parameters and \
         calculate how long it takes if recovery is achieved"
 
-    def __init__(self, perf_measure, do_smoothing=True):
+    def __init__(self, perf_measure: str, do_smoothing: bool=True):
         super().__init__()
         self.perf_measure = perf_measure
         self.do_smoothing = do_smoothing
 
-    def validate(self, block_info):
+    def validate(self, block_info: pd.DataFrame) -> (dict, dict):
         # Get unique tasks
         unique_tasks = block_info.loc[:, 'task_name'].unique()
 
@@ -172,7 +172,7 @@ class RecoveryTime(AgentMetric):
 
         return ref_inds, assess_inds
 
-    def calculate(self, dataframe, block_info, metrics_df):
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
             # Get the places where we should calculate recovery time
             ref_inds, assess_inds = self.validate(block_info)
@@ -209,11 +209,11 @@ class PerformanceRecovery(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance recovery value corresponding to a change of task or parameters"
 
-    def __init__(self, perf_measure):
+    def __init__(self, perf_measure: str):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, metrics_df):
+    def validate(self, metrics_df: pd.DataFrame) -> None:
         # Get number of recovery times
         if 'recovery_time' in metrics_df.columns:
             r = metrics_df['recovery_time']
@@ -225,9 +225,7 @@ class PerformanceRecovery(AgentMetric):
         else:
             raise Exception('No recovery times')
 
-        return
-
-    def calculate(self, dataframe, block_info, metrics_df):
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
             # Get the places where we should calculate recovery time
             self.validate(metrics_df)
@@ -266,11 +264,11 @@ class PerformanceMaintenance(AgentMetric):
     description = "Calculates the average difference between the most recent" \
         "terminal learning performance of a task and each evaluation performance"
 
-    def __init__(self, perf_measure):
+    def __init__(self, perf_measure: str):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, block_info):
+    def validate(self, block_info: pd.DataFrame) -> None:
         # Initialize variables for checking block type format
         last_block_num = -1
         last_block_type = ''
@@ -289,9 +287,7 @@ class PerformanceMaintenance(AgentMetric):
                         raise Exception('Block types must be alternating')
                     last_block_type = 'train'
 
-        return
-
-    def calculate(self, dataframe, block_info, metrics_df):
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
             # Validate block structure
             self.validate(block_info)
@@ -353,12 +349,12 @@ class ForwardTransfer(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the forward transfer for valid task pairs"
 
-    def __init__(self, perf_measure='reward', transfer_method='contrast'):
+    def __init__(self, perf_measure: str = 'reward', transfer_method: str = 'contrast'):
         super().__init__()
         self.perf_measure = perf_measure
         self.transfer_method = transfer_method
 
-    def validate(self, block_info):
+    def validate(self, block_info: pd.DataFrame) -> dict:
         # Check for valid transfer method
         if self.transfer_method not in ['contrast', 'ratio', 'both']:
             raise Exception(f'Invalid transfer method: {self.transfer_method}')
@@ -415,7 +411,7 @@ class ForwardTransfer(AgentMetric):
 
         return tasks_for_ft
 
-    def calculate(self, dataframe, block_info, metrics_df):
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
             # Validate data and get pairs eligible for forward transfer
             tasks_for_ft = self.validate(block_info)
@@ -470,12 +466,12 @@ class BackwardTransfer(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the backward transfer for valid task pairs"
 
-    def __init__(self, perf_measure='reward', transfer_method='contrast'):
+    def __init__(self, perf_measure: str = 'reward', transfer_method: str = 'contrast'):
         super().__init__()
         self.perf_measure = perf_measure
         self.transfer_method = transfer_method
 
-    def validate(self, block_info):
+    def validate(self, block_info: pd.DataFrame) -> dict:
         # Check for valid transfer method
         if self.transfer_method not in ['contrast', 'ratio', 'both']:
             raise Exception(f'Invalid transfer method: {self.transfer_method}')
@@ -538,7 +534,7 @@ class BackwardTransfer(AgentMetric):
 
         return tasks_for_bt
 
-    def calculate(self, dataframe, block_info, metrics_df):
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
             # Validate data and get pairs eligible for backward transfer
             tasks_for_bt = self.validate(block_info)
@@ -584,11 +580,11 @@ class STERelativePerf(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance of each task relative to it's corresponding single task expert"
 
-    def __init__(self, perf_measure):
+    def __init__(self, perf_measure: str):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, block_info):
+    def validate(self, block_info: pd.DataFrame) -> None:
         # Check if there is STE data for each task in the scenario
         unique_tasks = block_info.loc[:, 'task_name'].unique()
         ste_names = util.get_ste_data_names()
@@ -601,7 +597,7 @@ class STERelativePerf(AgentMetric):
         if ~np.any(np.isin(unique_tasks, ste_names)):
             raise Exception('No STE data available for any task')
 
-    def calculate(self, dataframe, block_info, metrics_df):
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
             # Validate the STE
             self.validate(block_info)
@@ -649,11 +645,11 @@ class SampleEfficiency(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the sample efficiency relative to the single task expert"
 
-    def __init__(self, perf_measure):
+    def __init__(self, perf_measure: str):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def validate(self, block_info):
+    def validate(self, block_info: pd.DataFrame) -> pd.DataFrame:
         # Check if there is STE data for each task in the scenario
         unique_tasks = block_info.loc[:, 'task_name'].unique()
         ste_names = util.get_ste_data_names()
@@ -666,7 +662,7 @@ class SampleEfficiency(AgentMetric):
         if ~np.any(np.isin(unique_tasks, ste_names)):
             raise Exception('No STE data available for any task')
 
-    def calculate(self, dataframe, block_info, metrics_df):
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
             # Validate the STE
             self.validate(block_info)
@@ -808,10 +804,10 @@ class AgentMetricsReport(core.MetricsReport):
         self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(
             self._metrics_df.loc[:, 'task_name'].values)
 
-    def add(self, metrics_list):
+    def add(self, metrics_list: list) -> None:
         self._metrics.append(metrics_list)
 
-    def _add_default_metrics(self):
+    def _add_default_metrics(self) -> None:
         # Default metrics no matter the syllabus type
         self.add(WithinBlockSaturation(self.perf_measure))
         self.add(MostRecentTerminalPerformance(self.perf_measure, self.do_smoothing))
@@ -823,14 +819,14 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(STERelativePerf(self.perf_measure))
         self.add(SampleEfficiency(self.perf_measure))
 
-    def calculate(self):
+    def calculate(self) -> None:
         for metric in self._metrics:
             self._metrics_df = metric.calculate(self._log_data, self.block_info, self._metrics_df)
         
         self.calculate_task_metrics()
         self.calculate_lifetime_metrics()
 
-    def calculate_task_metrics(self):
+    def calculate_task_metrics(self) -> None:
         self.task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=self.task_metrics)
         self.task_metrics_df.index.name = 'task_name'
 
@@ -924,7 +920,7 @@ class AgentMetricsReport(core.MetricsReport):
         
         self.task_metrics_df = self.task_metrics_df.dropna(axis=1)
 
-    def calculate_lifetime_metrics(self):
+    def calculate_lifetime_metrics(self) -> None:
         # Calculate lifetime metrics from task metrics
         self.lifetime_metrics_df = pd.DataFrame(columns=self.task_metrics)
 
@@ -952,7 +948,7 @@ class AgentMetricsReport(core.MetricsReport):
         
         self.lifetime_metrics_df = self.lifetime_metrics_df.dropna(axis=1)
 
-    def report(self, save=False, output=None):
+    def report(self, save: bool = False, output: bool = None) -> None:
         # TODO: Handle reporting custom metrics
 
         # Print lifetime metrics
@@ -991,7 +987,7 @@ class AgentMetricsReport(core.MetricsReport):
                 metrics_file.write('\n')
                 regime_metrics_df.to_csv(metrics_file, sep='\t')
 
-    def plot(self, save=False, output=None):
+    def plot(self, save: bool = False, output: bool = None) -> None:
         if output is None:
             input_title = os.path.split(self.log_dir)[-1]
         else:

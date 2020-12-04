@@ -20,6 +20,7 @@ import argparse
 import os
 
 import l2metrics
+import pandas as pd
 from l2metrics import _localutil
 
 
@@ -29,11 +30,11 @@ class MyCustomAgentMetric(l2metrics.AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Records the maximum value per regime in the dataframe"
     
-    def __init__(self, perf_measure):
+    def __init__(self, perf_measure: str):
         super().__init__()
         self.perf_measure = perf_measure
 
-    def calculate(self, dataframe, block_info, metrics_df):
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         max_values = {}
 
         for idx in range(block_info.loc[:, 'regime_num'].max() + 1):
@@ -51,7 +52,7 @@ class MyCustomAgentMetric(l2metrics.AgentMetric):
         pass
 
 
-def run():
+def run() -> None:
     # Instantiate parser
     parser = argparse.ArgumentParser(description='Run L2Metrics from the command line')
 

@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 
-def smooth(x, window_len=100, window='hanning'):
+def smooth(x: list, window_len: int = 100, window: str = 'hanning') -> list:
     # """smooth the data using a window with requested size.
     # Code from https://scipy-cookbook.readthedocs.io/items/SignalSmooth.html
     # This method is based on the convolution of a scaled window with the signal.
@@ -74,7 +74,8 @@ def smooth(x, window_len=100, window='hanning'):
     return y[start_ind:end_ind]
 
 
-def get_block_saturation_perf(data, col_to_use=None, prev_sat_val=None, window_len=100):
+def get_block_saturation_perf(data: pd.DataFrame, col_to_use: str, prev_sat_val: float = None,
+                              window_len: int = 100) -> (float, int, int):
     # Calculate the "saturation" value
     # Calculate the number of episodes to "saturation"
 
@@ -98,7 +99,9 @@ def get_block_saturation_perf(data, col_to_use=None, prev_sat_val=None, window_l
     return saturation_value, episodes_to_saturation, episodes_to_recovery
 
 
-def get_terminal_perf(data, col_to_use=None, prev_val=None, do_smoothing=True, window_len=100, term_window_ratio=0.1):
+def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = None,
+                      do_smoothing: bool = True, window_len: int = 100,
+                      term_window_ratio: float = 0.1) -> (float, int, int):
     # Calculate the terminal performance value
     # Calculate the number of episodes to terminal performance
 
@@ -125,7 +128,7 @@ def get_terminal_perf(data, col_to_use=None, prev_val=None, do_smoothing=True, w
     return terminal_value, episodes_to_terminal_perf, episodes_to_recovery
 
 
-def fill_metrics_df(metric, metric_string_name, metrics_df, dict_key=None):
+def fill_metrics_df(metric: dict, metric_string_name: str, metrics_df: pd.DataFrame, dict_key=None) -> pd.DataFrame:
     if not dict_key:
         metrics_df[metric_string_name] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
         for idx in metric.keys():
@@ -138,7 +141,7 @@ def fill_metrics_df(metric, metric_string_name, metrics_df, dict_key=None):
     return metrics_df
 
 
-def get_simple_rl_task_names(task_names):
+def get_simple_rl_task_names(task_names: list) -> list:
     simple_names = []
 
     for t in task_names:

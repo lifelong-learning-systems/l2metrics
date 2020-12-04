@@ -27,13 +27,13 @@ from l2logger.util import *
 from . import _localutil
 
 
-def get_ste_data_names():
+def get_ste_data_names() -> list:
     # This function will return a list of the Single-Task-Expert data files names from all of
     # available single task baselines that have been stored in $L2DATA/taskinfo/
     return [os.path.splitext(os.path.basename(x))[0] for x in glob.glob(get_l2root_base_dirs('taskinfo') + "\\*.pkl")]
 
 
-def load_ste_data(task_name):
+def load_ste_data(task_name: str) -> pd.DataFrame:
     # This function will return a dataframe of the specified task's Single-Task-Expert data that has
     # been stored in $L2DATA/taskinfo/
 
@@ -45,7 +45,7 @@ def load_ste_data(task_name):
         return None
 
 
-def save_ste_data(log_dir):
+def save_ste_data(log_dir: str) -> None:
     # Load data from ste logs
     ste_data = read_log_data(log_dir)
 
@@ -82,10 +82,11 @@ def save_ste_data(log_dir):
     print(f'Stored STE data for {task_name[0]}')
 
 
-def plot_performance(dataframe, block_info, do_smoothing=False, col_to_plot='reward',
-                     x_axis_col='exp_num', input_title=None, do_save_fig=True, plot_filename=None,
-                     input_xlabel='Episodes', input_ylabel='Performance', show_block_boundary=True,
-                     shade_test_blocks=True, max_smoothing_window=100):
+def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, do_smoothing: bool = False,
+                     col_to_plot: str = 'reward', x_axis_col: str = 'exp_num', input_title: str = None,
+                     do_save_fig: bool = True, plot_filename: str = None, input_xlabel: str = 'Episodes',
+                     input_ylabel: str = 'Performance', show_block_boundary: bool = True,
+                     shade_test_blocks: bool = True, max_smoothing_window: int = 100) -> None:
     # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
     # directory and/or customize the title, axes labeling, filename, etc. Color is supported for agent tasks only.
 

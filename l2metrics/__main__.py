@@ -21,7 +21,7 @@ import argparse
 import l2metrics
 
 
-def run():
+def run() -> None:
     # Instantiate parser
     parser = argparse.ArgumentParser(description='Run L2Metrics from the command line')
 

@@ -24,13 +24,14 @@ import l2metrics
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from tabulate import tabulate
 from tqdm import *
 
 sns.set_style("dark")
 sns.set_context("paper")
 
 
-def save_ste_data(log_dir):
+def save_ste_data(log_dir: str) -> None:
     # Check for STE logs
     ste_log_dir = log_dir + "/ste_logs/ste_logs/"
 
@@ -46,7 +47,7 @@ def save_ste_data(log_dir):
         raise Exception(f"STE logs not found in expected location!")
 
 
-def compute_metrics(log_dir, perf_measure, transfer_method, do_smoothing):
+def compute_metrics(log_dir: str, perf_measure: str, transfer_method: str, do_smoothing: bool) -> pd.DataFrame:
     # Check for LL logs
     ll_log_dir = log_dir + "/ll_logs/"
 
@@ -94,7 +95,7 @@ def compute_metrics(log_dir, perf_measure, transfer_method, do_smoothing):
     return ll_metrics_df
 
 
-def plot(ll_metrics_df):
+def plot(ll_metrics_df: pd.DataFrame) -> None:
     fig = plt.figure(figsize=(12, 8))
 
     for index, metric in enumerate(ll_metrics_df.drop(columns=['complexity', 'difficulty']).columns, start=1):
@@ -113,7 +114,7 @@ def plot(ll_metrics_df):
     plt.show()
 
 
-def evaluate():
+def evaluate() -> None:
     # Instantiate parser
     parser = argparse.ArgumentParser(
         description='Run L2M evaluation from the command line')
@@ -154,6 +155,10 @@ def evaluate():
     # Compute LL metric data
     ll_metrics_df = compute_metrics(
         args.log_dir, args.perf_measure, args.transfer_method, do_smoothing)
+
+    # Display aggregated data
+    print(tabulate(ll_metrics_df.groupby(by=['complexity', 'difficulty']).mean(),
+                   headers='keys', tablefmt='psql', floatfmt=".2f"))
 
     # Plot aggregated data
     if do_plot:

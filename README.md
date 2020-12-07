@@ -24,7 +24,7 @@ Lifelong Learning Metrics (L2Metrics) is a Python library containing foundationa
 
 ## Metrics
 
-The L2Metrics library supports the following lifelong learning metrics as defined in the Lifelong Learning Metrics for DARPA L2M specification version 0.64:
+The L2Metrics library supports the following lifelong learning metrics as defined in the Lifelong Learning Metrics for DARPA L2M specification version 0.65:
 
 * Performance Recovery (PR)
 * Performance Maintenance (PM)

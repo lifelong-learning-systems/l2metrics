@@ -247,7 +247,7 @@ class PerformanceRecovery(AgentMetric):
 
                     # Set performance recovery value as slope
                     idx = block_info[block_info['task_name'] == task]['regime_num'].max()
-                    pr_values[idx] = slope
+                    pr_values[idx] = -slope
                 else:
                     print(f"Cannot compute {self.name} for task {task} - Not enough recovery times")
 

@@ -8,6 +8,7 @@ All notable changes to this repository are documented here. We are using [Semant
 - Added validation for scenario info (complexity/difficulty)
 - Added type hints
 - Updated reference to metrics specification document 0.65
+- Updated calculation for performance recovery to use negative slope
 
 ## 2.2.0 - 2020-11-19
 

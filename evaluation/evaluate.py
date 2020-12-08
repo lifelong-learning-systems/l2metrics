@@ -23,7 +23,9 @@ import os
 import l2metrics
 import matplotlib.pyplot as plt
 import pandas as pd
+import scipy
 import seaborn as sns
+from IPython.display import display
 from tabulate import tabulate
 from tqdm import *
 
@@ -60,7 +62,7 @@ def compute_metrics(log_dir: str, perf_measure: str, transfer_method: str, do_sm
         # Compute and store the LL metrics for all scenarios found in the directory
         for item in tqdm(os.listdir(ll_log_dir), desc='Overall'):
             if os.path.isdir(ll_log_dir + item):
-                for scenario in tqdm(os.listdir(ll_log_dir + item), desc='Scenario'):
+                for scenario in tqdm(os.listdir(ll_log_dir + item), desc=item):
                     scenario_dir = ll_log_dir + item + '/' + scenario + '/'
 
                     # Initialize metrics report
@@ -74,9 +76,6 @@ def compute_metrics(log_dir: str, perf_measure: str, transfer_method: str, do_sm
                     # Append lifetime metrics to dataframe
                     ll_metrics_df = ll_metrics_df.append(
                         report.lifetime_metrics_df, ignore_index=True)
-
-                    # Add scenario name to row
-                    # ll_metrics_df.at[ll_metrics_df.index[-1], 'scenario'] = scenario.split('-')[0]
 
                     # Append scenario complexity and difficulty
                     with open(scenario_dir + 'scenario_info.json', 'r') as json_file:
@@ -157,8 +156,8 @@ def evaluate() -> None:
         args.log_dir, args.perf_measure, args.transfer_method, do_smoothing)
 
     # Display aggregated data
-    print(tabulate(ll_metrics_df.groupby(by=['complexity', 'difficulty']).mean(),
-                   headers='keys', tablefmt='psql', floatfmt=".2f"))
+    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['mean', 'std']))
+    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['median', scipy.stats.iqr]))
 
     # Plot aggregated data
     if do_plot:

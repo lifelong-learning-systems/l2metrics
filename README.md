@@ -45,7 +45,7 @@ L2Metrics is written in Python 3. It is recommended to use at least version Pyth
 
 This library depends on the following main Python packages, also listed in [setup.py](setup.py):
 
-* l2logger==1.0.1
+* l2logger
 * ipykernel
 * ipympl
 * matplotlib

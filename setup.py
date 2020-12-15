@@ -41,7 +41,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'l2logger==1.0.1',
+        'l2logger>=1.0.1',
         'ipykernel',
         'ipympl',
         'matplotlib',

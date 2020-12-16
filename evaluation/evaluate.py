@@ -18,7 +18,7 @@
 
 import argparse
 import json
-import os
+from pathlib import Path
 
 import l2metrics
 import matplotlib.pyplot as plt
@@ -27,66 +27,68 @@ import scipy
 import seaborn as sns
 from IPython.display import display
 from tabulate import tabulate
-from tqdm import *
+from tqdm import tqdm
 
 sns.set_style("dark")
 sns.set_context("paper")
 
 
-def save_ste_data(log_dir: str) -> None:
+def save_ste_data(log_dir: Path) -> None:
     # Check for STE logs
-    ste_log_dir = log_dir + "/ste_logs/ste_logs/"
+    ste_log_dir = log_dir / 'ste_logs' / 'ste_logs'
 
-    if os.path.isdir(ste_log_dir):
+    if ste_log_dir.exists():
         # Store all the STE data found in the directory
         print('Storing STE data...')
-        for ste_task in os.listdir(ste_log_dir):
-            l2metrics.util.save_ste_data(ste_log_dir + ste_task)
+        for ste_dir in ste_log_dir.iterdir():
+            if ste_dir.is_dir():
+                l2metrics.util.save_ste_data(str(ste_dir))
         print('Done storing STE data!\n')
     else:
         # STE log path not found - possibly because comrpressed archive has not been
         # extracted in the same location yet
-        raise Exception(f"STE logs not found in expected location!")
+        raise FileNotFoundError(f"STE logs not found in expected location!")
 
 
-def compute_metrics(log_dir: str, perf_measure: str, transfer_method: str, do_smoothing: bool) -> pd.DataFrame:
+def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_smoothing: bool) -> pd.DataFrame:
     # Check for LL logs
-    ll_log_dir = log_dir + "/ll_logs/"
+    ll_log_dir = log_dir / 'll_logs'
 
-    if os.path.isdir(ll_log_dir):
+    if ll_log_dir.exists():
         print('Computing metrics from LL logs...')
 
         # Initialize LL metric dataframe
         ll_metrics_df = pd.DataFrame()
 
         # Compute and store the LL metrics for all scenarios found in the directory
-        for item in tqdm(os.listdir(ll_log_dir), desc='Overall'):
-            if os.path.isdir(ll_log_dir + item):
-                for scenario in tqdm(os.listdir(ll_log_dir + item), desc=item):
-                    scenario_dir = ll_log_dir + item + '/' + scenario + '/'
+        for path in tqdm(list(ll_log_dir.iterdir()), desc='Overall'):
+            if path.is_dir():
+                for sub_path in tqdm(list(path.iterdir()), desc=path.name):
+                    if sub_path.is_dir():
+                        scenario_dir = str(sub_path)
 
-                    # Initialize metrics report
-                    report = l2metrics.AgentMetricsReport(
-                        log_dir=scenario_dir, perf_measure=perf_measure,
-                        transfer_method=transfer_method, do_smoothing=do_smoothing)
+                        # Initialize metrics report
+                        report = l2metrics.AgentMetricsReport(
+                            log_dir=scenario_dir, perf_measure=perf_measure,
+                            transfer_method=transfer_method, do_smoothing=do_smoothing)
 
-                    # Calculate metrics in order of their addition to the metrics list
-                    report.calculate()
+                        # Calculate metrics in order of their addition to the metrics list
+                        report.calculate()
 
-                    # Append lifetime metrics to dataframe
-                    ll_metrics_df = ll_metrics_df.append(
-                        report.lifetime_metrics_df, ignore_index=True)
+                        # Append lifetime metrics to dataframe
+                        ll_metrics_df = ll_metrics_df.append(
+                            report.lifetime_metrics_df, ignore_index=True)
 
-                    # Append scenario complexity and difficulty
-                    with open(scenario_dir + 'scenario_info.json', 'r') as json_file:
-                        scenario_info = json.load(json_file)
-                        if 'complexity' in scenario_info:
-                            ll_metrics_df.at[ll_metrics_df.index[-1], 'complexity'] = scenario_info['complexity']
-                        if 'difficulty' in scenario_info:
-                            ll_metrics_df.at[ll_metrics_df.index[-1], 'difficulty'] = scenario_info['difficulty']
+                        # Append scenario complexity and difficulty
+                        with open(sub_path / 'scenario_info.json', 'r') as json_file:
+                            scenario_info = json.load(json_file)
+                            if 'complexity' in scenario_info:
+                                ll_metrics_df.at[ll_metrics_df.index[-1], 'complexity'] = scenario_info['complexity']
+                            if 'difficulty' in scenario_info:
+                                ll_metrics_df.at[ll_metrics_df.index[-1], 'difficulty'] = scenario_info['difficulty']
 
     else:
-        raise Exception(f"LL logs not found in expected location!")
+        raise FileNotFoundError(f"LL logs not found in expected location!")
 
     # Sort data by complexity and difficulty
     ll_metrics_df = ll_metrics_df.sort_values(by=['complexity', 'difficulty'])
@@ -144,16 +146,17 @@ def evaluate() -> None:
 
     # Parse arguments
     args = parser.parse_args()
+    log_dir = Path(args.log_dir)
     do_smoothing = not args.no_smoothing
     do_plot = not args.no_plot
     do_save = not args.no_save
 
     # Store STE log data
-    save_ste_data(args.log_dir)
+    save_ste_data(log_dir)
 
     # Compute LL metric data
     ll_metrics_df = compute_metrics(
-        args.log_dir, args.perf_measure, args.transfer_method, do_smoothing)
+        log_dir, args.perf_measure, args.transfer_method, do_smoothing)
 
     # Display aggregated data
     display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['mean', 'std']))

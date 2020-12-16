@@ -128,7 +128,7 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
     return terminal_value, episodes_to_terminal_perf, episodes_to_recovery
 
 
-def fill_metrics_df(metric: dict, metric_string_name: str, metrics_df: pd.DataFrame, dict_key=None) -> pd.DataFrame:
+def fill_metrics_df(metric: dict, metric_string_name: str, metrics_df: pd.DataFrame, dict_key: str = None) -> pd.DataFrame:
     if not dict_key:
         metrics_df[metric_string_name] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
         for idx in metric.keys():

@@ -726,7 +726,7 @@ class AgentMetricsReport(core.MetricsReport):
     Aggregates a list of metrics for an Agent learner
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         # Defines log_dir and initializes the metrics list
         super().__init__(**kwargs)
 

@@ -28,9 +28,9 @@ setup(
     description='Metrics for Lifelong Learning',
     long_description=(HERE / 'README.md').read_text(),
     long_description_content_type='text/markdown',
-    author='Megan Baker',
-    author_email='megan.baker@jhuapl.edu',
-    license='UNLICENSED',
+    author='Eric Nguyen, Megan Baker',
+    author_email='Eric.Nguyen@jhuapl.edu, Megan.Baker@jhuapl.edu',
+    license='Proprietary',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'License :: Other/Proprietary License',

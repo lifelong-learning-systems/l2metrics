@@ -24,13 +24,13 @@ HERE = pathlib.Path(__file__).parent
 
 setup(
     name='l2metrics',
-    version='2.2.0',
+    version='2.3.0',
     description='Metrics for Lifelong Learning',
     long_description=(HERE / 'README.md').read_text(),
     long_description_content_type='text/markdown',
-    author='Megan Baker',
-    author_email='megan.baker@jhuapl.edu',
-    license='UNLICENSED',
+    author='Eric Nguyen, Megan Baker',
+    author_email='Eric.Nguyen@jhuapl.edu, Megan.Baker@jhuapl.edu',
+    license='Proprietary',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'License :: Other/Proprietary License',
@@ -41,14 +41,18 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'l2logger==1.0.0',
+        'l2logger>=1.0.1',
+        'ipykernel',
+        'ipympl',
+        'matplotlib',
         'numpy',
-        'six',
+        'pandas',
         'python-dateutil',
         'pytz',
-        'pandas',
-        'tabulate',
         'scipy',
-        'matplotlib'
+        'seaborn',
+        'six',
+        'tabulate',
+        'tqdm'
     ]
 )

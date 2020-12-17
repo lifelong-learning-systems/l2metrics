@@ -16,13 +16,13 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
-import re
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
 
 
-def smooth(x: list, window_len: int = 100, window: str = 'hanning') -> list:
+def smooth(x: np.ndarray, window_len: int = None, window: str = 'hanning') -> np.ndarray:
     # """smooth the data using a window with requested size.
     # Code from https://scipy-cookbook.readthedocs.io/items/SignalSmooth.html
     # This method is based on the convolution of a scaled window with the signal.
@@ -31,7 +31,7 @@ def smooth(x: list, window_len: int = 100, window: str = 'hanning') -> list:
     # in the beginning and end part of the output signal.
     # input:
     #    x: the input signal
-    #    window_len: the dimension of the smoothing window; should be an odd integer
+    #    window_len: the dimension of the smoothing window
     #    window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
     #        flat window will produce a moving average smoothing.
     # output:
@@ -49,9 +49,9 @@ def smooth(x: list, window_len: int = 100, window: str = 'hanning') -> list:
     if x.ndim != 1:
         raise ValueError("smooth only accepts 1 dimension arrays.")
 
-    if x.size < window_len:
+    if window_len is None or x.size < window_len:
         # raise(ValueError, "Input vector needs to be bigger than window size.")
-        window_len = int(np.floor(x.size / 2))
+        window_len = min(int(x.size * 0.2), 100)
 
     if window_len < 3:
         return x
@@ -75,7 +75,7 @@ def smooth(x: list, window_len: int = 100, window: str = 'hanning') -> list:
 
 
 def get_block_saturation_perf(data: pd.DataFrame, col_to_use: str, prev_sat_val: float = None,
-                              window_len: int = 100) -> (float, int, int):
+                              window_len: int = None) -> Tuple[float, int, int]:
     # Calculate the "saturation" value
     # Calculate the number of episodes to "saturation"
 
@@ -100,8 +100,8 @@ def get_block_saturation_perf(data: pd.DataFrame, col_to_use: str, prev_sat_val:
 
 
 def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = None,
-                      do_smoothing: bool = True, window_len: int = 100,
-                      term_window_ratio: float = 0.1) -> (float, int, int):
+                      do_smoothing: bool = True, window_len: int = None,
+                      term_window_ratio: float = 0.1) -> Tuple[float, int, int]:
     # Calculate the terminal performance value
     # Calculate the number of episodes to terminal performance
 

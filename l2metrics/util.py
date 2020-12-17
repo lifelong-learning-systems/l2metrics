@@ -86,7 +86,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, do_smoot
                      col_to_plot: str = 'reward', x_axis_col: str = 'exp_num', input_title: str = None,
                      do_save_fig: bool = True, plot_filename: str = None, input_xlabel: str = 'Episodes',
                      input_ylabel: str = 'Performance', show_block_boundary: bool = True,
-                     shade_test_blocks: bool = True, max_smoothing_window: int = 100) -> None:
+                     shade_test_blocks: bool = True, window_len: int = None) -> None:
     # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
     # directory and/or customize the title, axes labeling, filename, etc. Color is supported for agent tasks only.
 
@@ -109,9 +109,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, do_smoot
                     dataframe['regime_num'] == regime), col_to_plot].values
 
                 if do_smoothing:
-                    window = int(len(y) * 0.2)
-                    custom_window = min(window, max_smoothing_window)
-                    y = _localutil.smooth(y, window_len=custom_window)
+                    y = _localutil.smooth(y, window_len=window_len)
 
                 ax.scatter(x, y, color=c, marker='*', linestyle='None', label=t)
 

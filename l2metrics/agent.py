@@ -20,6 +20,7 @@ import os
 from abc import ABC
 from collections import defaultdict
 from itertools import permutations
+from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -37,8 +38,6 @@ class AgentMetric(core.Metric, ABC):
     A single metric for an Agent (aka. Reinforcement Learning) learner
     """
 
-    max_window_size = 100   # Max window size for moving average and smoothing
-
     def __init__(self):
         pass
 
@@ -55,7 +54,7 @@ class WithinBlockSaturation(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the max performance within each block"
 
-    def __init__(self, perf_measure: str):
+    def __init__(self, perf_measure: str) -> None:
         super().__init__()
         self.perf_measure = perf_measure
 
@@ -72,13 +71,9 @@ class WithinBlockSaturation(AgentMetric):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
-            # Get block window size for smoothing
-            window = int(len(block_data) * 0.2)
-            custom_window = min(window, self.max_window_size)
-
             # Make within block calculations
             sat_value, eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                block_data, col_to_use=self.perf_measure, window_len=custom_window)
+                block_data, col_to_use=self.perf_measure)
 
             # Record them
             saturation_values[idx] = sat_value
@@ -95,7 +90,7 @@ class MostRecentTerminalPerformance(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the terminal performance within each block"
 
-    def __init__(self, perf_measure: str, do_smoothing: bool = True):
+    def __init__(self, perf_measure: str, do_smoothing: bool = True) -> None:
         super().__init__()
         self.perf_measure = perf_measure
         self.do_smoothing = do_smoothing
@@ -113,14 +108,9 @@ class MostRecentTerminalPerformance(AgentMetric):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
-            # Get block window size for smoothing
-            window = int(len(block_data) * 0.2)
-            custom_window = min(window, self.max_window_size)
-
             # Make within block calculations
             term_perf, eps_to_term_perf, _ = _localutil.get_terminal_perf(
-                block_data, col_to_use=self.perf_measure, do_smoothing=self.do_smoothing,
-                window_len=custom_window)
+                block_data, col_to_use=self.perf_measure, do_smoothing=self.do_smoothing)
 
             # Record them
             terminal_perf_values[idx] = term_perf
@@ -137,12 +127,12 @@ class RecoveryTime(AgentMetric):
     description = "Calculates whether the system recovers after a change of task or parameters and \
         calculate how long it takes if recovery is achieved"
 
-    def __init__(self, perf_measure: str, do_smoothing: bool=True):
+    def __init__(self, perf_measure: str, do_smoothing: bool = True) -> None:
         super().__init__()
         self.perf_measure = perf_measure
         self.do_smoothing = do_smoothing
 
-    def validate(self, block_info: pd.DataFrame) -> (dict, dict):
+    def validate(self, block_info: pd.DataFrame) -> Tuple[dict, dict]:
         # Get unique tasks
         unique_tasks = block_info.loc[:, 'task_name'].unique()
 
@@ -186,15 +176,10 @@ class RecoveryTime(AgentMetric):
                     prev_val = metrics_df['term_perf'][ref_ind]
                     block_data = dataframe.loc[assess_ind]
 
-                    # Get block window size for smoothing
-                    window = int(len(block_data) * 0.2)
-                    custom_window = min(window, self.max_window_size)
-
                     _, _, eps_to_rec = _localutil.get_terminal_perf(block_data,
                                                                     col_to_use=self.perf_measure,
                                                                     do_smoothing=self.do_smoothing,
-                                                                    prev_val=prev_val,
-                                                                    window_len=custom_window)
+                                                                    prev_val=prev_val)
                     recovery_time[assess_ind] = eps_to_rec
 
             return _localutil.fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
@@ -209,7 +194,7 @@ class PerformanceRecovery(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance recovery value corresponding to a change of task or parameters"
 
-    def __init__(self, perf_measure: str):
+    def __init__(self, perf_measure: str) -> None:
         super().__init__()
         self.perf_measure = perf_measure
 
@@ -264,7 +249,7 @@ class PerformanceMaintenance(AgentMetric):
     description = "Calculates the average difference between the most recent" \
         "terminal learning performance of a task and each evaluation performance"
 
-    def __init__(self, perf_measure: str):
+    def __init__(self, perf_measure: str) -> None:
         super().__init__()
         self.perf_measure = perf_measure
 
@@ -349,7 +334,7 @@ class ForwardTransfer(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the forward transfer for valid task pairs"
 
-    def __init__(self, perf_measure: str = 'reward', transfer_method: str = 'contrast'):
+    def __init__(self, perf_measure: str = 'reward', transfer_method: str = 'contrast') -> None:
         super().__init__()
         self.perf_measure = perf_measure
         self.transfer_method = transfer_method
@@ -466,7 +451,7 @@ class BackwardTransfer(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the backward transfer for valid task pairs"
 
-    def __init__(self, perf_measure: str = 'reward', transfer_method: str = 'contrast'):
+    def __init__(self, perf_measure: str = 'reward', transfer_method: str = 'contrast') -> None:
         super().__init__()
         self.perf_measure = perf_measure
         self.transfer_method = transfer_method
@@ -580,7 +565,7 @@ class STERelativePerf(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance of each task relative to it's corresponding single-task expert"
 
-    def __init__(self, perf_measure: str):
+    def __init__(self, perf_measure: str) -> None:
         super().__init__()
         self.perf_measure = perf_measure
 
@@ -645,7 +630,7 @@ class SampleEfficiency(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the sample efficiency relative to the single-task expert"
 
-    def __init__(self, perf_measure: str):
+    def __init__(self, perf_measure: str) -> None:
         super().__init__()
         self.perf_measure = perf_measure
 
@@ -690,18 +675,12 @@ class SampleEfficiency(AgentMetric):
                     # Check if performance measure exists in STE data
                     if self.perf_measure in ste_data.columns:
                         # Get task saturation value and episodes to saturation
-                        window = int(len(task_data) * 0.2)
-                        custom_window = min(window, self.max_window_size)
-
                         task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                            task_data, col_to_use=self.perf_measure, window_len=custom_window)
+                            task_data, col_to_use=self.perf_measure)
 
                         # Get STE saturation value and episodes to saturation
-                        window = int(len(ste_data) * 0.2)
-                        custom_window = min(window, self.max_window_size)
-
                         ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                            ste_data, col_to_use=self.perf_measure, window_len=custom_window)
+                            ste_data, col_to_use=self.perf_measure)
 
                         # Compute sample efficiency
                         se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
@@ -804,7 +783,7 @@ class AgentMetricsReport(core.MetricsReport):
         self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(
             self._metrics_df.loc[:, 'task_name'].values)
 
-    def add(self, metrics_list: list) -> None:
+    def add(self, metrics_list: Union[AgentMetric, List[AgentMetric]]) -> None:
         self._metrics.append(metrics_list)
 
     def _add_default_metrics(self) -> None:
@@ -948,7 +927,7 @@ class AgentMetricsReport(core.MetricsReport):
         
         self.lifetime_metrics_df = self.lifetime_metrics_df.dropna(axis=1)
 
-    def report(self, save: bool = False, output: bool = None) -> None:
+    def report(self, save: bool = False, output: str = None) -> None:
         # TODO: Handle reporting custom metrics
 
         # Print lifetime metrics
@@ -987,12 +966,11 @@ class AgentMetricsReport(core.MetricsReport):
                 metrics_file.write('\n')
                 regime_metrics_df.to_csv(metrics_file, sep='\t')
 
-    def plot(self, save: bool = False, output: bool = None) -> None:
+    def plot(self, save: bool = False, output: str = None) -> None:
         if output is None:
             input_title = os.path.split(self.log_dir)[-1]
         else:
             input_title = output
 
         util.plot_performance(self._log_data, self.block_info, do_smoothing=self.do_smoothing,
-                              col_to_plot=self.perf_measure, do_save_fig=save,
-                              max_smoothing_window=AgentMetric.max_window_size, input_title=input_title)
+                              col_to_plot=self.perf_measure, do_save_fig=save, input_title=input_title)

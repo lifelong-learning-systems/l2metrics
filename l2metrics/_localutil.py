@@ -23,28 +23,39 @@ import pandas as pd
 
 
 def smooth(x: np.ndarray, window_len: int = None, window: str = 'hanning') -> np.ndarray:
-    # """smooth the data using a window with requested size.
-    # Code from https://scipy-cookbook.readthedocs.io/items/SignalSmooth.html
-    # This method is based on the convolution of a scaled window with the signal.
-    # The signal is prepared by introducing reflected copies of the signal
-    # (with the window size) in both ends so that transient parts are minimized
-    # in the beginning and end part of the output signal.
-    # input:
-    #    x: the input signal
-    #    window_len: the dimension of the smoothing window
-    #    window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
-    #        flat window will produce a moving average smoothing.
-    # output:
-    #    the smoothed signal
-    # example:
-    # t=linspace(-2,2,0.1)
-    # x=sin(t)+randn(len(t))*0.1
-    # y=smooth(x)
-    # see also:
-    # numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
-    # scipy.signal.lfilter
-    # NOTE: length(output) != length(input), to correct this: return
-    # y[(window_len/2-1):-(window_len/2)] instead of just y.
+    """Smooths the data using a window with requested size.
+
+    Code from https://scipy-cookbook.readthedocs.io/items/SignalSmooth.html
+    This method is based on the convolution of a scaled window with the signal.
+    The signal is prepared by introducing reflected copies of the signal
+    (with the window size) in both ends so that transient parts are minimized
+    in the beginning and end part of the output signal.
+
+    example:
+        t = linspace(-2,2,0.1)
+        x = sin(t)+randn(len(t))*0.1
+        y = smooth(x)
+    
+    See also:
+    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+    scipy.signal.lfilter
+
+    NOTE: length(output) != length(input).
+    To correct this, return y[(window_len/2-1):-(window_len/2)] instead of just y.
+
+    Args:
+        x (np.ndarray): The input signal.
+        window_len (int, optional): The dimension of the smoothing window. Defaults to None.
+        window (str, optional): The type of window from 'flat', 'hanning', 'hamming', 'bartlett',
+            'blackman'. Flat window will produce a moving average smoothing. Defaults to 'hanning'.
+
+    Raises:
+        ValueError: If input signal has more than one dimension.
+        ValueError: If window type is not supported.
+
+    Returns:
+        np.ndarray: The smoothed signal.
+    """
 
     if x.ndim != 1:
         raise ValueError("smooth only accepts 1 dimension arrays.")
@@ -76,9 +87,20 @@ def smooth(x: np.ndarray, window_len: int = None, window: str = 'hanning') -> np
 
 def get_block_saturation_perf(data: pd.DataFrame, col_to_use: str, prev_sat_val: float = None,
                               window_len: int = None) -> Tuple[float, int, int]:
-    # Calculate the "saturation" value
-    # Calculate the number of episodes to "saturation"
+    """Calculates the saturation value, episodes to saturation, and episodes to recovery.
 
+    Args:
+        data (pd.DataFrame): The input data.
+        col_to_use (str): The column name of the metric to use for calculations.
+        prev_sat_val (float, optional): Previous saturation value for calculating recovery time.
+            Defaults to None.
+        window_len (int, optional): The window length for smoothing the data. Defaults to None.
+
+    Returns:
+        Tuple[float, int, int]: Saturation value, episodes to saturation, and episodes to recovery.
+    """
+
+    # Aggregate multiple reward values for the same episode
     mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
     mean_data = np.ravel(mean_reward_per_episode.values)
 
@@ -102,9 +124,23 @@ def get_block_saturation_perf(data: pd.DataFrame, col_to_use: str, prev_sat_val:
 def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = None,
                       do_smoothing: bool = True, window_len: int = None,
                       term_window_ratio: float = 0.1) -> Tuple[float, int, int]:
-    # Calculate the terminal performance value
-    # Calculate the number of episodes to terminal performance
+    """Calculates the terminal performance, episodes to terminal performance, and episodes to recovery.
 
+    Args:
+        data (pd.DataFrame): The input data.
+        col_to_use (str): The column name of the metric to use for calculations.
+        prev_val (float, optional): Previous saturation value for calculating recovery time.
+            Defaults to None.
+        do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to True.
+        window_len (int, optional): The window length for smoothing the data. Defaults to None.
+        term_window_ratio (float, optional): [description]. Defaults to 0.1.
+
+    Returns:
+        Tuple[float, int, int]: Terminal performance, episodes to terminal performance,
+            and episodes to recovery.
+    """
+
+    # Aggregate multiple reward values for the same episode
     mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
     mean_data = np.ravel(mean_reward_per_episode.values)
 
@@ -129,6 +165,19 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
 
 
 def fill_metrics_df(metric: dict, metric_string_name: str, metrics_df: pd.DataFrame, dict_key: str = None) -> pd.DataFrame:
+    """Fills the metrics DataFrame with additional data.
+
+    Args:
+        metric (dict): The new metric data to insert into the metrics DataFrame.
+        metric_string_name (str): The name of the new metric to add.
+        metrics_df (pd.DataFrame): The metrics DataFrame to insert the new data into.
+        dict_key (str, optional): The dictionary key of the metrics DataFrame to insert the new
+            metric into, allows a higher level of insertion if value is passed. Defaults to None.
+
+    Returns:
+        pd.DataFrame: The updated metrics DataFrame.
+    """
+
     if not dict_key:
         metrics_df[metric_string_name] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
         for idx in metric.keys():
@@ -142,6 +191,18 @@ def fill_metrics_df(metric: dict, metric_string_name: str, metrics_df: pd.DataFr
 
 
 def get_simple_rl_task_names(task_names: list) -> list:
+    """Simplifies the task name.
+
+    For each task name in the provided list, this function splits the names using an underscore as
+    delimiter, then returns the last element in the split list as the simplified name.
+
+    Args:
+        task_names (list): The list of task names to simplify.
+
+    Returns:
+        list: The list of simplified task names.
+    """
+
     simple_names = []
 
     for t in task_names:

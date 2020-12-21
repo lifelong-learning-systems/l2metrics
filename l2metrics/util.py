@@ -28,14 +28,26 @@ from . import _localutil
 
 
 def get_ste_data_names() -> list:
-    # This function will return a list of the Single-Task-Expert data files names from all of
-    # available single-task baselines that have been stored in $L2DATA/taskinfo/
+    """Gets the names of the stored STE data in $L2DATA/taskinfo/.
+
+    Returns:
+        list: The STE task names.
+    """
     return [os.path.splitext(os.path.basename(x))[0] for x in glob.glob(get_l2root_base_dirs('taskinfo') + "\\*.pkl")]
 
 
 def load_ste_data(task_name: str) -> pd.DataFrame:
-    # This function will return a dataframe of the specified task's Single-Task-Expert data that has
-    # been stored in $L2DATA/taskinfo/
+    """Loads the STE data corresponding to the given task name.
+
+    This function searches $L2DATA/taskinfo/ for the given task name and reads the file as a
+    DataFrame.
+
+    Args:
+        task_name (str): The name of the STE data file.
+
+    Returns:
+        pd.DataFrame: The STE data if found, else None.
+    """
 
     if task_name in get_ste_data_names():
         data_file_name = get_l2root_base_dirs('taskinfo', task_name + '.pkl')
@@ -46,6 +58,15 @@ def load_ste_data(task_name: str) -> pd.DataFrame:
 
 
 def save_ste_data(log_dir: str) -> None:
+    """Saves the STE data in the given log directory as a pickled DataFrame.
+
+    Args:
+        log_dir (str): The log directory of the STE data.
+
+    Raises:
+        Exception: If scenario contains more than one task.
+    """
+
     # Load data from ste logs
     ste_data = read_log_data(log_dir)
 
@@ -87,8 +108,23 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, do_smoot
                      do_save_fig: bool = True, plot_filename: str = None, input_xlabel: str = 'Episodes',
                      input_ylabel: str = 'Performance', show_block_boundary: bool = True,
                      shade_test_blocks: bool = True, window_len: int = None) -> None:
-    # This function takes a dataframe and plots the desired columns. Has an option to save the figure in the current
-    # directory and/or customize the title, axes labeling, filename, etc. Color is supported for agent tasks only.
+    """Plots the performance curves for the given DataFrame.
+
+    Args:
+        dataframe (pd.DataFrame): The performance data to plot.
+        block_info (pd.DataFrame): The block info of the DataFrame.
+        do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to False.
+        col_to_plot (str, optional): The column name of the metric to plot. Defaults to 'reward'.
+        x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
+        input_title (str, optional): The title of the plot. Defaults to None.
+        do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to True.
+        plot_filename (str, optional): The filename to use for saving. Defaults to None.
+        input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
+        input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
+        show_block_boundary (bool, optional): Flag for enabling block boundaries. Defaults to True.
+        shade_test_blocks (bool, optional): Flag for enabling block shading. Defaults to True.
+        window_len (int, optional): The window length for smoothing the data. Defaults to None.
+    """
 
     unique_tasks = dataframe.loc[:, 'task_name'].unique()
     fig = plt.figure(figsize=(12, 6))

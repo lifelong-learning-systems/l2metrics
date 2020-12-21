@@ -1,6 +1,6 @@
 # Multi-Lifetime Metrics Evaluation
 
-The L2Metrics evaluation package contains a Jupyter notebook and Python script for evaluating multi-lifetime metrics. The Jupyter notebook and Python script perform the same functions, but the script allows users to parse, aggregate, and display LL metrics without having to start a Jupyter server.
+The L2Metrics evaluation package contains a Jupyter notebook (`evaluation.ipynb`) and Python script (`evaluate.py`) for evaluating multi-lifetime metrics. The Jupyter notebook and Python script perform the same functions, but the script allows users to parse, aggregate, and display LL metrics without having to start a Jupyter server. Additionally, the Jupyter notebook relies on the Python script as it contains helper functions for storing STE data and computing metrics on lifelong learning logs.
 
 ## Usage
 
@@ -12,8 +12,8 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 
 ```
 usage: evaluate.py [-h] -l LOG_DIR [-p PERF_MEASURE]
-                   [-m {contrast,ratio,both}] [--no-smoothing] [--no-plot]
-                   [--no-save]
+                   [-m {contrast,ratio,both}] [-o OUTPUT] [--no-smoothing]
+                   [--no-plot] [--no-save]
 
 Run L2M evaluation from the command line
 
@@ -28,8 +28,12 @@ optional arguments:
                         Name of column to use for metrics calculations
   -m {contrast,ratio,both}, --transfer-method {contrast,ratio,both}
                         Method for computing forward and backward transfer
+  -o OUTPUT, --output OUTPUT
+                        Output filename for results
   --no-smoothing        Do not smooth performance data for metrics and
                         plotting
   --no-plot             Do not plot performance
   --no-save             Do not save metrics outputs
 ```
+
+**Note**: Valid values for the performance measure input argument are determined by the `metrics_columns` dictionary in `logger_info.json`.

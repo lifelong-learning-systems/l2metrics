@@ -2,13 +2,14 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
-## 2.3.0 - 2020-12-02
+## 2.3.0 - 2020-12-21
 
 - Added scripts for multi-lifetime evaluation
 - Added validation for scenario info (complexity/difficulty)
 - Added type hints
 - Updated reference to metrics specification document 0.65
 - Updated calculation for performance recovery to use negative slope
+- Add docstrings
 
 ## 2.2.0 - 2020-11-19
 

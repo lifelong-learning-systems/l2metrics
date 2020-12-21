@@ -16,6 +16,14 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
+"""
+This is a Python script for computing and aggregating lifelong learning metrics
+across multiple runs of different learning scenarios.
+
+Additionally, this script contains helper functions for the Jupyter notebook,
+evaluation.ipynb.
+"""
+
 import argparse
 import json
 from pathlib import Path
@@ -26,14 +34,22 @@ import pandas as pd
 import scipy
 import seaborn as sns
 from IPython.display import display
-from tabulate import tabulate
-from tqdm import tqdm
 
 sns.set_style("dark")
 sns.set_context("paper")
 
 
 def save_ste_data(log_dir: Path) -> None:
+    """Save all single-task expert data in provided log directory.
+
+    Args:
+        log_dir (Path): Path to agent configuration directory containing STE logs.
+
+    Raises:
+        FileNotFoundError: If log directory structure does not follow the expected
+            structure described in the evaluation protocol.
+    """
+
     # Check for STE logs
     ste_log_dir = log_dir / 'ste_logs' / 'ste_logs'
 
@@ -51,6 +67,29 @@ def save_ste_data(log_dir: Path) -> None:
 
 
 def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_smoothing: bool) -> pd.DataFrame:
+    """Compute lifelong learning metrics for all LL logs in provided log directory.
+
+    This function iterates through all the lifelong learning logs it finds in the provided
+    directory, computes the LL metrics for those logs, then sorts the metrics by scenario
+    complexity and difficulty. Scenarios with missing complexity or difficulty information
+    might be ignored in the evaluation.
+
+    Args:
+        log_dir (Path): Path to agent configuration directory containing LL logs.
+        perf_measure (str): Name of column to use for metrics calculations.
+        transfer_method (str): Method for computing forward and backward transfer.
+            Valid values are 'contrast', 'ratio', and 'both.'
+        do_smoothing (bool): Flag for enabling smoothing on performance data for metrics.
+
+    Raises:
+        FileNotFoundError: If log directory structure does not follow the expected
+            structure described in the evaluation protocol.
+
+    Returns:
+        pd.DataFrame: DataFrame containing lifelong metrics from all parsed scenarios, sorted by
+            scenario complexity and difficulty.
+    """
+
     # Check for LL logs
     ll_log_dir = log_dir / 'll_logs'
 
@@ -97,6 +136,16 @@ def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_s
 
 
 def plot(ll_metrics_df: pd.DataFrame) -> None:
+    """Plot the aggregated lifelong metrics DataFrame as a violin plot.
+
+    The plot should show trends for each of the lifelong metrics based on scenario complexity and
+    difficulty.
+
+    Args:
+        ll_metrics_df (pd.DataFrame): DataFrame containing lifelong metrics from all parsed
+            scenarios, sorted by scenario complexity and difficulty.
+    """
+
     fig = plt.figure(figsize=(12, 8))
 
     for index, metric in enumerate(ll_metrics_df.drop(columns=['complexity', 'difficulty']).columns, start=1):
@@ -116,21 +165,33 @@ def plot(ll_metrics_df: pd.DataFrame) -> None:
 
 
 def evaluate() -> None:
+    """Runs an evaluation on the provided log directory with the given parameters.
+
+    This function loops through the subdirectories in the given directory, stores all STE data,
+    computes LL metrics on all LL data, sorts the metrics by scenario complexity/difficulty,
+    displays the aggregated data as tables, plots the results, then saves the metrics to the given
+    output location.
+
+    """
     # Instantiate parser
     parser = argparse.ArgumentParser(
         description='Run L2M evaluation from the command line')
 
     # Log directories can be absolute paths, relative paths, or paths found in $L2DATA/logs
-    parser.add_argument('-l', '--log-dir', required=True,
+    parser.add_argument('-l', '--log-dir', required=True, type=str,
                         help='Log directory for evaluation')
 
     # Choose application measure to use as performance column
-    parser.add_argument('-p', '--perf-measure', default='performance',
+    parser.add_argument('-p', '--perf-measure', default='performance', type=str,
                         help='Name of column to use for metrics calculations')
 
     # Method for calculating forward and backward transfer
     parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
+
+    # Output file location
+    parser.add_argument('-o', '--output', default='ll_metrics.tsv', type=str,
+                        help='Output filename for results')
 
     # Flag for disabling smoothing
     parser.add_argument('--no-smoothing', action='store_true',
@@ -147,6 +208,7 @@ def evaluate() -> None:
     # Parse arguments
     args = parser.parse_args()
     log_dir = Path(args.log_dir)
+    output = Path(args.output)
     do_smoothing = not args.no_smoothing
     do_plot = not args.no_plot
     do_save = not args.no_save
@@ -166,9 +228,24 @@ def evaluate() -> None:
     if do_plot:
         plot(ll_metrics_df)
 
+    # Save data
+    if do_save:
+        if output.is_dir():
+            filename = output / 'll_metrics.tsv'
+        elif output.suffix != '.tsv':
+            filename = Path(output.name + '.tsv')
+        else:
+            filename = output
+
+        with open(filename, 'w', newline='\n') as metrics_file:
+            ll_metrics_df.to_csv(metrics_file, sep='\t')
+
 
 if __name__ == '__main__':
+    from tqdm import tqdm
     try:
         evaluate()
     except Exception as e:
         print(f'Error: {e}')
+else:
+    from tqdm.notebook import tqdm

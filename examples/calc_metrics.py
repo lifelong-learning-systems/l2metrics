@@ -16,6 +16,11 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
+"""
+This script illustrates how to produce a lifelong learning metrics report with a
+custom metric.
+"""
+
 import argparse
 import os
 

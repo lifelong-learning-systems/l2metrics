@@ -24,7 +24,7 @@ Lifelong Learning Metrics (L2Metrics) is a Python library containing foundationa
 
 ## Metrics
 
-The L2Metrics library supports the following lifelong learning metrics as defined in the Lifelong Learning Metrics for DARPA L2M specification version 0.65:
+The L2Metrics library supports the following lifelong learning metrics as defined in the [Lifelong Learning Metrics for L2M specification version 0.65](https://github.com/darpa-l2m/shared_docs/blob/master/working_groups/metrics/metrics_specifications/Lifelong_Learning_Metrics_for_L2M.docx):
 
 * Performance Recovery (PR)
 * Performance Maintenance (PM)
@@ -39,7 +39,7 @@ Refer to this [README](./evaluation/README.md) for information on the L2Metrics 
 
 ## Getting Started
 
-L2Metrics is written in Python 3. It is recommended to use at least version Python 3.6.
+L2Metrics is written in Python 3 and it is highly recommended to use at least version Python 3.6. The Metrics Framework has been tested on Windows 10 and Ubuntu 18.04/20.04. It should work on other platforms but has not been verified.
 
 ### Prerequisites
 
@@ -128,6 +128,8 @@ Once these logs are generated, you'll need to store Single-Task Expert (STE) dat
     --no-plot             Do not plot metrics report
     --no-save             Do not save metrics outputs
 ```
+
+**Note**: Valid values for the performance measure input argument are determined by the `metrics_columns` dictionary in `logger_info.json`.
 
 ### Storing Single-Task Expert Data
 

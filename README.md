@@ -166,16 +166,16 @@ Additionally, the script will print the metrics report to the console and save t
 ### Lifetime Metrics
 
 | perf_recovery | perf_maintenance | forward_transfer | backward_transfer | ste_rel_perf | sample_efficiency |
-|---------------|------------------|------------------|-------------------|--------------|-------------------|
-| 0             | -2.08            | 0.71             | -0.02             | 1.10         | 0.71              |
+|---------------|------------------|------------------|-------------------|-------------|-------------------|
+| 0.0           | -1.81            | 0.71             | -0.02             | 1.10           | 0.71              |
 
 ### Task Metrics
 
-| task_name | perf_recovery | perf_maintenance | forward_transfer | backward_transfer  | ste_rel_perf | sample_efficiency |
+| task_name | perf_recovery | perf_maintenance | forward_transfer_contrast | backward_transfer_contrast  | ste_rel_perf | sample_efficiency |
 |-----------|---------------|------------------|------------------|--------------------|--------------|-------------------|
-| task1     | 0.00          | -5.62            | [nan, 0.83, 0.71]| [nan, 0.02, 0.0]   | 0.94         | 0.70              |
-| task2     | 0.00          | -2.08            | [nan, nan, 0.53] | [-0.02, nan, 0.01] | 1.10         | 0.71              |
-| task3     | 0.00          | 1.67             | [nan, nan, nan]  | [-0.04, -0.02, nan]| 1.20         | 0.71              |
+| task1     | 0.0           | -5.22            | [nan, 0.83, 0.71]| [nan, 0.02, 0.0]   | 0.94         | 0.70              |
+| task2     | 0.0           | -1.81            | [nan, nan, 0.53] | [-0.02, nan, 0.01] | 1.10         | 0.71              |
+| task3     | 0.0           | 1.86             | [nan, nan, nan]  | [-0.04, -0.02, nan]| 1.20         | 0.71              |
 
 ### Custom Metrics
 

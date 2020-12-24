@@ -2,6 +2,10 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.3.1 - 2020-12-21
+
+- Updated reference to metrics specification document 0.66
+
 ## 2.3.0 - 2020-12-21
 
 - Added scripts for multi-lifetime evaluation
@@ -37,7 +41,7 @@ All notable changes to this repository are documented here. We are using [Semant
 
 - Updated initial metrics to include all major identified lifelong learning metrics
 - Removed dependence on learnkit
-- Refectored metrics calculations to integrate with different log format
+- Refactored metrics calculations to integrate with different log format
 - Updated workflow for storing single-task expert data
 - Updated READMEs and example scripts
 - Added new example logs along with their metrics outputs

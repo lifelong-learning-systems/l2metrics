@@ -5,6 +5,7 @@ All notable changes to this repository are documented here. We are using [Semant
 ## 2.3.1 - 2020-12-21
 
 - Updated reference to metrics specification document 0.66
+- Fixed manual path generation bug between Windows and Linux when getting STE task names
 
 ## 2.3.0 - 2020-12-21
 

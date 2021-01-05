@@ -18,6 +18,7 @@
 
 import glob
 import os
+import pathlib
 from collections import OrderedDict
 
 import matplotlib.pyplot as plt
@@ -33,7 +34,7 @@ def get_ste_data_names() -> list:
     Returns:
         list: The STE task names.
     """
-    return [os.path.splitext(os.path.basename(x))[0] for x in glob.glob(get_l2root_base_dirs('taskinfo') + "\\*.pkl")]
+    return [f.stem for f in pathlib.Path(get_l2root_base_dirs('taskinfo')).glob('*.pkl')]
 
 
 def load_ste_data(task_name: str) -> pd.DataFrame:

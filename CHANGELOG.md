@@ -2,10 +2,15 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
-## 2.3.1 - 2020-12-21
+## 2.3.1 - 2021-01-11
 
 - Updated reference to metrics specification document 0.66
 - Fixed manual path generation bug between Windows and Linux when getting STE task names
+- Removed ambiguous imports in l2metrics init
+- Removed performance measure filter when loading log data to pass validation
+- Fixed dropping of metric values when NaNs were present in the same column
+- Converted all task names to lowercase for more robust name comparison
+- Fixed handling of NaN task parameters
 
 ## 2.3.0 - 2020-12-21
 

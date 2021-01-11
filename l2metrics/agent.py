@@ -945,8 +945,10 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Fill regime metrics dataframe
         regime_metrics_df = pd.concat([regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
-        regime_metrics_df['task_params'] = regime_metrics_df['task_params'].apply(
-            lambda x: x[:20] + '...' if len(x) > 20 else x)
+        if regime_metrics_df['task_params'].dropna().size:
+            regime_metrics_df['task_params'] = regime_metrics_df['task_params'].apply(lambda x: x[:25] + '...' if len(x) > 25 else x)
+        else:
+            regime_metrics_df = regime_metrics_df.dropna(axis=1)
 
         # Print regime-level metrics
         # print('\nRegime Metrics:')

@@ -207,6 +207,6 @@ def get_simple_rl_task_names(task_names: list) -> list:
 
     for t in task_names:
         splits = str.split(t, '_')
-        simple_names.append(splits[-1])
+        simple_names.append(splits[-1].lower())
 
     return simple_names

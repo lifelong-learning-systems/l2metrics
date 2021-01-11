@@ -16,13 +16,13 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
-import glob
 import os
 import pathlib
 from collections import OrderedDict
 
 import l2logger.util as l2l
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from . import _localutil
@@ -34,7 +34,7 @@ def get_ste_data_names() -> list:
     Returns:
         list: The STE task names.
     """
-    return [f.stem for f in pathlib.Path(l2l.get_l2root_base_dirs('taskinfo')).glob('*.pkl')]
+    return np.char.lower([f.stem for f in pathlib.Path(l2l.get_l2root_base_dirs('taskinfo')).glob('*.pkl')])
 
 
 def load_ste_data(task_name: str) -> pd.DataFrame:
@@ -85,7 +85,7 @@ def save_ste_data(log_dir: str) -> None:
     ste_data = ste_data[ste_data['block_type'] == 'train']
 
     # Get task name
-    task_name = ste_data.task_name.unique()
+    task_name = np.char.lower(list(ste_data.task_name.unique()))
 
     # Check for number of tasks in scenario
     if task_name.size != 1:

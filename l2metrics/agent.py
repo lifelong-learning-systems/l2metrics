@@ -741,7 +741,7 @@ class AgentMetricsReport(core.MetricsReport):
             raise Exception(f'Performance measure not found in metrics columns: {self.perf_measure}')
 
         # Gets all data from the relevant log files
-        self._log_data = l2l.read_log_data(self.log_dir, [self.perf_measure])
+        self._log_data = l2l.read_log_data(self.log_dir)
 
         # Validate scenario info
         l2l.validate_scenario_info(self.log_dir)

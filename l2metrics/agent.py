@@ -898,7 +898,7 @@ class AgentMetricsReport(core.MetricsReport):
                         else:
                             self.task_metrics_df.at[task, metric] = metric_values
         
-        self.task_metrics_df = self.task_metrics_df.dropna(axis=1)
+        self.task_metrics_df = self.task_metrics_df
 
     def calculate_lifetime_metrics(self) -> None:
         # Calculate lifetime metrics from task metrics
@@ -926,7 +926,7 @@ class AgentMetricsReport(core.MetricsReport):
                 if len(metric_vals):
                     self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
         
-        self.lifetime_metrics_df = self.lifetime_metrics_df.dropna(axis=1)
+        self.lifetime_metrics_df = self.lifetime_metrics_df
 
     def report(self, save: bool = False, output: str = None) -> None:
         # TODO: Handle reporting custom metrics

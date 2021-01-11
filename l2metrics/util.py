@@ -21,9 +21,9 @@ import os
 import pathlib
 from collections import OrderedDict
 
+import l2logger.util as l2l
 import matplotlib.pyplot as plt
 import pandas as pd
-from l2logger.util import *
 
 from . import _localutil
 
@@ -34,7 +34,7 @@ def get_ste_data_names() -> list:
     Returns:
         list: The STE task names.
     """
-    return [f.stem for f in pathlib.Path(get_l2root_base_dirs('taskinfo')).glob('*.pkl')]
+    return [f.stem for f in pathlib.Path(l2l.get_l2root_base_dirs('taskinfo')).glob('*.pkl')]
 
 
 def load_ste_data(task_name: str) -> pd.DataFrame:
@@ -51,7 +51,7 @@ def load_ste_data(task_name: str) -> pd.DataFrame:
     """
 
     if task_name in get_ste_data_names():
-        data_file_name = get_l2root_base_dirs('taskinfo', task_name + '.pkl')
+        data_file_name = l2l.get_l2root_base_dirs('taskinfo', task_name + '.pkl')
         dataframe = pd.read_pickle(data_file_name)
         return dataframe
     else:
@@ -69,16 +69,16 @@ def save_ste_data(log_dir: str) -> None:
     """
 
     # Load data from ste logs
-    ste_data = read_log_data(log_dir)
+    ste_data = l2l.read_log_data(log_dir)
 
     # Get metric fields
-    metric_fields = read_logger_info(log_dir)
+    metric_fields = l2l.read_logger_info(log_dir)
 
     # Validate data format
-    validate_log(ste_data, metric_fields)
+    l2l.validate_log(ste_data, metric_fields)
 
     # Fill in regime number and sort
-    ste_data = fill_regime_num(ste_data)
+    ste_data = l2l.fill_regime_num(ste_data)
     ste_data = ste_data.sort_values(by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
 
     # Filter out training only data
@@ -92,11 +92,11 @@ def save_ste_data(log_dir: str) -> None:
         raise Exception('Scenario contains more than one task')
 
     # Create task info directory if it doesn't exist
-    if not os.path.exists(get_l2root_base_dirs('taskinfo')):
-        os.makedirs(get_l2root_base_dirs('taskinfo'))
+    if not os.path.exists(l2l.get_l2root_base_dirs('taskinfo')):
+        os.makedirs(l2l.get_l2root_base_dirs('taskinfo'))
 
     # Get base directory to store ste data
-    filename = get_l2root_base_dirs('taskinfo', task_name[0] + '.pkl')
+    filename = l2l.get_l2root_base_dirs('taskinfo', task_name[0] + '.pkl')
 
     # Store ste data in task info directory
     ste_data.to_pickle(filename)
@@ -105,7 +105,7 @@ def save_ste_data(log_dir: str) -> None:
 
 
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, do_smoothing: bool = False,
-                     col_to_plot: str = 'reward', x_axis_col: str = 'exp_num', input_title: str = None,
+                     col_to_plot: str = 'reward', x_axis_col: str = 'exp_num', input_title: str = "",
                      do_save_fig: bool = True, plot_filename: str = None, input_xlabel: str = 'Episodes',
                      input_ylabel: str = 'Performance', show_block_boundary: bool = True,
                      shade_test_blocks: bool = True, window_len: int = None) -> None:

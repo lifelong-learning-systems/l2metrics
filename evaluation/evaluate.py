@@ -28,12 +28,13 @@ import argparse
 import json
 from pathlib import Path
 
-import l2metrics
 import matplotlib.pyplot as plt
 import pandas as pd
 import scipy
 import seaborn as sns
 from IPython.display import display
+from l2metrics import util
+from l2metrics.agent import AgentMetricsReport
 
 sns.set_style("dark")
 sns.set_context("paper")
@@ -58,7 +59,7 @@ def save_ste_data(log_dir: Path) -> None:
         print('Storing STE data...')
         for ste_dir in ste_log_dir.iterdir():
             if ste_dir.is_dir():
-                l2metrics.util.save_ste_data(str(ste_dir))
+                util.save_ste_data(str(ste_dir))
         print('Done storing STE data!\n')
     else:
         # STE log path not found - possibly because comrpressed archive has not been
@@ -107,7 +108,7 @@ def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_s
                         scenario_dir = str(sub_path)
 
                         # Initialize metrics report
-                        report = l2metrics.AgentMetricsReport(
+                        report = AgentMetricsReport(
                             log_dir=scenario_dir, perf_measure=perf_measure,
                             transfer_method=transfer_method, do_smoothing=do_smoothing)
 

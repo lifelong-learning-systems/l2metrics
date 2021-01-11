@@ -17,8 +17,10 @@
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
 import argparse
+import traceback
 
-import l2metrics
+from l2metrics import util
+from l2metrics.agent import AgentMetricsReport
 
 
 def run() -> None:
@@ -26,7 +28,8 @@ def run() -> None:
     parser = argparse.ArgumentParser(description='Run L2Metrics from the command line')
 
     # Log directories can be absolute paths, relative paths, or paths found in $L2DATA/logs
-    parser.add_argument('-l', '--log-dir', required=True, help='Log directory of scenario')
+    parser.add_argument('-l', '--log-dir', required=True,
+                        help='Log directory of scenario')
 
     # Flag for storing log data as STE data
     parser.add_argument('-s', '--store-ste-data', action='store_true',
@@ -35,7 +38,7 @@ def run() -> None:
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf-measure', default='reward',
                         help='Name of column to use for metrics calculations')
-    
+
     # Method for calculating forward and backward transfer
     parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
@@ -49,10 +52,12 @@ def run() -> None:
                         help='Do not smooth performance data for metrics and plotting')
 
     # Flag for disabling plotting
-    parser.add_argument('--no-plot', action='store_true', help='Do not plot performance')
+    parser.add_argument('--no-plot', action='store_true',
+                        help='Do not plot performance')
 
     # Flag for disabling save
-    parser.add_argument('--no-save', action='store_true', help='Do not save metrics outputs')
+    parser.add_argument('--no-save', action='store_true',
+                        help='Do not save metrics outputs')
 
     # Parse arguments
     args = parser.parse_args()
@@ -61,11 +66,11 @@ def run() -> None:
     do_save = not args.no_save
 
     if args.store_ste_data:
-        l2metrics.util.save_ste_data(args.log_dir)
+        util.save_ste_data(args.log_dir)
     else:
         # Initialize metrics report
-        report = l2metrics.AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
-                                              transfer_method=args.transfer_method, do_smoothing=do_smoothing)
+        report = AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
+                                    transfer_method=args.transfer_method, do_smoothing=do_smoothing)
 
         # Calculate metrics in order of their addition to the metrics list.
         report.calculate()
@@ -83,3 +88,4 @@ if __name__ == '__main__':
         run()
     except Exception as e:
         print(f'Error: {e}')
+        traceback.print_exc()

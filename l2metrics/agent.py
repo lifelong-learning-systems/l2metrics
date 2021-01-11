@@ -22,6 +22,7 @@ from collections import defaultdict
 from itertools import permutations
 from typing import List, Tuple, Union
 
+import l2logger.util as l2l
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -733,23 +734,23 @@ class AgentMetricsReport(core.MetricsReport):
         self.task_metrics.extend(['ste_rel_perf', 'sample_efficiency'])
 
         # Get metric fields
-        metric_fields = util.read_logger_info(self.log_dir)
+        metric_fields = l2l.read_logger_info(self.log_dir)
 
          # Do a check to make sure the performance measure has been logged
         if self.perf_measure not in metric_fields:
             raise Exception(f'Performance measure not found in metrics columns: {self.perf_measure}')
 
         # Gets all data from the relevant log files
-        self._log_data = util.read_log_data(self.log_dir, [self.perf_measure])
+        self._log_data = l2l.read_log_data(self.log_dir, [self.perf_measure])
 
         # Validate scenario info
-        util.validate_scenario_info(self.log_dir)
+        l2l.validate_scenario_info(self.log_dir)
 
         # Validate data format
-        util.validate_log(self._log_data, metric_fields)
+        l2l.validate_log(self._log_data, metric_fields)
 
         # Fill in regime number and sort
-        self._log_data = util.fill_regime_num(self._log_data)
+        self._log_data = l2l.fill_regime_num(self._log_data)
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
 
@@ -760,7 +761,7 @@ class AgentMetricsReport(core.MetricsReport):
             raise Exception('No valid log data to compute metrics')
 
         # Get block summary
-        _, self.block_info = util.parse_blocks(self._log_data)
+        _, self.block_info = l2l.parse_blocks(self._log_data)
 
         # Store unique task names
         self._unique_tasks = _localutil.get_simple_rl_task_names(

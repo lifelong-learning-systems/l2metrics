@@ -2,6 +2,13 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.4.0 - 2021-01-25
+
+- Added explanation for transfer matrix output in README
+- Removed task name simplification for greater compatibility with learnkit and custom task names
+- Added computational cost parser in evaluation scripts
+- Fixed minor bug when no STE data is stored
+
 ## 2.3.1 - 2021-01-11
 
 - Updated reference to metrics specification document 0.66

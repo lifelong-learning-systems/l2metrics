@@ -177,6 +177,18 @@ Additionally, the script will print the metrics report to the console and save t
 | task2     | 0.0           | -1.81            | [nan, nan, 0.53]          | [-0.02, nan, 0.01]         | 1.10         | 0.71              |
 | task3     | 0.0           | 1.86             | [nan, nan, nan]           | [-0.04, -0.02, nan]        | 1.20         | 0.71              |
 
+Where the transfer rows can be interpreted as follows:
+
+- `task1`'s forward transfer to `task2` is 0.83.
+- `task1`'s forward transfer to `task3` is 0.71.
+- `task2`'s forward transfer to `task3` is 0.53.
+- `task1`'s backward transfer to `task2` is 0.02.
+- `task1`'s backward transfer to `task3` is 0.0.
+- `task2`'s backward transfer to `task1` is -0.02.
+- `task2`'s backward transfer to `task3` is 0.01.
+- `task3`'s backward transfer to `task1` is -0.04.
+- `task3`'s backward transfer to `task2` is -0.02.
+
 ### Custom Metrics
 
 See documentation in the examples folder at [examples/README.md](./examples/README.md) for more details on how to implement custom metrics.

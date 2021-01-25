@@ -221,8 +221,7 @@ class PerformanceRecovery(AgentMetric):
 
             # Calculate performance recovery for each task
             for task in block_info.loc[:, 'task_name'].unique():
-                r = metrics_df[metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
-                        [task])[0]]['recovery_time']
+                r = metrics_df[metrics_df['task_name'] == task]['recovery_time']
                 r = r[r.notna()]
 
                 # Get Theil-Sen slope
@@ -311,8 +310,7 @@ class PerformanceMaintenance(AgentMetric):
                 for task in block_info.loc[:, 'task_name'].unique():
 
                     # Get the task maintenance values
-                    m = metrics_df[metrics_df['task_name'] == _localutil.get_simple_rl_task_names(
-                        [task])[0]]['maintenance_val'].values
+                    m = metrics_df[metrics_df['task_name'] == task]['maintenance_val'].values
 
                     # Remove NaNs
                     m = m[~np.isnan(m)]
@@ -417,24 +415,18 @@ class ForwardTransfer(AgentMetric):
 
             # Calculate forward transfer for valid task pairs
             for task, value in tasks_for_ft.items():
-                # Get simple task name
-                task_name = _localutil.get_simple_rl_task_names([task])[0]
-
                 for trans_task, trans_blocks in value.items():
-                    # Get simple task name
-                    trans_task_name = _localutil.get_simple_rl_task_names([trans_task])[0]
-
-                    tp_1 = metrics_df[(metrics_df['task_name'] == trans_task_name) & (
+                    tp_1 = metrics_df[(metrics_df['task_name'] == trans_task) & (
                         metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
-                    tp_2 = metrics_df[(metrics_df['task_name'] == trans_task_name) & (
+                    tp_2 = metrics_df[(metrics_df['task_name'] == trans_task) & (
                         metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
                     idx = block_info[(block_info['task_name'] == trans_task) & (
                         block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
 
                     if do_contrast:
-                        forward_transfer_contrast[idx] = [{task_name: (tp_2 - tp_1) / (tp_1 + tp_2)}]
+                        forward_transfer_contrast[idx] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
                     if do_ratio:
-                        forward_transfer_ratio[idx] = [{task_name: tp_2 / tp_1}]
+                        forward_transfer_ratio[idx] = [{task: tp_2 / tp_1}]
 
             if do_contrast:
                 metrics_df = _localutil.fill_metrics_df(forward_transfer_contrast, 'forward_transfer_contrast', metrics_df)
@@ -764,8 +756,7 @@ class AgentMetricsReport(core.MetricsReport):
         _, self.block_info = l2l.parse_blocks(self._log_data)
 
         # Store unique task names
-        self._unique_tasks = _localutil.get_simple_rl_task_names(
-            self.block_info.loc[:, 'task_name'].unique())
+        self._unique_tasks = list(self.block_info.loc[:, 'task_name'].unique())
 
         # Do a check to make sure the performance measure is logged
         if self.perf_measure not in self._log_data.columns:
@@ -781,8 +772,6 @@ class AgentMetricsReport(core.MetricsReport):
             block_info_keys_to_include.append('task_params')
 
         self._metrics_df = self.block_info[block_info_keys_to_include].copy()
-        self._metrics_df['task_name'] = _localutil.get_simple_rl_task_names(
-            self._metrics_df.loc[:, 'task_name'].values)
 
     def add(self, metrics_list: Union[AgentMetric, List[AgentMetric]]) -> None:
         self._metrics.append(metrics_list)
@@ -897,8 +886,6 @@ class AgentMetricsReport(core.MetricsReport):
                             self.task_metrics_df.at[task, metric] = metric_values[0]
                         else:
                             self.task_metrics_df.at[task, metric] = metric_values
-        
-        self.task_metrics_df = self.task_metrics_df
 
     def calculate_lifetime_metrics(self) -> None:
         # Calculate lifetime metrics from task metrics
@@ -925,8 +912,6 @@ class AgentMetricsReport(core.MetricsReport):
 
                 if len(metric_vals):
                     self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
-        
-        self.lifetime_metrics_df = self.lifetime_metrics_df
 
     def report(self, save: bool = False, output: str = None) -> None:
         # TODO: Handle reporting custom metrics

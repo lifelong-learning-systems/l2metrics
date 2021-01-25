@@ -17,8 +17,8 @@
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
 import os
-import pathlib
 from collections import OrderedDict
+from pathlib import Path
 
 import l2logger.util as l2l
 import matplotlib.pyplot as plt
@@ -34,7 +34,13 @@ def get_ste_data_names() -> list:
     Returns:
         list: The STE task names.
     """
-    return np.char.lower([f.stem for f in pathlib.Path(l2l.get_l2root_base_dirs('taskinfo')).glob('*.pkl')])
+
+    ste_files = list(Path(l2l.get_l2root_base_dirs('taskinfo')).glob('*.pkl'))
+
+    if ste_files:
+        return np.char.lower([f.stem for f in ste_files])
+    else:
+        return []
 
 
 def load_ste_data(task_name: str) -> pd.DataFrame:

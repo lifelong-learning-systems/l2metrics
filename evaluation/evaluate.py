@@ -26,6 +26,7 @@ evaluation.ipynb.
 
 import argparse
 import json
+import traceback
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -55,8 +56,11 @@ def load_computational_costs(log_dir: Path) -> pd.DataFrame:
 
     # Concatenate computational cost data
     docs_dir = log_dir / 'docs'
-    comp_cost_df = pd.concat(
-        (pd.read_csv(f) for f in docs_dir.glob('computation*.csv')), ignore_index=True)
+
+    comp_cost_files = list(docs_dir.glob('computation*.csv'))
+
+    if comp_cost_files:
+        comp_cost_df = pd.concat((pd.read_csv(f) for f in comp_cost_files), ignore_index=True)
 
     return comp_cost_df
 
@@ -276,5 +280,6 @@ if __name__ == '__main__':
         evaluate()
     except Exception as e:
         print(f'Error: {e}')
+        traceback.print_exc()
 else:
     from tqdm.notebook import tqdm

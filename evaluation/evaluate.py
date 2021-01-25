@@ -40,6 +40,27 @@ sns.set_style("dark")
 sns.set_context("paper")
 
 
+def load_computational_costs(log_dir: Path) -> pd.DataFrame:
+    """Load the computational cost data from the given log directory.
+
+    Args:
+        log_dir (Path): Path to agent configuration directory containing computational cost data.
+
+    Returns:
+        pd.DataFrame: DataFrame containing computational costs for system and agent.
+    """
+
+    # Initialize computational cost dataframe
+    comp_cost_df = pd.DataFrame()
+
+    # Concatenate computational cost data
+    docs_dir = log_dir / 'docs'
+    comp_cost_df = pd.concat(
+        (pd.read_csv(f) for f in docs_dir.glob('computation*.csv')), ignore_index=True)
+
+    return comp_cost_df
+
+
 def save_ste_data(log_dir: Path) -> None:
     """Save all single-task expert data in provided log directory.
 
@@ -123,9 +144,11 @@ def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_s
                         with open(sub_path / 'scenario_info.json', 'r') as json_file:
                             scenario_info = json.load(json_file)
                             if 'complexity' in scenario_info:
-                                ll_metrics_df.at[ll_metrics_df.index[-1], 'complexity'] = scenario_info['complexity']
+                                ll_metrics_df.at[ll_metrics_df.index[-1],
+                                                 'complexity'] = scenario_info['complexity']
                             if 'difficulty' in scenario_info:
-                                ll_metrics_df.at[ll_metrics_df.index[-1], 'difficulty'] = scenario_info['difficulty']
+                                ll_metrics_df.at[ll_metrics_df.index[-1],
+                                                 'difficulty'] = scenario_info['difficulty']
 
     else:
         raise FileNotFoundError(f"LL logs not found in expected location!")
@@ -214,6 +237,9 @@ def evaluate() -> None:
     do_plot = not args.no_plot
     do_save = not args.no_save
 
+    # Load computational cost data
+    comp_cost_df = load_computational_costs(log_dir)
+
     # Store STE log data
     save_ste_data(log_dir)
 
@@ -222,8 +248,10 @@ def evaluate() -> None:
         log_dir, args.perf_measure, args.transfer_method, do_smoothing)
 
     # Display aggregated data
-    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['mean', 'std']))
-    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['median', scipy.stats.iqr]))
+    display(ll_metrics_df.groupby(
+        by=['complexity', 'difficulty']).agg(['mean', 'std']))
+    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(
+        ['median', scipy.stats.iqr]))
 
     # Plot aggregated data
     if do_plot:

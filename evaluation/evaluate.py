@@ -28,6 +28,7 @@ import argparse
 import json
 import traceback
 from pathlib import Path
+import warnings
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -56,11 +57,12 @@ def load_computational_costs(log_dir: Path) -> pd.DataFrame:
 
     # Concatenate computational cost data
     docs_dir = log_dir / 'docs'
-
     comp_cost_files = list(docs_dir.glob('computation*.csv'))
 
     if comp_cost_files:
         comp_cost_df = pd.concat((pd.read_csv(f) for f in comp_cost_files), ignore_index=True)
+    else:
+        warnings.warn(f"No computational cost files found in directory: {log_dir}\n")
 
     return comp_cost_df
 

@@ -94,6 +94,44 @@ def save_ste_data(log_dir: Path) -> None:
         raise FileNotFoundError(f"STE logs not found in expected location!")
 
 
+def compute_scenario_metrics(path: Path, perf_measure: str, transfer_method: str, do_smoothing: bool) -> pd.DataFrame:
+    """Compute lifelong learning metrics for single LL logs found at input path.
+
+    Args:
+        path (Path): Path to scenario directory.
+        perf_measure (str): Name of column to use for metrics calculations.
+        transfer_method (str): Method for computing forward and backward transfer.
+            Valid values are 'contrast', 'ratio', and 'both.'
+        do_smoothing (bool): Flag for enabling smoothing on performance data for metrics.
+
+    Returns:
+        pd.DataFrame: DataFrame containing lifelong metrics from scenarios.
+    """
+
+    scenario_dir = str(path)
+
+    # Initialize metrics report
+    report = AgentMetricsReport(
+        log_dir=scenario_dir, perf_measure=perf_measure,
+        transfer_method=transfer_method, do_smoothing=do_smoothing)
+
+    # Calculate metrics in order of their addition to the metrics list
+    report.calculate()
+
+    # Append lifetime metrics to dataframe
+    ll_metrics_df = report.lifetime_metrics_df
+
+    # Append scenario complexity and difficulty
+    with open(path / 'scenario_info.json', 'r') as json_file:
+        scenario_info = json.load(json_file)
+        if 'complexity' in scenario_info:
+            ll_metrics_df['complexity'] = scenario_info['complexity']
+        if 'difficulty' in scenario_info:
+            ll_metrics_df['difficulty'] = scenario_info['difficulty']
+    
+    return ll_metrics_df
+
+
 def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_smoothing: bool) -> pd.DataFrame:
     """Compute lifelong learning metrics for all LL logs in provided log directory.
 
@@ -130,32 +168,16 @@ def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_s
         # Compute and store the LL metrics for all scenarios found in the directory
         for path in tqdm(list(ll_log_dir.iterdir()), desc='Overall'):
             if path.is_dir():
-                for sub_path in tqdm(list(path.iterdir()), desc=path.name):
-                    if sub_path.is_dir():
-                        scenario_dir = str(sub_path)
-
-                        # Initialize metrics report
-                        report = AgentMetricsReport(
-                            log_dir=scenario_dir, perf_measure=perf_measure,
-                            transfer_method=transfer_method, do_smoothing=do_smoothing)
-
-                        # Calculate metrics in order of their addition to the metrics list
-                        report.calculate()
-
-                        # Append lifetime metrics to dataframe
-                        ll_metrics_df = ll_metrics_df.append(
-                            report.lifetime_metrics_df, ignore_index=True)
-
-                        # Append scenario complexity and difficulty
-                        with open(sub_path / 'scenario_info.json', 'r') as json_file:
-                            scenario_info = json.load(json_file)
-                            if 'complexity' in scenario_info:
-                                ll_metrics_df.at[ll_metrics_df.index[-1],
-                                                 'complexity'] = scenario_info['complexity']
-                            if 'difficulty' in scenario_info:
-                                ll_metrics_df.at[ll_metrics_df.index[-1],
-                                                 'difficulty'] = scenario_info['difficulty']
-
+                # Check if current path is log directory for single run
+                if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
+                    ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
+                        path, perf_measure, transfer_method, do_smoothing))
+                else:
+                    # Iterate through subdirectories containing LL logs
+                    for sub_path in tqdm(list(path.iterdir()), desc=path.name):
+                        if sub_path.is_dir():
+                            ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
+                                sub_path, perf_measure, transfer_method, do_smoothing))
     else:
         raise FileNotFoundError(f"LL logs not found in expected location!")
 

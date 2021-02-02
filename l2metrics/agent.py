@@ -792,8 +792,25 @@ class AgentMetricsReport(core.MetricsReport):
         for metric in self._metrics:
             self._metrics_df = metric.calculate(self._log_data, self.block_info, self._metrics_df)
         
+        self.calculate_regime_metrics()
         self.calculate_task_metrics()
         self.calculate_lifetime_metrics()
+
+
+    def calculate_regime_metrics(self) -> None:
+        # Create dataframe for regime-level metrics
+        regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
+        self.regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'task_params']]
+
+        # Fill regime metrics dataframe
+        self.regime_metrics_df = pd.concat(
+            [self.regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
+        if self.regime_metrics_df['task_params'].dropna().size:
+            self.regime_metrics_df['task_params'] = self.regime_metrics_df['task_params'].apply(
+                lambda x: x[:25] + '...' if len(x) > 25 else x)
+        else:
+            self.regime_metrics_df = self.regime_metrics_df.dropna(axis=1)
+
 
     def calculate_task_metrics(self) -> None:
         self.task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=self.task_metrics)
@@ -924,20 +941,9 @@ class AgentMetricsReport(core.MetricsReport):
         print('\nTask Metrics:')
         print(tabulate(self.task_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
 
-        # Create dataframe for regime-level metrics
-        regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
-        regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'task_params']]
-
-        # Fill regime metrics dataframe
-        regime_metrics_df = pd.concat([regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
-        if regime_metrics_df['task_params'].dropna().size:
-            regime_metrics_df['task_params'] = regime_metrics_df['task_params'].apply(lambda x: x[:25] + '...' if len(x) > 25 else x)
-        else:
-            regime_metrics_df = regime_metrics_df.dropna(axis=1)
-
         # Print regime-level metrics
         # print('\nRegime Metrics:')
-        # print(tabulate(regime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f"))
+        # print(tabulate(self.regime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f"))
 
         if save:
             # Generate filename
@@ -952,7 +958,7 @@ class AgentMetricsReport(core.MetricsReport):
                 metrics_file.write('\n')
                 self.task_metrics_df.to_csv(metrics_file, sep='\t')
                 metrics_file.write('\n')
-                regime_metrics_df.to_csv(metrics_file, sep='\t')
+                self.regime_metrics_df.to_csv(metrics_file, sep='\t')
 
     def plot(self, save: bool = False, output: str = None) -> None:
         if output is None:

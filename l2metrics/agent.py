@@ -756,7 +756,8 @@ class AgentMetricsReport(core.MetricsReport):
         _, self.block_info = l2l.parse_blocks(self._log_data)
 
         # Store unique task names
-        self._unique_tasks = list(self.block_info.loc[:, 'task_name'].unique())
+        self._unique_tasks = list(
+            self.block_info[self.block_info['block_type'] == 'train'].loc[:, 'task_name'].unique())
 
         # Do a check to make sure the performance measure is logged
         if self.perf_measure not in self._log_data.columns:

@@ -8,6 +8,8 @@ To evaluate multi-lifetime metrics for a lifetime learning agent, you must first
 
 Once logs have been generated or unzipped, the LL agent can be evaluated with either the Jupyter notebook (`evaluation.ipypnb`) or the Python script (`evaluate.py`). Both methods require some configuration or input arguments for properly generating the metrics summary report.
 
+**Note**: The evaluation scripts assume the directory structure described in the example evaluation repository README for finding STE and LL logs. The scripts will raise an error if the directory structure does not match what is expected.
+
 ### Command-Line Execution
 
 ```

@@ -2,6 +2,18 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.5.0 - 2021-02-07
+
+- Handled LL logs in evaluation directories not contained within top-level scenario log directories
+- Fixed import error in example metric calculation script
+- Separated regime metric calculations to class method and store as member variable
+- Added Python notebook for calculating single lifetime metrics with additional summaries
+- Sort task names by order in which they are trained to make interpreting transfer matrix easier
+- Handle NaNs in calculating regime metrics
+- Filter log data by completed experiences before filling in regime number to handle misnumbering
+- Handle NaNs and empty lists in saturation and terminal performance calculations
+- Update evaluation README to describe directory structure assumptions
+
 ## 2.4.0 - 2021-01-25
 
 - Added explanation for transfer matrix output in README

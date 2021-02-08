@@ -741,13 +741,13 @@ class AgentMetricsReport(core.MetricsReport):
         # Validate data format
         l2l.validate_log(self._log_data, metric_fields)
 
+        # Filter data by completed experiences
+        self._log_data = self._log_data[self._log_data['exp_status'] == 'complete']
+
         # Fill in regime number and sort
         self._log_data = l2l.fill_regime_num(self._log_data)
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
-
-        # Filter data by completed experiences
-        self._log_data = self._log_data[self._log_data['exp_status'] == 'complete']
 
         if len(self._log_data) == 0:
             raise Exception('No valid log data to compute metrics')
@@ -756,7 +756,8 @@ class AgentMetricsReport(core.MetricsReport):
         _, self.block_info = l2l.parse_blocks(self._log_data)
 
         # Store unique task names
-        self._unique_tasks = list(self.block_info.loc[:, 'task_name'].unique())
+        self._unique_tasks = list(
+            self.block_info[self.block_info['block_type'] == 'train'].loc[:, 'task_name'].unique())
 
         # Do a check to make sure the performance measure is logged
         if self.perf_measure not in self._log_data.columns:
@@ -792,8 +793,25 @@ class AgentMetricsReport(core.MetricsReport):
         for metric in self._metrics:
             self._metrics_df = metric.calculate(self._log_data, self.block_info, self._metrics_df)
         
+        self.calculate_regime_metrics()
         self.calculate_task_metrics()
         self.calculate_lifetime_metrics()
+
+
+    def calculate_regime_metrics(self) -> None:
+        # Create dataframe for regime-level metrics
+        regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
+        self.regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'task_params']]
+
+        # Fill regime metrics dataframe
+        self.regime_metrics_df = pd.concat(
+            [self.regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
+        if self.regime_metrics_df['task_params'].size:
+            self.regime_metrics_df['task_params'] = self.regime_metrics_df['task_params'].dropna().apply(
+                lambda x: x[:25] + '...' if len(x) > 25 else x)
+        else:
+            self.regime_metrics_df = self.regime_metrics_df.dropna(axis=1)
+
 
     def calculate_task_metrics(self) -> None:
         self.task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=self.task_metrics)
@@ -924,20 +942,9 @@ class AgentMetricsReport(core.MetricsReport):
         print('\nTask Metrics:')
         print(tabulate(self.task_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
 
-        # Create dataframe for regime-level metrics
-        regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
-        regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'task_params']]
-
-        # Fill regime metrics dataframe
-        regime_metrics_df = pd.concat([regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
-        if regime_metrics_df['task_params'].dropna().size:
-            regime_metrics_df['task_params'] = regime_metrics_df['task_params'].apply(lambda x: x[:25] + '...' if len(x) > 25 else x)
-        else:
-            regime_metrics_df = regime_metrics_df.dropna(axis=1)
-
         # Print regime-level metrics
         # print('\nRegime Metrics:')
-        # print(tabulate(regime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f"))
+        # print(tabulate(self.regime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f"))
 
         if save:
             # Generate filename
@@ -952,7 +959,7 @@ class AgentMetricsReport(core.MetricsReport):
                 metrics_file.write('\n')
                 self.task_metrics_df.to_csv(metrics_file, sep='\t')
                 metrics_file.write('\n')
-                regime_metrics_df.to_csv(metrics_file, sep='\t')
+                self.regime_metrics_df.to_csv(metrics_file, sep='\t')
 
     def plot(self, save: bool = False, output: str = None) -> None:
         if output is None:

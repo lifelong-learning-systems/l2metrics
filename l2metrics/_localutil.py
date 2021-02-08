@@ -106,17 +106,24 @@ def get_block_saturation_perf(data: pd.DataFrame, col_to_use: str, prev_sat_val:
 
     # Take the moving average of the mean of the per episode reward
     smoothed_data = smooth(mean_data, window_len=window_len, window='flat')
-    saturation_value = np.nanmax(smoothed_data)
+    smoothed_data = smoothed_data[~np.isnan(smoothed_data)]
 
-    # Calculate the number of episodes to "saturation", which we define as the max of the moving average
-    inds = np.where(smoothed_data == saturation_value)
-    episodes_to_saturation = inds[0][0]
-    episodes_to_recovery = len(data) + 1
+    if len(smoothed_data):
+        saturation_value = np.max(smoothed_data)
 
-    if prev_sat_val:
-        inds = np.where(smoothed_data >= prev_sat_val)
-        if len(inds[0]):
-            episodes_to_recovery = inds[0][0]
+        # Calculate the number of episodes to "saturation", which we define as the max of the moving average
+        inds = np.where(smoothed_data == saturation_value)
+        episodes_to_saturation = inds[0][0]
+        episodes_to_recovery = len(data) + 1
+
+        if prev_sat_val:
+            inds = np.where(smoothed_data >= prev_sat_val)
+            if len(inds[0]):
+                episodes_to_recovery = inds[0][0]
+    else:
+        saturation_value = np.nan
+        episodes_to_saturation = np.nan
+        episodes_to_recovery = np.nan
 
     return saturation_value, episodes_to_saturation, episodes_to_recovery
 
@@ -143,23 +150,29 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
     # Aggregate multiple reward values for the same episode
     mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
     mean_data = np.ravel(mean_reward_per_episode.values)
+    mean_data = mean_data[~np.isnan(mean_data)]
 
-    # Take the moving average of the mean of the per episode reward
-    if do_smoothing:
-        mean_data = smooth(mean_data, window_len=window_len, window='flat')
+    if len(mean_data):
+        # Take the moving average of the mean of the per episode reward
+        if do_smoothing:
+            mean_data = smooth(mean_data, window_len=window_len, window='flat')
 
-    terminal_value = np.mean(mean_data[int((1-term_window_ratio)*mean_data.size):])
+        terminal_value = np.mean(mean_data[int((1-term_window_ratio)*mean_data.size):])
 
-    # Calculate the number of episodes to terminal performance
-    episodes_to_terminal_perf = int((1-(term_window_ratio/2))*mean_data.size)
+        # Calculate the number of episodes to terminal performance
+        episodes_to_terminal_perf = int((1-(term_window_ratio/2))*mean_data.size)
 
-    # Initialize recovery time to one more than number of learning experiences in the data
-    episodes_to_recovery = len(data) + 1
+        # Initialize recovery time to one more than number of learning experiences in the data
+        episodes_to_recovery = len(data) + 1
 
-    if prev_val is not None:
-        inds = np.where(mean_data >= prev_val)
-        if len(inds[0]):
-            episodes_to_recovery = inds[0][0]
+        if prev_val is not None:
+            inds = np.where(mean_data >= prev_val)
+            if len(inds[0]):
+                episodes_to_recovery = inds[0][0]
+    else:
+        terminal_value = np.nan
+        episodes_to_terminal_perf = np.nan
+        episodes_to_recovery = np.nan
 
     return terminal_value, episodes_to_terminal_perf, episodes_to_recovery
 

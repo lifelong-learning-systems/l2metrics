@@ -741,13 +741,13 @@ class AgentMetricsReport(core.MetricsReport):
         # Validate data format
         l2l.validate_log(self._log_data, metric_fields)
 
+        # Filter data by completed experiences
+        self._log_data = self._log_data[self._log_data['exp_status'] == 'complete']
+
         # Fill in regime number and sort
         self._log_data = l2l.fill_regime_num(self._log_data)
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
-
-        # Filter data by completed experiences
-        self._log_data = self._log_data[self._log_data['exp_status'] == 'complete']
 
         if len(self._log_data) == 0:
             raise Exception('No valid log data to compute metrics')

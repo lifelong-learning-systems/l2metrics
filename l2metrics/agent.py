@@ -173,7 +173,7 @@ class RecoveryTime(AgentMetric):
             recovery_time = {}
 
             # Iterate over indices for computing recovery time
-            for (task, ref_vals), (_, assess_vals) in zip(ref_indices.items(), assess_indices.items()):
+            for (_, ref_vals), (_, assess_vals) in zip(ref_indices.items(), assess_indices.items()):
                 for ref_ind, assess_ind in zip(ref_vals, assess_vals):
                     prev_val = metrics_df['term_perf'][ref_ind]
                     block_data = dataframe.loc[assess_ind]
@@ -467,6 +467,22 @@ class BackwardTransfer(AgentMetric):
         last_block_num = -1
         last_block_type = ''
 
+        # Ensure alternating block types
+        for _, regime in block_info.iterrows():
+            if regime['block_num'] != last_block_num:
+                last_block_num = regime['block_num']
+
+                if regime['block_type'] == 'test':
+                    if last_block_type == 'test':
+                        warnings.warn('Block types are not alternating')
+                        break
+                    last_block_type = 'test'
+                elif regime['block_type'] == 'train':
+                    if last_block_type == 'train':
+                        warnings.warn('Block types are not alternating')
+                        break
+                    last_block_type = 'train'
+
         # Find eligible tasks for backward transfer
         unique_tasks = block_info.loc[:, 'task_name'].unique()
 
@@ -476,26 +492,9 @@ class BackwardTransfer(AgentMetric):
         # Iterate over all regimes in scenario
         for _, regime in block_info.iterrows():
             # Get regime info
-            block_num = regime['block_num']
             block_type = regime['block_type']
             task_name = regime['task_name']
             regime_num = regime['regime_num']
-
-            # Ensure alternating block types
-            for _, regime in block_info.iterrows():
-                if regime['block_num'] != last_block_num:
-                    last_block_num = regime['block_num']
-
-                    if regime['block_type'] == 'test':
-                        if last_block_type == 'test':
-                            warnings.warn('Block types are not alternating')
-                            break
-                        last_block_type = 'test'
-                    elif regime['block_type'] == 'train':
-                        if last_block_type == 'train':
-                            warnings.warn('Block types are not alternating')
-                            break
-                        last_block_type = 'train'
 
             # Check for valid backward transfer pair
             if block_type == 'train':

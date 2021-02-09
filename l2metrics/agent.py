@@ -138,41 +138,41 @@ class RecoveryTime(AgentMetric):
         unique_tasks = block_info.loc[:, 'task_name'].unique()
 
         # Determine where we need to assess recovery time for each task
-        ref_inds = defaultdict(list)
-        assess_inds = defaultdict(list)
+        ref_indices = defaultdict(list)
+        assess_indices = defaultdict(list)
 
         for task in unique_tasks:
             # Get train blocks in order of appearance
             tr_block_info = block_info.sort_index().loc[(block_info['block_type'] == 'train') &
                                                         (block_info['task_name'] == task),
                                                         ['task_name', 'task_params']]
-            tr_inds = tr_block_info.index
+            tr_indices = tr_block_info.index
 
             # Regimes are defined as new combinations of tasks and params, but can repeat, 
             # so check for changes across regimes
             first = True
-            for idx, block_idx in enumerate(tr_inds):
+            for idx, block_idx in enumerate(tr_indices):
                 if first:
                     first = False
                     continue
-                assess_inds[task].append(block_idx)
-                ref_inds[task].append(tr_inds[idx - 1])
+                assess_indices[task].append(block_idx)
+                ref_indices[task].append(tr_indices[idx - 1])
 
-        if not ref_inds or not assess_inds:
+        if not ref_indices or not assess_indices:
             raise Exception('Not enough blocks to assess recovery time')
 
-        return ref_inds, assess_inds
+        return ref_indices, assess_indices
 
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
             # Get the places where we should calculate recovery time
-            ref_inds, assess_inds = self.validate(block_info)
+            ref_indices, assess_indices = self.validate(block_info)
 
             # Initialize metric dictionary
             recovery_time = {}
 
             # Iterate over indices for computing recovery time
-            for (task, ref_vals), (_, assess_vals) in zip(ref_inds.items(), assess_inds.items()):
+            for (task, ref_vals), (_, assess_vals) in zip(ref_indices.items(), assess_indices.items()):
                 for ref_ind, assess_ind in zip(ref_vals, assess_vals):
                     prev_val = metrics_df['term_perf'][ref_ind]
                     block_data = dataframe.loc[assess_ind]
@@ -377,11 +377,15 @@ class ForwardTransfer(AgentMetric):
             other_test_blocks = other_blocks[other_blocks['block_type'] == 'test']['block_num'].values
             other_training_blocks = other_blocks[other_blocks['block_type'] == 'train']['block_num'].values
 
-            # FT - Must have tested task before training another task then more testing
-            if np.any(training_blocks < np.min(other_training_blocks)):
-                if len(other_test_blocks) >= 2:
+            # FT - Must have tested task 2 before task 2 then tested task 2 again
+            if len(training_blocks):
+                # Get valid training blocks for first task
+                valid_training_blocks = training_blocks[training_blocks < np.min(
+                    other_training_blocks)] if len(other_training_blocks) else training_blocks
+
+                if len(valid_training_blocks) and len(other_test_blocks) >= 2:
                     for idx in range(len(other_test_blocks) - 1):
-                        for t_idx in training_blocks[training_blocks < np.min(other_training_blocks)]:
+                        for t_idx in valid_training_blocks:
                             if other_test_blocks[idx] < t_idx < other_test_blocks[idx + 1]:
                                 tasks_for_ft[task_pair[0]][task_pair[1]] = (
                                     other_test_blocks[idx], other_test_blocks[idx + 1])
@@ -390,7 +394,7 @@ class ForwardTransfer(AgentMetric):
                             continue
                         break
 
-        if np.sum([len(value) for key, value in tasks_for_ft.items()]) == 0:
+        if np.sum([len(value) for _, value in tasks_for_ft.items()]) == 0:
             raise Exception('No valid task pairs for forward transfer')
 
         return tasks_for_ft
@@ -497,15 +501,14 @@ class BackwardTransfer(AgentMetric):
 
                     # BT - Other task must have been trained and tested before current regime, then
                     # tested again after
-                    if np.any(other_train_regs < regime_num):
-                        if len(other_test_regs) >= 2:
-                            for idx in range(len(other_test_regs) - 1):
-                                if other_test_regs[idx] < regime['regime_num'] < other_test_regs[idx + 1]:
-                                    key = (task_name, other_task)
-                                    if key not in tasks_for_bt.keys():
-                                        tasks_for_bt[key] = [(other_test_regs[idx], other_test_regs[idx + 1])]
-                                    else:
-                                        tasks_for_bt[key].append((other_test_regs[idx], other_test_regs[idx + 1]))
+                    if np.any(other_train_regs < regime_num) and len(other_test_regs) >= 2:
+                        for idx in range(len(other_test_regs) - 1):
+                            if other_test_regs[idx] < regime['regime_num'] < other_test_regs[idx + 1]:
+                                key = (task_name, other_task)
+                                if key not in tasks_for_bt.keys():
+                                    tasks_for_bt[key] = [(other_test_regs[idx], other_test_regs[idx + 1])]
+                                else:
+                                    tasks_for_bt[key].append((other_test_regs[idx], other_test_regs[idx + 1]))
 
         if not tasks_for_bt:
             raise Exception('No valid task pairs for backward transfer')
@@ -594,22 +597,23 @@ class STERelativePerf(AgentMetric):
                 # Get data concatenated data for task
                 task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
 
-                # Load STE data
-                ste_data = util.load_ste_data(task)
+                if len(task_data):
+                    # Load STE data
+                    ste_data = util.load_ste_data(task)
 
-                if ste_data is not None:
-                    # Check if performance measure exists in STE data
-                    if self.perf_measure in ste_data.columns:
-                        # Compute relative performance with no smoothing on data
-                        min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
-                        task_perf = task_data.head(min_exp)[self.perf_measure].sum()
-                        ste_perf = ste_data.head(min_exp)[self.perf_measure].sum()
-                        rel_perf = task_perf / ste_perf
-                        ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
+                    if ste_data is not None:
+                        # Check if performance measure exists in STE data
+                        if self.perf_measure in ste_data.columns:
+                            # Compute relative performance with no smoothing on data
+                            min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
+                            task_perf = task_data.head(min_exp)[self.perf_measure].sum()
+                            ste_perf = ste_data.head(min_exp)[self.perf_measure].sum()
+                            rel_perf = task_perf / ste_perf
+                            ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
+                        else:
+                            print(f"Cannot compute {self.name} for task {task} - Performance measure not in STE data")
                     else:
-                        print(f"Cannot compute {self.name} for task {task} - Performance measure not in STE data")
-                else:
-                    print(f"Cannot compute {self.name} for task {task} - No STE data available")
+                        print(f"Cannot compute {self.name} for task {task} - No STE data available")
 
             return _localutil.fill_metrics_df(ste_rel_perf, 'ste_rel_perf', metrics_df)
         except Exception as e:
@@ -661,29 +665,30 @@ class SampleEfficiency(AgentMetric):
                 # Get data concatenated data for task
                 task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
 
-                # Load STE data
-                ste_data = util.load_ste_data(task)
+                if len(task_data):
+                    # Load STE data
+                    ste_data = util.load_ste_data(task)
 
-                if ste_data is not None:
-                    # Check if performance measure exists in STE data
-                    if self.perf_measure in ste_data.columns:
-                        # Get task saturation value and episodes to saturation
-                        task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                            task_data, col_to_use=self.perf_measure)
+                    if ste_data is not None:
+                        # Check if performance measure exists in STE data
+                        if self.perf_measure in ste_data.columns:
+                            # Get task saturation value and episodes to saturation
+                            task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
+                                task_data, col_to_use=self.perf_measure)
 
-                        # Get STE saturation value and episodes to saturation
-                        ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
-                            ste_data, col_to_use=self.perf_measure)
+                            # Get STE saturation value and episodes to saturation
+                            ste_saturation, ste_eps_to_sat, _ = _localutil.get_block_saturation_perf(
+                                ste_data, col_to_use=self.perf_measure)
 
-                        # Compute sample efficiency
-                        se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
-                        se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
-                        sample_efficiency[task_data['regime_num'].iloc[-1]] = \
-                            (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
+                            # Compute sample efficiency
+                            se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
+                            se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
+                            sample_efficiency[task_data['regime_num'].iloc[-1]] = \
+                                (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
+                        else:
+                            print(f"Cannot compute {self.name} for task {task} - Performance measure not in STE data")
                     else:
-                        print(f"Cannot compute {self.name} for task {task} - Performance measure not in STE data")
-                else:
-                    print(f"Cannot compute {self.name} for task {task} - No STE data available")
+                        print(f"Cannot compute {self.name} for task {task} - No STE data available")
 
             metrics_df = _localutil.fill_metrics_df(se_saturation, 'se_saturation', metrics_df)
             metrics_df = _localutil.fill_metrics_df(se_eps_to_sat, 'se_eps_to_sat', metrics_df)
@@ -756,8 +761,8 @@ class AgentMetricsReport(core.MetricsReport):
         _, self.block_info = l2l.parse_blocks(self._log_data)
 
         # Store unique task names
-        self._unique_tasks = list(
-            self.block_info[self.block_info['block_type'] == 'train'].loc[:, 'task_name'].unique())
+        self._unique_tasks = list(self.block_info.sort_values(
+            ['block_type', 'block_num'], ascending=[False, True])['task_name'].unique())
 
         # Do a check to make sure the performance measure is logged
         if self.perf_measure not in self._log_data.columns:
@@ -832,7 +837,7 @@ class AgentMetricsReport(core.MetricsReport):
             self.backward_transfers_ratio = defaultdict(dict)
 
         # Create data structures for transfer values
-        for index, row in self._metrics_df.iterrows():
+        for _, row in self._metrics_df.iterrows():
             if 'forward_transfer_contrast' in self._metrics_df:
                 if type(row['forward_transfer_contrast']) is dict:
                     [(other_task, transfer_value)] = row['forward_transfer_contrast'].items()

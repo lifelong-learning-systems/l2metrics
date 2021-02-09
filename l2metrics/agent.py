@@ -35,6 +35,7 @@ from . import _localutil, core, util
 Standard metrics for Agent Learning (RL tasks)
 """
 
+
 class AgentMetric(core.Metric, ABC):
     """
     A single metric for an Agent (aka. Reinforcement Learning) learner
@@ -149,7 +150,7 @@ class RecoveryTime(AgentMetric):
                                                         ['task_name', 'task_params']]
             tr_indices = tr_block_info.index
 
-            # Regimes are defined as new combinations of tasks and params, but can repeat, 
+            # Regimes are defined as new combinations of tasks and params, but can repeat,
             # so check for changes across regimes
             first = True
             for idx, block_idx in enumerate(tr_indices):
@@ -292,7 +293,7 @@ class PerformanceMaintenance(AgentMetric):
 
                     # Get the most recent terminal learning performance of the current task
                     training_tasks = block_info[(block_info['task_name'] == regime['task_name']) &
-                                                (block_info['block_type'] == 'train') & 
+                                                (block_info['block_type'] == 'train') &
                                                 (block_info['block_num'] < regime['block_num'])]
 
                     # Check to make sure the task has been trained on
@@ -438,9 +439,11 @@ class ForwardTransfer(AgentMetric):
                         forward_transfer_ratio[idx] = [{task: tp_2 / tp_1}]
 
             if do_contrast:
-                metrics_df = _localutil.fill_metrics_df(forward_transfer_contrast, 'forward_transfer_contrast', metrics_df)
+                metrics_df = _localutil.fill_metrics_df(
+                    forward_transfer_contrast, 'forward_transfer_contrast', metrics_df)
             if do_ratio:
-                metrics_df = _localutil.fill_metrics_df(forward_transfer_ratio, 'forward_transfer_ratio', metrics_df)
+                metrics_df = _localutil.fill_metrics_df(
+                    forward_transfer_ratio, 'forward_transfer_ratio', metrics_df)
             return metrics_df
         except Exception as e:
             print(f"Cannot compute {self.name} - {e}")
@@ -553,9 +556,11 @@ class BackwardTransfer(AgentMetric):
                         backward_transfer_ratio[idx] = [{task_pair[0]: tp_2 / tp_1}]
 
             if do_contrast:
-                metrics_df = _localutil.fill_metrics_df(backward_transfer_contrast, 'backward_transfer_contrast', metrics_df)
+                metrics_df = _localutil.fill_metrics_df(
+                    backward_transfer_contrast, 'backward_transfer_contrast', metrics_df)
             if do_ratio:
-                metrics_df = _localutil.fill_metrics_df(backward_transfer_ratio, 'backward_transfer_ratio', metrics_df)
+                metrics_df = _localutil.fill_metrics_df(
+                    backward_transfer_ratio, 'backward_transfer_ratio', metrics_df)
             return metrics_df
         except Exception as e:
             print(f"Cannot compute {self.name} - {e}")
@@ -740,7 +745,7 @@ class AgentMetricsReport(core.MetricsReport):
         # Get metric fields
         metric_fields = l2l.read_logger_info(self.log_dir)
 
-         # Do a check to make sure the performance measure has been logged
+        # Do a check to make sure the performance measure has been logged
         if self.perf_measure not in metric_fields:
             raise Exception(f'Performance measure not found in metrics columns: {self.perf_measure}\n'
                             f'Valid measures are: {metric_fields}')
@@ -803,17 +808,17 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(SampleEfficiency(self.perf_measure))
 
     def add_noise(self, mean: float, std: float) -> None:
+        # Add Gaussian noise to log data
         noise = np.random.normal(mean, std, len(self._log_data[self.perf_measure]))
         self._log_data[self.perf_measure] = self._log_data[self.perf_measure] + noise
 
     def calculate(self) -> None:
         for metric in self._metrics:
             self._metrics_df = metric.calculate(self._log_data, self.block_info, self._metrics_df)
-        
+
         self.calculate_regime_metrics()
         self.calculate_task_metrics()
         self.calculate_lifetime_metrics()
-
 
     def calculate_regime_metrics(self) -> None:
         # Create dataframe for regime-level metrics
@@ -828,7 +833,6 @@ class AgentMetricsReport(core.MetricsReport):
                 lambda x: x[:25] + '...' if len(x) > 25 else x)
         else:
             self.regime_metrics_df = self.regime_metrics_df.dropna(axis=1)
-
 
     def calculate_task_metrics(self) -> None:
         self.task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=self.task_metrics)
@@ -853,18 +857,23 @@ class AgentMetricsReport(core.MetricsReport):
             if 'forward_transfer_contrast' in self._metrics_df:
                 if type(row['forward_transfer_contrast']) is dict:
                     [(other_task, transfer_value)] = row['forward_transfer_contrast'].items()
-                    key = (self._unique_tasks.index(other_task), self._unique_tasks.index(row['task_name']))
-                    self.forward_transfers_contrast[key[0]][key[1]] = round(transfer_value, 2)
+                    key = (self._unique_tasks.index(other_task),
+                           self._unique_tasks.index(row['task_name']))
+                    self.forward_transfers_contrast[key[0]][key[1]] = round(
+                        transfer_value, 2)
             if 'forward_transfer_ratio' in self._metrics_df:
                 if type(row['forward_transfer_ratio']) is dict:
                     [(other_task, transfer_value)] = row['forward_transfer_ratio'].items()
-                    key = (self._unique_tasks.index(other_task), self._unique_tasks.index(row['task_name']))
-                    self.forward_transfers_ratio[key[0]][key[1]] = round(transfer_value, 2)
+                    key = (self._unique_tasks.index(other_task),
+                           self._unique_tasks.index(row['task_name']))
+                    self.forward_transfers_ratio[key[0]][key[1]] = round(
+                        transfer_value, 2)
 
             if 'backward_transfer_contrast' in self._metrics_df:
                 if type(row['backward_transfer_contrast']) is dict:
                     [(other_task, transfer_value)] = row['backward_transfer_contrast'].items()
-                    key = (self._unique_tasks.index(other_task), self._unique_tasks.index(row['task_name']))
+                    key = (self._unique_tasks.index(other_task),
+                           self._unique_tasks.index(row['task_name']))
                     if key[0] not in self.backward_transfers_contrast.keys():
                         self.backward_transfers_contrast[key[0]][key[1]] = [transfer_value]
                     elif key[1] not in self.backward_transfers_contrast[key[0]].keys():
@@ -874,7 +883,8 @@ class AgentMetricsReport(core.MetricsReport):
             if 'backward_transfer_ratio' in self._metrics_df:
                 if type(row['backward_transfer_ratio']) is dict:
                     [(other_task, transfer_value)] = row['backward_transfer_ratio'].items()
-                    key = (self._unique_tasks.index(other_task), self._unique_tasks.index(row['task_name']))
+                    key = (self._unique_tasks.index(other_task),
+                           self._unique_tasks.index(row['task_name']))
                     if key[0] not in self.backward_transfers_ratio.keys():
                         self.backward_transfers_ratio[key[0]][key[1]] = [transfer_value]
                     elif key[1] not in self.backward_transfers_ratio[key[0]].keys():
@@ -936,7 +946,7 @@ class AgentMetricsReport(core.MetricsReport):
 
                     # Drop NaNs
                     metric_vals = metric_vals[~np.isnan(metric_vals)]
-                elif metric  == 'backward_transfer_contrast':
+                elif metric == 'backward_transfer_contrast':
                     # Get the first calculated backward transfer values for each task pair
                     metric_vals = [v2[0] for k, v in self.backward_transfers_contrast.items() for k2, v2 in v.items()]
                 elif metric == 'backward_transfer_ratio':
@@ -953,7 +963,8 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Print lifetime metrics
         print('\nLifetime Metrics:')
-        print(tabulate(self.lifetime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f", showindex=False))
+        print(tabulate(self.lifetime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql',
+                       floatfmt=".2f", showindex=False))
 
         # Print task-level metrics
         print('\nTask Metrics:')

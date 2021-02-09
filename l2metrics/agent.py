@@ -802,6 +802,10 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(STERelativePerf(self.perf_measure))
         self.add(SampleEfficiency(self.perf_measure))
 
+    def add_noise(self, mean: float, std: float) -> None:
+        noise = np.random.normal(mean, std, len(self._log_data[self.perf_measure]))
+        self._log_data[self.perf_measure] = self._log_data[self.perf_measure] + noise
+
     def calculate(self) -> None:
         for metric in self._metrics:
             self._metrics_df = metric.calculate(self._log_data, self.block_info, self._metrics_df)

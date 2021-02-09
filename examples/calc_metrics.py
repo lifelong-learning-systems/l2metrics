@@ -76,6 +76,10 @@ def run() -> None:
     parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
+    # Mean and standard deviation for adding noise to log data
+    parser.add_argument('-n', '--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
+                        help='Mean and standard deviation for Gaussian noise in log data')
+
     # Output filename
     parser.add_argument('-o', '--output', default=None,
                         help='Specify output filename for plot and results')
@@ -104,6 +108,10 @@ def run() -> None:
 
     # Add example of custom metric
     report.add(MyCustomAgentMetric(args.perf_measure))
+
+    # Add noise to log data if mean or standard deviation is specified
+    if args.noise[0] or args.noise[1]:
+        report.add_noise(mean=args.noise[0], std=args.noise[1])
 
     # Calculate metrics in order of their addition to the metrics list.
     report.calculate()

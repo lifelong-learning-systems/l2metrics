@@ -743,7 +743,8 @@ class AgentMetricsReport(core.MetricsReport):
 
          # Do a check to make sure the performance measure has been logged
         if self.perf_measure not in metric_fields:
-            raise Exception(f'Performance measure not found in metrics columns: {self.perf_measure}')
+            raise Exception(f'Performance measure not found in metrics columns: {self.perf_measure}\n'
+                            f'Valid measures are: {metric_fields}')
 
         # Gets all data from the relevant log files
         self._log_data = l2l.read_log_data(self.log_dir)

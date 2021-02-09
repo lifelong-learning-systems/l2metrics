@@ -2,7 +2,11 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
-## 2.5.0 - 2021-02-07
+## 2.5.1 - 2021-02-09
+
+- Handled scenarios with tasks that are not all trained
+
+## 2.5.0 - 2021-02-08
 
 - Handled LL logs in evaluation directories not contained within top-level scenario log directories
 - Fixed import error in example metric calculation script

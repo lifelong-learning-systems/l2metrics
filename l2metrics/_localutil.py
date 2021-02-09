@@ -112,14 +112,14 @@ def get_block_saturation_perf(data: pd.DataFrame, col_to_use: str, prev_sat_val:
         saturation_value = np.max(smoothed_data)
 
         # Calculate the number of episodes to "saturation", which we define as the max of the moving average
-        inds = np.where(smoothed_data == saturation_value)
-        episodes_to_saturation = inds[0][0]
+        indices = np.where(smoothed_data == saturation_value)
+        episodes_to_saturation = indices[0][0]
         episodes_to_recovery = len(data) + 1
 
         if prev_sat_val:
-            inds = np.where(smoothed_data >= prev_sat_val)
-            if len(inds[0]):
-                episodes_to_recovery = inds[0][0]
+            indices = np.where(smoothed_data >= prev_sat_val)
+            if len(indices[0]):
+                episodes_to_recovery = indices[0][0]
     else:
         saturation_value = np.nan
         episodes_to_saturation = np.nan
@@ -166,9 +166,9 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
         episodes_to_recovery = len(data) + 1
 
         if prev_val is not None:
-            inds = np.where(mean_data >= prev_val)
-            if len(inds[0]):
-                episodes_to_recovery = inds[0][0]
+            indices = np.where(mean_data >= prev_val)
+            if len(indices[0]):
+                episodes_to_recovery = indices[0][0]
     else:
         terminal_value = np.nan
         episodes_to_terminal_perf = np.nan

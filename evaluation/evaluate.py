@@ -67,6 +67,31 @@ def load_computational_costs(log_dir: Path) -> pd.DataFrame:
     return comp_cost_df
 
 
+def load_performance_thresholds(log_dir: Path) -> pd.DataFrame:
+    """Load the performance threshold data from the given log directory.
+
+    Args:
+        log_dir (Path): Path to agent configuration directory containing performance thresholds.
+
+    Returns:
+        pd.DataFrame: DataFrame containing performance thresholds for system and agent.
+    """
+
+    # Initialize computational cost dataframe
+    perf_thresh_df = pd.DataFrame()
+
+    # Concatenate computational cost data
+    docs_dir = log_dir / 'docs'
+    perf_thresh_file = docs_dir / 'performance_thresholds.csv'
+
+    if perf_thresh_file.exists():
+        perf_thresh_df = pd.read_csv(perf_thresh_file)
+    else:
+        warnings.warn(f"No performance threshold file found in directory: {log_dir}\n")
+
+    return perf_thresh_df
+
+
 def save_ste_data(log_dir: Path) -> None:
     """Save all single-task expert data in provided log directory.
 
@@ -89,7 +114,7 @@ def save_ste_data(log_dir: Path) -> None:
                 util.save_ste_data(str(ste_dir))
         print('Done storing STE data!\n')
     else:
-        # STE log path not found - possibly because comrpressed archive has not been
+        # STE log path not found - possibly because compressed archive has not been
         # extracted in the same location yet
         raise FileNotFoundError(f"STE logs not found in expected location!")
 
@@ -267,6 +292,9 @@ def evaluate() -> None:
 
     # Load computational cost data
     comp_cost_df = load_computational_costs(log_dir)
+
+    # Load performance threshold data
+    perf_thresh_df = load_performance_thresholds(log_dir)
 
     # Store STE log data
     save_ste_data(log_dir)

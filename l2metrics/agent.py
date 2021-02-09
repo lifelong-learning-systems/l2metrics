@@ -17,6 +17,7 @@
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
 import os
+import warnings
 from abc import ABC
 from collections import defaultdict
 from itertools import permutations
@@ -265,11 +266,13 @@ class PerformanceMaintenance(AgentMetric):
 
                 if regime['block_type'] == 'test':
                     if last_block_type == 'test':
-                        raise Exception('Block types must be alternating')
+                        warnings.warn('Block types are not alternating')
+                        break
                     last_block_type = 'test'
                 elif regime['block_type'] == 'train':
                     if last_block_type == 'train':
-                        raise Exception('Block types must be alternating')
+                        warnings.warn('Block types are not alternating')
+                        break
                     last_block_type = 'train'
 
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
@@ -354,11 +357,13 @@ class ForwardTransfer(AgentMetric):
 
                 if regime['block_type'] == 'test':
                     if last_block_type == 'test':
-                        raise Exception('Block types must be alternating')
+                        warnings.warn('Block types are not alternating')
+                        break
                     last_block_type = 'test'
                 elif regime['block_type'] == 'train':
                     if last_block_type == 'train':
-                        raise Exception('Block types must be alternating')
+                        warnings.warn('Block types are not alternating')
+                        break
                     last_block_type = 'train'
 
         # Find eligible tasks for forward transfer
@@ -477,17 +482,20 @@ class BackwardTransfer(AgentMetric):
             regime_num = regime['regime_num']
 
             # Ensure alternating block types
-            if block_num != last_block_num:
-                last_block_num = block_num
+            for _, regime in block_info.iterrows():
+                if regime['block_num'] != last_block_num:
+                    last_block_num = regime['block_num']
 
-                if block_type == 'test':
-                    if last_block_type == 'test':
-                        raise Exception('Block types must be alternating')
-                    last_block_type = 'test'
-                elif block_type == 'train':
-                    if last_block_type == 'train':
-                        raise Exception('Block types must be alternating')
-                    last_block_type = 'train'
+                    if regime['block_type'] == 'test':
+                        if last_block_type == 'test':
+                            warnings.warn('Block types are not alternating')
+                            break
+                        last_block_type = 'test'
+                    elif regime['block_type'] == 'train':
+                        if last_block_type == 'train':
+                            warnings.warn('Block types are not alternating')
+                            break
+                        last_block_type = 'train'
 
             # Check for valid backward transfer pair
             if block_type == 'train':
@@ -570,13 +578,13 @@ class STERelativePerf(AgentMetric):
         unique_tasks = block_info.loc[:, 'task_name'].unique()
         ste_names = util.get_ste_data_names()
 
-        # Make sure STE baselines are available for all tasks, else send warning
-        if ~np.all(np.isin(unique_tasks, ste_names)):
-            Warning('STE data not available for all tasks')
-
         # Raise exception if none of the tasks have STE data
         if ~np.any(np.isin(unique_tasks, ste_names)):
             raise Exception('No STE data available for any task')
+
+        # Make sure STE baselines are available for all tasks, else send warning
+        if ~np.all(np.isin(unique_tasks, ste_names)):
+            warnings.warn('STE data not available for all tasks')
 
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
@@ -636,13 +644,13 @@ class SampleEfficiency(AgentMetric):
         unique_tasks = block_info.loc[:, 'task_name'].unique()
         ste_names = util.get_ste_data_names()
 
-        # Make sure STE baselines are available for all tasks, else send warning
-        if ~np.all(np.isin(unique_tasks, ste_names)):
-            Warning('STE data not available for all tasks')
-
         # Raise exception if none of the tasks have STE data
         if ~np.any(np.isin(unique_tasks, ste_names)):
             raise Exception('No STE data available for any task')
+
+        # Make sure STE baselines are available for all tasks, else send warning
+        if ~np.all(np.isin(unique_tasks, ste_names)):
+            warnings.warn('STE data not available for all tasks')
 
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:

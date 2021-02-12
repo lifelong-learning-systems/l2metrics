@@ -196,13 +196,13 @@ def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_s
                 # Check if current path is log directory for single run
                 if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
                     ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
-                        path, perf_measure, transfer_method, do_smoothing))
+                        path, perf_measure, transfer_method, do_smoothing), ignore_index=True)
                 else:
                     # Iterate through subdirectories containing LL logs
                     for sub_path in tqdm(list(path.iterdir()), desc=path.name):
                         if sub_path.is_dir():
                             ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
-                                sub_path, perf_measure, transfer_method, do_smoothing))
+                                sub_path, perf_measure, transfer_method, do_smoothing), ignore_index=True)
     else:
         raise FileNotFoundError(f"LL logs not found in expected location!")
 

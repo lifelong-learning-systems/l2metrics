@@ -21,9 +21,11 @@ import warnings
 from abc import ABC
 from collections import defaultdict
 from itertools import permutations
+from math import ceil
 from typing import List, Tuple, Union
 
 import l2logger.util as l2l
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -988,6 +990,62 @@ class AgentMetricsReport(core.MetricsReport):
                 self.task_metrics_df.to_csv(metrics_file, sep='\t')
                 metrics_file.write('\n')
                 self.regime_metrics_df.to_csv(metrics_file, sep='\t')
+
+    def log_summary(self) -> pd.DataFrame:
+        # Get summary of log data
+        task_experiences = {'task_name': [], 'LX': [], 'EX': []}
+
+        for task in self._unique_tasks:
+            task_experiences['task_name'].append(task)
+            task_experiences['LX'].append(self._log_data[(self._log_data['task_name'] == task) & (
+                self._log_data['block_type'] == 'train')].shape[0])
+            task_experiences['EX'].append(self._log_data[(self._log_data['task_name'] == task) & (
+                self._log_data['block_type'] == 'test')].shape[0])
+
+        return pd.DataFrame(task_experiences)
+
+    def plot_ste_data(self, window_len: int = None, save: bool = False) -> None:
+        # Initialize figure
+        fig = plt.figure(figsize=(12, 6))
+
+        for index, task_name in enumerate(self._unique_tasks):
+            # Get block info for task during training
+            task_blocks = self.block_info[(self.block_info['task_name'] == task_name) & (
+                self.block_info['block_type'] == 'train')]
+
+            # Get data concatenated data for task
+            task_data = self._log_data[self._log_data['regime_num'].isin(
+                task_blocks['regime_num'])]
+
+            if len(task_data):
+                # Load STE data
+                ste_data = util.load_ste_data(task_name)
+
+                if ste_data is not None:
+                    # Create subplot
+                    ax = fig.add_subplot(3, ceil(len(self._unique_tasks)/3), index + 1)
+
+                    x1 = list(range(0, ste_data.shape[0]))
+                    x2 = list(range(0, task_data.shape[0]))
+
+                    if self.do_smoothing:
+                        y1 = _localutil.smooth(ste_data[self.perf_measure].values, window_len=window_len)
+                        y2 = _localutil.smooth(task_data[self.perf_measure].values, window_len=window_len)
+                    else:
+                        y1 = ste_data[self.perf_measure].values
+                        y2 = task_data[self.perf_measure].values
+
+                    ax.scatter(x1, y1, marker='*', linestyle='None', label='STE')
+                    ax.scatter(x2, y2, marker='*', linestyle='None', label=task_name)
+
+                    plt.legend()
+                else:
+                    print(f"STE data for task cannot be found: {task_name}")
+            else:
+                print(f"Task name cannot be found in scenario: {task_name}")
+
+        fig.subplots_adjust(wspace=0.35, hspace=0.35)
+        plt.show()
 
     def plot(self, save: bool = False, output: str = None) -> None:
         if output is None:

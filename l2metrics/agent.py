@@ -575,9 +575,10 @@ class STERelativePerf(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance of each task relative to it's corresponding single-task expert"
 
-    def __init__(self, perf_measure: str) -> None:
+    def __init__(self, perf_measure: str, do_smoothing: bool = True) -> None:
         super().__init__()
         self.perf_measure = perf_measure
+        self.do_smoothing = do_smoothing
 
     def validate(self, block_info: pd.DataFrame) -> None:
         # Check if there is STE data for each task in the scenario
@@ -618,10 +619,20 @@ class STERelativePerf(AgentMetric):
                     if ste_data is not None:
                         # Check if performance measure exists in STE data
                         if self.perf_measure in ste_data.columns:
-                            # Compute relative performance with no smoothing on data
+                            # Compute relative performance
                             min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
-                            task_perf = task_data.head(min_exp)[self.perf_measure].sum()
-                            ste_perf = ste_data.head(min_exp)[self.perf_measure].sum()
+
+                            if self.do_smoothing:
+                                task_perf = _localutil.smooth(task_data.head(
+                                    min_exp)[self.perf_measure].values).sum()
+                                ste_perf = _localutil.smooth(ste_data.head(
+                                    min_exp)[self.perf_measure].values).sum()
+                            else:
+                                task_perf = task_data.head(
+                                    min_exp)[self.perf_measure].values.sum()
+                                ste_perf = ste_data.head(
+                                    min_exp)[self.perf_measure].values.sum()
+
                             rel_perf = task_perf / ste_perf
                             ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
                         else:
@@ -806,7 +817,7 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(PerformanceMaintenance(self.perf_measure))
         self.add(ForwardTransfer(self.perf_measure, self.transfer_method))
         self.add(BackwardTransfer(self.perf_measure, self.transfer_method))
-        self.add(STERelativePerf(self.perf_measure))
+        self.add(STERelativePerf(self.perf_measure, self.do_smoothing))
         self.add(SampleEfficiency(self.perf_measure))
 
     def add_noise(self, mean: float, std: float) -> None:

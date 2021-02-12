@@ -89,7 +89,7 @@ def run() -> None:
         # Plot metrics
         if do_plot:
             report.plot(save=do_save, output=args.output)
-            report.plot_ste_data()
+            report.plot_ste_data(save=do_save)
 
 
 if __name__ == '__main__':

@@ -180,34 +180,35 @@ def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_s
         pd.DataFrame: DataFrame containing lifelong metrics from all parsed scenarios, sorted by
             scenario complexity and difficulty.
     """
+    # Initialize LL metric dataframe
+    ll_metrics_df = pd.DataFrame()
 
-    # Check for LL logs
-    ll_log_dir = log_dir / 'll_logs'
+    # Iterate through agent configuration directories
+    for agent_config in tqdm(list(log_dir.glob('agent_config*')), desc='Agents'):
+        # Check for LL logs
+        ll_log_dir = agent_config / 'll_logs'
 
-    if ll_log_dir.exists():
-        print('Computing metrics from LL logs...')
+        if ll_log_dir.exists():
+            print(f'Computing metrics from LL logs for {agent_config.name}...')
 
-        # Initialize LL metric dataframe
-        ll_metrics_df = pd.DataFrame()
+            # Compute and store the LL metrics for all scenarios found in the directory
+            for path in tqdm(list(ll_log_dir.iterdir()), desc=agent_config.name):
+                if path.is_dir():
+                    # Check if current path is log directory for single run
+                    if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
+                        ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
+                            path, perf_measure, transfer_method, do_smoothing), ignore_index=True)
+                    else:
+                        # Iterate through subdirectories containing LL logs
+                        for sub_path in tqdm(list(path.iterdir()), desc=path.name):
+                            if sub_path.is_dir():
+                                ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
+                                    sub_path, perf_measure, transfer_method, do_smoothing), ignore_index=True)
+        else:
+            raise FileNotFoundError(f"LL logs not found in expected location!")
 
-        # Compute and store the LL metrics for all scenarios found in the directory
-        for path in tqdm(list(ll_log_dir.iterdir()), desc='Overall'):
-            if path.is_dir():
-                # Check if current path is log directory for single run
-                if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
-                    ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
-                        path, perf_measure, transfer_method, do_smoothing), ignore_index=True)
-                else:
-                    # Iterate through subdirectories containing LL logs
-                    for sub_path in tqdm(list(path.iterdir()), desc=path.name):
-                        if sub_path.is_dir():
-                            ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
-                                sub_path, perf_measure, transfer_method, do_smoothing), ignore_index=True)
-    else:
-        raise FileNotFoundError(f"LL logs not found in expected location!")
-
-    # Sort data by complexity and difficulty
-    ll_metrics_df = ll_metrics_df.sort_values(by=['complexity', 'difficulty'])
+        # Sort data by complexity and difficulty
+        ll_metrics_df = ll_metrics_df.sort_values(by=['complexity', 'difficulty'])
 
     return ll_metrics_df
 

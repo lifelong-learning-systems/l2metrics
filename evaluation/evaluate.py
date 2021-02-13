@@ -25,10 +25,13 @@ evaluation.ipynb.
 """
 
 import argparse
+import fnmatch
 import json
+import os
 import traceback
-from pathlib import Path
 import warnings
+from pathlib import Path
+from zipfile import ZipFile
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -46,7 +49,7 @@ def load_computational_costs(log_dir: Path) -> pd.DataFrame:
     """Load the computational cost data from the given log directory.
 
     Args:
-        log_dir (Path): Path to agent configuration directory containing computational cost data.
+        log_dir (Path): Path to directory containing computational cost data.
 
     Returns:
         pd.DataFrame: DataFrame containing computational costs for system and agent.
@@ -71,7 +74,7 @@ def load_performance_thresholds(log_dir: Path) -> pd.DataFrame:
     """Load the performance threshold data from the given log directory.
 
     Args:
-        log_dir (Path): Path to agent configuration directory containing performance thresholds.
+        log_dir (Path): Path to directory containing performance thresholds.
 
     Returns:
         pd.DataFrame: DataFrame containing performance thresholds for system and agent.
@@ -91,6 +94,40 @@ def load_performance_thresholds(log_dir: Path) -> pd.DataFrame:
 
     return perf_thresh_df
 
+def load_task_similarities(log_dir: Path) -> pd.DataFrame:
+    """Load the task similarity matrix from the given log directory.
+
+    Args:
+        log_dir (Path): Path to directory containing task similarity matrix.
+
+    Returns:
+        pd.DataFrame: DataFrame containing task similarities.
+    """
+
+    # Initialize task similarity dataframe
+    task_similarity_df = pd.DataFrame()
+
+    # Concatenate computational cost data
+    docs_dir = log_dir / 'docs'
+    task_similarity_file = docs_dir / 'task_relationships.csv'
+
+    if task_similarity_file.exists():
+        task_similarity_df = pd.read_csv(task_similarity_file)
+    else:
+        warnings.warn(f"No task similarity file found in directory: {log_dir}\n")
+
+    return task_similarity_df
+
+def unzip_logs(log_dir: Path) -> None:
+    """Walk through log directory and unzip log archives.
+
+    Args:
+        log_dir (Path): Path to directory containing log archives.
+    """
+    for root, dirs, files in os.walk(log_dir):
+        for filename in fnmatch.filter(files, '*.zip'):
+            print(f'Unzipping file: {filename}')
+            ZipFile(os.path.join(root, filename)).extractall(root)
 
 def save_ste_data(log_dir: Path) -> None:
     """Save all single-task expert data in provided log directory.

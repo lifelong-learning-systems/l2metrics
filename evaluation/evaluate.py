@@ -179,9 +179,10 @@ def compute_scenario_metrics(path: Path, perf_measure: str, transfer_method: str
 
     # Calculate metrics in order of their addition to the metrics list
     report.calculate()
-
-    # Append lifetime metrics to dataframe
     ll_metrics_df = report.lifetime_metrics_df
+    
+    # Append scenario name to dataframe
+    ll_metrics_df['scenario_name'] = path.name
 
     # Append scenario complexity and difficulty
     with open(path / 'scenario_info.json', 'r') as json_file:

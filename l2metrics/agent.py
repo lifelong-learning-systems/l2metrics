@@ -622,9 +622,9 @@ class STERelativePerf(AgentMetric):
 
                             if self.do_smoothing:
                                 task_perf = _localutil.smooth(task_data.head(
-                                    min_exp)[self.perf_measure].values).sum()
+                                    min_exp)[self.perf_measure].values, window='flat').sum()
                                 ste_perf = _localutil.smooth(ste_data.head(
-                                    min_exp)[self.perf_measure].values).sum()
+                                    min_exp)[self.perf_measure].values, window='flat').sum()
                             else:
                                 task_perf = task_data.head(
                                     min_exp)[self.perf_measure].values.sum()

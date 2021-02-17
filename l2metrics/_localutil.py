@@ -157,6 +157,10 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
         if do_smoothing:
             mean_data = smooth(mean_data, window_len=window_len, window='flat')
 
+        # Average all data points in test block for terminal performance
+        if data.iloc[0]['block_type'] == 'test':
+            term_window_ratio = 1
+
         terminal_value = np.mean(mean_data[int((1-term_window_ratio)*mean_data.size):])
 
         # Calculate the number of episodes to terminal performance

@@ -216,7 +216,10 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, do_smoot
                     dataframe['regime_num'] == regime), col_to_plot].values
 
                 if do_smoothing:
-                    y = _localutil.smooth(y, window_len=window_len)
+                    if block_info.loc[regime, :]['block_type'] == 'train':
+                        y = _localutil.smooth(y, window_len=window_len)
+                    elif block_info.loc[regime, :]['block_type'] == 'test':
+                        y = y.mean() * np.ones(len(x))
 
                 ax.scatter(x, y, color=c, marker='*', linestyle='None', label=t)
 

@@ -45,11 +45,11 @@ sns.set_style("dark")
 sns.set_context("paper")
 
 
-def load_computational_costs(log_dir: Path) -> pd.DataFrame:
+def load_computational_costs(eval_dir: Path) -> pd.DataFrame:
     """Load the computational cost data from the given log directory.
 
     Args:
-        log_dir (Path): Path to directory containing computational cost data.
+        eval_dir (Path): Path to directory containing computational cost data.
 
     Returns:
         pd.DataFrame: DataFrame containing computational costs for system and agent.
@@ -59,22 +59,22 @@ def load_computational_costs(log_dir: Path) -> pd.DataFrame:
     comp_cost_df = pd.DataFrame()
 
     # Concatenate computational cost data
-    docs_dir = log_dir / 'docs'
+    docs_dir = eval_dir / 'docs'
     comp_cost_files = list(docs_dir.glob('computation*.csv'))
 
     if comp_cost_files:
         comp_cost_df = pd.concat((pd.read_csv(f) for f in comp_cost_files), ignore_index=True)
     else:
-        warnings.warn(f"No computational cost files found in directory: {log_dir}\n")
+        warnings.warn(f"No computational cost files found in directory: {eval_dir}\n")
 
     return comp_cost_df
 
 
-def load_performance_thresholds(log_dir: Path) -> pd.DataFrame:
+def load_performance_thresholds(eval_dir: Path) -> pd.DataFrame:
     """Load the performance threshold data from the given log directory.
 
     Args:
-        log_dir (Path): Path to directory containing performance thresholds.
+        eval_dir (Path): Path to directory containing performance thresholds.
 
     Returns:
         pd.DataFrame: DataFrame containing performance thresholds for system and agent.
@@ -84,21 +84,21 @@ def load_performance_thresholds(log_dir: Path) -> pd.DataFrame:
     perf_thresh_df = pd.DataFrame()
 
     # Concatenate computational cost data
-    docs_dir = log_dir / 'docs'
+    docs_dir = eval_dir / 'docs'
     perf_thresh_file = docs_dir / 'performance_thresholds.csv'
 
     if perf_thresh_file.exists():
         perf_thresh_df = pd.read_csv(perf_thresh_file)
     else:
-        warnings.warn(f"No performance threshold file found in directory: {log_dir}\n")
+        warnings.warn(f"No performance threshold file found in directory: {eval_dir}\n")
 
     return perf_thresh_df
 
-def load_task_similarities(log_dir: Path) -> pd.DataFrame:
+def load_task_similarities(eval_dir: Path) -> pd.DataFrame:
     """Load the task similarity matrix from the given log directory.
 
     Args:
-        log_dir (Path): Path to directory containing task similarity matrix.
+        eval_dir (Path): Path to directory containing task similarity matrix.
 
     Returns:
         pd.DataFrame: DataFrame containing task similarities.
@@ -108,23 +108,23 @@ def load_task_similarities(log_dir: Path) -> pd.DataFrame:
     task_similarity_df = pd.DataFrame()
 
     # Concatenate computational cost data
-    docs_dir = log_dir / 'docs'
+    docs_dir = eval_dir / 'docs'
     task_similarity_file = docs_dir / 'task_relationships.csv'
 
     if task_similarity_file.exists():
         task_similarity_df = pd.read_csv(task_similarity_file)
     else:
-        warnings.warn(f"No task similarity file found in directory: {log_dir}\n")
+        warnings.warn(f"No task similarity file found in directory: {eval_dir}\n")
 
     return task_similarity_df
 
-def unzip_logs(log_dir: Path) -> None:
+def unzip_logs(eval_dir: Path) -> None:
     """Walk through log directory and unzip log archives.
 
     Args:
-        log_dir (Path): Path to directory containing log archives.
+        eval_dir (Path): Path to directory containing log archives.
     """
-    for root, dirs, files in os.walk(log_dir):
+    for root, dirs, files in os.walk(eval_dir):
         for filename in fnmatch.filter(files, '*.zip'):
             print(f'Unzipping file: {filename}')
             ZipFile(os.path.join(root, filename)).extractall(root)
@@ -195,7 +195,7 @@ def compute_scenario_metrics(path: Path, perf_measure: str, transfer_method: str
     return ll_metrics_df
 
 
-def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_smoothing: bool) -> pd.DataFrame:
+def compute_metrics(eval_dir: Path, perf_measure: str, transfer_method: str, do_smoothing: bool) -> pd.DataFrame:
     """Compute lifelong learning metrics for all LL logs in provided log directory.
 
     This function iterates through all the lifelong learning logs it finds in the provided
@@ -204,7 +204,7 @@ def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_s
     might be ignored in the evaluation.
 
     Args:
-        log_dir (Path): Path to agent configuration directory containing LL logs.
+        eval_dir (Path): Path to evaluation directory containing LL logs.
         perf_measure (str): Name of column to use for metrics calculations.
         transfer_method (str): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both.'
@@ -222,7 +222,7 @@ def compute_metrics(log_dir: Path, perf_measure: str, transfer_method: str, do_s
     ll_metrics_df = pd.DataFrame()
 
     # Iterate through agent configuration directories
-    for agent_config in tqdm(list(log_dir.glob('agent_config*')), desc='Agents'):
+    for agent_config in tqdm(list(eval_dir.glob('agent_config*')), desc='Agents'):
         # Check for LL logs
         ll_log_dir = agent_config / 'll_logs'
 
@@ -293,9 +293,9 @@ def evaluate() -> None:
     parser = argparse.ArgumentParser(
         description='Run L2M evaluation from the command line')
 
-    # Log directories can be absolute paths, relative paths, or paths found in $L2DATA/logs
-    parser.add_argument('-l', '--log-dir', required=True, type=str,
-                        help='Log directory for evaluation')
+    # Evaluation directory be absolute or relative paths
+    parser.add_argument('-l', '--eval-dir', required=True, type=str,
+                        help='Evaluation directory containing logs')
 
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf-measure', default='performance', type=str,
@@ -308,6 +308,10 @@ def evaluate() -> None:
     # Output file location
     parser.add_argument('-o', '--output', default='ll_metrics.tsv', type=str,
                         help='Output filename for results')
+
+    # Flag for enabling unzipping of logs
+    parser.add_argument('-u', '--unzip', action='store_true',
+                        help='Unzip all data found in evaluation directory')
 
     # Flag for disabling smoothing
     parser.add_argument('--no-smoothing', action='store_true',
@@ -323,24 +327,31 @@ def evaluate() -> None:
 
     # Parse arguments
     args = parser.parse_args()
-    log_dir = Path(args.log_dir)
+    eval_dir = Path(args.eval_dir)
     output = Path(args.output)
     do_smoothing = not args.no_smoothing
     do_plot = not args.no_plot
     do_save = not args.no_save
 
     # Load computational cost data
-    comp_cost_df = load_computational_costs(log_dir)
+    comp_cost_df = load_computational_costs(eval_dir)
 
     # Load performance threshold data
-    perf_thresh_df = load_performance_thresholds(log_dir)
+    perf_thresh_df = load_performance_thresholds(eval_dir)
+
+    # Load task similarity data
+    task_similarity_df = load_task_similarities(eval_dir)
+
+    # Unzip logs
+    if args.unzip:
+        unzip_logs(eval_dir)
 
     # Store STE log data
-    save_ste_data(log_dir)
+    # save_ste_data(eval_dir / 'agent_config-0')
 
     # Compute LL metric data
     ll_metrics_df = compute_metrics(
-        log_dir, args.perf_measure, args.transfer_method, do_smoothing)
+        eval_dir, args.perf_measure, args.transfer_method, do_smoothing)
 
     # Display aggregated data
     display(ll_metrics_df.groupby(

@@ -156,7 +156,8 @@ def save_ste_data(log_dir: Path) -> None:
         raise FileNotFoundError(f"STE logs not found in expected location!")
 
 
-def compute_scenario_metrics(path: Path, perf_measure: str, transfer_method: str, do_smoothing: bool) -> pd.DataFrame:
+def compute_scenario_metrics(path: Path, perf_measure: str, transfer_method: str, do_normalize: bool,
+                             remove_outliers: bool, do_smoothing: bool) -> pd.DataFrame:
     """Compute lifelong learning metrics for single LL logs found at input path.
 
     Args:
@@ -174,15 +175,22 @@ def compute_scenario_metrics(path: Path, perf_measure: str, transfer_method: str
 
     # Initialize metrics report
     report = AgentMetricsReport(
-        log_dir=scenario_dir, perf_measure=perf_measure,
-        transfer_method=transfer_method, do_smoothing=do_smoothing)
+        log_dir=scenario_dir, perf_measure=perf_measure, transfer_method=transfer_method,
+        do_normalize=do_normalize, remove_outliers=remove_outliers, do_smoothing=do_smoothing)
 
     # Calculate metrics in order of their addition to the metrics list
     report.calculate()
     ll_metrics_df = report.lifetime_metrics_df
     
+     # Append agent configuration to dataframe
+    ll_metrics_df['agent_config'] = path.parts[-4]
+
     # Append scenario name to dataframe
     ll_metrics_df['scenario_name'] = path.name
+
+    # Append min and max of performance data
+    ll_metrics_df['min'] = report._log_data[perf_measure].min()
+    ll_metrics_df['max'] = report._log_data[perf_measure].max()
 
     # Append scenario complexity and difficulty
     with open(path / 'scenario_info.json', 'r') as json_file:
@@ -195,7 +203,8 @@ def compute_scenario_metrics(path: Path, perf_measure: str, transfer_method: str
     return ll_metrics_df
 
 
-def compute_metrics(eval_dir: Path, perf_measure: str, transfer_method: str, do_smoothing: bool) -> pd.DataFrame:
+def compute_metrics(eval_dir: Path, perf_measure: str, transfer_method: str, do_normalize: bool,
+                    remove_outliers: bool, do_smoothing: bool) -> pd.DataFrame:
     """Compute lifelong learning metrics for all LL logs in provided log directory.
 
     This function iterates through all the lifelong learning logs it finds in the provided
@@ -235,13 +244,17 @@ def compute_metrics(eval_dir: Path, perf_measure: str, transfer_method: str, do_
                     # Check if current path is log directory for single run
                     if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
                         ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
-                            path, perf_measure, transfer_method, do_smoothing), ignore_index=True)
+                            path=path, perf_measure=perf_measure, transfer_method=transfer_method,
+                            do_normalize=do_normalize, remove_outliers=remove_outliers,
+                            do_smoothing=do_smoothing), ignore_index=True)
                     else:
                         # Iterate through subdirectories containing LL logs
                         for sub_path in tqdm(list(path.iterdir()), desc=path.name):
                             if sub_path.is_dir():
                                 ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
-                                    sub_path, perf_measure, transfer_method, do_smoothing), ignore_index=True)
+                                    path=sub_path, perf_measure=perf_measure, transfer_method=transfer_method,
+                                    do_normalize=do_normalize, remove_outliers=remove_outliers,
+                                    do_smoothing=do_smoothing), ignore_index=True)
         else:
             raise FileNotFoundError(f"LL logs not found in expected location!")
 
@@ -264,7 +277,11 @@ def plot(ll_metrics_df: pd.DataFrame) -> None:
 
     fig = plt.figure(figsize=(12, 8))
 
-    for index, metric in enumerate(ll_metrics_df.drop(columns=['complexity', 'difficulty']).columns, start=1):
+    ll_metrics = ['perf_recovery', 'perf_maintenance', 'forward_transfer_contrast',
+                  'backward_transfer_contrast', 'forward_transfer_ratio',
+                  'backward_transfer_ratio', 'ste_rel_perf', 'sample_efficiency']
+
+    for index, metric in enumerate(ll_metrics, start=1):
         # Create subplot for current metric
         ax = fig.add_subplot(3, 3, index)
 
@@ -313,6 +330,10 @@ def evaluate() -> None:
     parser.add_argument('-u', '--unzip', action='store_true',
                         help='Unzip all data found in evaluation directory')
 
+    # Flag for enabling normalization
+    parser.add_argument('-n', '--normalize', action='store_true',
+                        help='Normalize performance data for metrics')
+
     # Flag for disabling smoothing
     parser.add_argument('--no-smoothing', action='store_true',
                         help='Do not smooth performance data for metrics')
@@ -329,6 +350,7 @@ def evaluate() -> None:
     args = parser.parse_args()
     eval_dir = Path(args.eval_dir)
     output = Path(args.output)
+    do_normalize = args.normalize
     do_smoothing = not args.no_smoothing
     do_plot = not args.no_plot
     do_save = not args.no_save
@@ -351,7 +373,7 @@ def evaluate() -> None:
 
     # Compute LL metric data
     ll_metrics_df = compute_metrics(
-        eval_dir, args.perf_measure, args.transfer_method, do_smoothing)
+        eval_dir, args.perf_measure, args.transfer_method, do_normalize, do_smoothing)
 
     # Display aggregated data
     display(ll_metrics_df.groupby(

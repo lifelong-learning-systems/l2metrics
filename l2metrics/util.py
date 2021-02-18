@@ -112,8 +112,9 @@ def save_ste_data(log_dir: str) -> None:
 
 
 def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, tasks: list,
-                  perf_measure: str = 'reward', do_smoothing: bool = False, window_len: int = None,
-                  do_save: bool = False) -> None:
+                  perf_measure: str = 'reward', do_normalize: bool = False,
+                  do_smoothing: bool = False, window_len: int = None, do_save: bool = False,
+                  input_title: str = '', input_xlabel: str = 'Episodes') -> None:
     """Plots the relative performance of tasks compared to Single-Task Experts.
 
     Args:
@@ -127,6 +128,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, tasks: list
     """
     # Initialize figure
     fig = plt.figure(figsize=(12, 6))
+    fig.suptitle(input_title)
 
     for index, task_name in enumerate(tasks):
         # Get block info for task during training
@@ -142,6 +144,12 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, tasks: list
             ste_data = load_ste_data(task_name)
 
             if ste_data is not None:
+                if do_normalize:
+                    raw_min = ste_data[perf_measure].values.min()
+                    raw_max = ste_data[perf_measure].values.max()
+                    norm_data = (ste_data[perf_measure].values - raw_min) / (raw_max - raw_min) * 100
+                    ste_data[perf_measure] = norm_data
+
                 # Create subplot
                 ax = fig.add_subplot(3, ceil(len(tasks)/3), index + 1)
 
@@ -157,7 +165,8 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, tasks: list
 
                 ax.scatter(x1, y1, marker='*', linestyle='None', label='STE')
                 ax.scatter(x2, y2, marker='*', linestyle='None', label=task_name)
-
+                ax.set(xlabel=input_xlabel, ylabel=perf_measure)
+                ax.grid()
                 plt.legend()
             else:
                 print(f"STE data for task cannot be found: {task_name}")
@@ -174,7 +183,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, tasks: list
     plt.show()
 
 
-def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, do_smoothing: bool = False,
+def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list, do_smoothing: bool = False,
                      col_to_plot: str = 'reward', x_axis_col: str = 'exp_num', input_title: str = "",
                      do_save_fig: bool = False, plot_filename: str = None, input_xlabel: str = 'Episodes',
                      input_ylabel: str = 'Performance', show_block_boundary: bool = True,
@@ -197,7 +206,6 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, do_smoot
         window_len (int, optional): The window length for smoothing the data. Defaults to None.
     """
 
-    unique_tasks = dataframe.loc[:, 'task_name'].unique()
     fig = plt.figure(figsize=(12, 6))
     ax = fig.add_subplot(111)
 

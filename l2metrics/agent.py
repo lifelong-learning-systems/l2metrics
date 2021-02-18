@@ -573,9 +573,10 @@ class STERelativePerf(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance of each task relative to it's corresponding single-task expert"
 
-    def __init__(self, perf_measure: str, do_smoothing: bool = True) -> None:
+    def __init__(self, perf_measure: str, do_normalize: bool = False, do_smoothing: bool = True) -> None:
         super().__init__()
         self.perf_measure = perf_measure
+        self.do_normalize = do_normalize
         self.do_smoothing = do_smoothing
 
     def validate(self, block_info: pd.DataFrame) -> None:
@@ -620,6 +621,12 @@ class STERelativePerf(AgentMetric):
                             # Compute relative performance
                             min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
 
+                            if self.do_normalize:
+                                raw_min = ste_data[self.perf_measure].values.min()
+                                raw_max = ste_data[self.perf_measure].values.max()
+                                norm_data = (ste_data[self.perf_measure].values - raw_min) / (raw_max - raw_min) * 100
+                                ste_data[self.perf_measure] = norm_data
+
                             if self.do_smoothing:
                                 task_perf = _localutil.smooth(task_data.head(
                                     min_exp)[self.perf_measure].values, window='flat').sum()
@@ -650,9 +657,10 @@ class SampleEfficiency(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the sample efficiency relative to the single-task expert"
 
-    def __init__(self, perf_measure: str) -> None:
+    def __init__(self, perf_measure: str, do_normalize: bool = False) -> None:
         super().__init__()
         self.perf_measure = perf_measure
+        self.do_normalize = do_normalize
 
     def validate(self, block_info: pd.DataFrame) -> pd.DataFrame:
         # Check if there is STE data for each task in the scenario
@@ -695,6 +703,12 @@ class SampleEfficiency(AgentMetric):
                     if ste_data is not None:
                         # Check if performance measure exists in STE data
                         if self.perf_measure in ste_data.columns:
+                            if self.do_normalize:
+                                raw_min = ste_data[self.perf_measure].values.min()
+                                raw_max = ste_data[self.perf_measure].values.max()
+                                norm_data = (ste_data[self.perf_measure].values - raw_min) / (raw_max - raw_min) * 100
+                                ste_data[self.perf_measure] = norm_data
+
                             # Get task saturation value and episodes to saturation
                             task_saturation, task_eps_to_sat, _ = _localutil.get_block_saturation_perf(
                                 task_data, col_to_use=self.perf_measure)
@@ -745,6 +759,16 @@ class AgentMetricsReport(core.MetricsReport):
         else:
             self.do_smoothing = True
 
+        if 'do_normalize' in kwargs:
+            self.do_normalize = kwargs['do_normalize']
+        else:
+            self.do_normalize = False
+
+        if 'remove_outliers' in kwargs:
+            self.remove_outliers = kwargs['remove_outliers']
+        else:
+            self.remove_outliers = False
+
         # Initialize list of LL metrics
         self.task_metrics = ['perf_recovery', 'perf_maintenance']
         if self.transfer_method in ['contrast', 'both']:
@@ -777,6 +801,19 @@ class AgentMetricsReport(core.MetricsReport):
         self._log_data = l2l.fill_regime_num(self._log_data)
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
+
+        # Normalize log data
+        if self.do_normalize:
+            self._raw_data = self._log_data[self.perf_measure].copy()
+            raw_min = self._log_data[self.perf_measure].values.min()
+            raw_max = self._log_data[self.perf_measure].values.max()
+            norm_data = (self._log_data[self.perf_measure].values - raw_min) / (raw_max - raw_min) * 100
+            self._log_data[self.perf_measure] = norm_data
+        
+        # Remove outliers
+        if self.remove_outliers:
+            x = self._log_data[self.perf_measure]
+            self._log_data = self._log_data[x.between(x.quantile(.1), x.quantile(.9))]
 
         if len(self._log_data) == 0:
             raise Exception('No valid log data to compute metrics')
@@ -815,8 +852,8 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(PerformanceMaintenance(self.perf_measure))
         self.add(ForwardTransfer(self.perf_measure, self.transfer_method))
         self.add(BackwardTransfer(self.perf_measure, self.transfer_method))
-        self.add(STERelativePerf(self.perf_measure, self.do_smoothing))
-        self.add(SampleEfficiency(self.perf_measure))
+        self.add(STERelativePerf(self.perf_measure, self.do_normalize, self.do_smoothing))
+        self.add(SampleEfficiency(self.perf_measure, self.do_normalize))
 
     def add_noise(self, mean: float, std: float) -> None:
         # Add Gaussian noise to log data
@@ -1013,9 +1050,11 @@ class AgentMetricsReport(core.MetricsReport):
 
         return pd.DataFrame(task_experiences)
 
-    def plot_ste_data(self, window_len: int = None, save: bool = False) -> None:
+    def plot_ste_data(self, window_len: int = None, input_title: str = 'Performance Relative to STE',
+                      save: bool = False) -> None:
         util.plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
-                           self.perf_measure, self.do_smoothing, window_len=window_len, do_save=save)
+                           self.perf_measure, self.do_normalize, self.do_smoothing,
+                           window_len=window_len, do_save=save, input_title=input_title)
 
     def plot(self, save: bool = False, output: str = None) -> None:
         if output is None:
@@ -1023,5 +1062,5 @@ class AgentMetricsReport(core.MetricsReport):
         else:
             input_title = output
 
-        util.plot_performance(self._log_data, self.block_info, do_smoothing=self.do_smoothing,
+        util.plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks, do_smoothing=self.do_smoothing,
                               col_to_plot=self.perf_measure, do_save_fig=save, input_title=input_title)

@@ -802,6 +802,11 @@ class AgentMetricsReport(core.MetricsReport):
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
 
+        # Remove outliers
+        if self.remove_outliers:
+            x = self._log_data[self.perf_measure]
+            self._log_data = self._log_data[x.between(x.quantile(.1), x.quantile(.9))]
+
         # Normalize log data
         if self.do_normalize:
             self._raw_data = self._log_data[self.perf_measure].copy()
@@ -809,11 +814,6 @@ class AgentMetricsReport(core.MetricsReport):
             raw_max = self._log_data[self.perf_measure].values.max()
             norm_data = (self._log_data[self.perf_measure].values - raw_min) / (raw_max - raw_min) * 100
             self._log_data[self.perf_measure] = norm_data
-        
-        # Remove outliers
-        if self.remove_outliers:
-            x = self._log_data[self.perf_measure]
-            self._log_data = self._log_data[x.between(x.quantile(.1), x.quantile(.9))]
 
         if len(self._log_data) == 0:
             raise Exception('No valid log data to compute metrics')
@@ -1050,17 +1050,22 @@ class AgentMetricsReport(core.MetricsReport):
 
         return pd.DataFrame(task_experiences)
 
-    def plot_ste_data(self, window_len: int = None, input_title: str = 'Performance Relative to STE',
-                      save: bool = False) -> None:
-        util.plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
-                           self.perf_measure, self.do_normalize, self.do_smoothing,
-                           window_len=window_len, do_save=save, input_title=input_title)
-
-    def plot(self, save: bool = False, output: str = None) -> None:
-        if output is None:
+    def plot(self, save: bool = False, output_dir: str = '', input_title: str = None) -> None:
+        if input_title is None:
             input_title = os.path.split(self.log_dir)[-1]
-        else:
-            input_title = output
 
-        util.plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks, do_smoothing=self.do_smoothing,
-                              col_to_plot=self.perf_measure, do_save_fig=save, input_title=input_title)
+        util.plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
+                              do_smoothing=self.do_smoothing, y_axis_col=self.perf_measure,
+                              input_title=input_title, output_dir=output_dir, do_save_fig=save)
+
+    def plot_ste_data(self, window_len: int = None, input_title: str = None,
+                      save: bool = False, output_dir: str = '') -> None:
+        if input_title is None:
+            input_title = 'Performance Relative to STE\n' + os.path.split(self.log_dir)[-1]
+        plot_filename = 'ste_' + os.path.split(self.log_dir)[-1]
+
+        util.plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
+                           perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,
+                           window_len=window_len, do_normalize=self.do_normalize,
+                           input_title=input_title, output_dir=output_dir, do_save=save,
+                           plot_filename=plot_filename)

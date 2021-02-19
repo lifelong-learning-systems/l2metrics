@@ -111,117 +111,51 @@ def save_ste_data(log_dir: str) -> None:
     print(f'Stored STE data for {task_name[0]}')
 
 
-def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, tasks: list,
-                  perf_measure: str = 'reward', do_normalize: bool = False,
-                  do_smoothing: bool = False, window_len: int = None, do_save: bool = False,
-                  input_title: str = '', input_xlabel: str = 'Episodes') -> None:
-    """Plots the relative performance of tasks compared to Single-Task Experts.
-
-    Args:
-        dataframe (pd.DataFrame): The performance data to plot.
-        block_info (pd.DataFrame): The block info of the DataFrame.
-        tasks (list): The list of task names.
-        perf_measure (str, optional): The column name of the metric to plot. Defaults to 'reward'.
-        do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to False.
-        window_len (int, optional): The window length for smoothing the data. Defaults to None.
-        do_save (bool, optional): Flag for enabling saving figure. Defaults to False.
-    """
-    # Initialize figure
-    fig = plt.figure(figsize=(12, 6))
-    fig.suptitle(input_title)
-
-    for index, task_name in enumerate(tasks):
-        # Get block info for task during training
-        task_blocks = block_info[(block_info['task_name'] == task_name) & (
-            block_info['block_type'] == 'train')]
-
-        # Get data concatenated data for task
-        task_data = dataframe[dataframe['regime_num'].isin(
-            task_blocks['regime_num'])]
-
-        if len(task_data):
-            # Load STE data
-            ste_data = load_ste_data(task_name)
-
-            if ste_data is not None:
-                if do_normalize:
-                    raw_min = ste_data[perf_measure].values.min()
-                    raw_max = ste_data[perf_measure].values.max()
-                    norm_data = (ste_data[perf_measure].values - raw_min) / (raw_max - raw_min) * 100
-                    ste_data[perf_measure] = norm_data
-
-                # Create subplot
-                ax = fig.add_subplot(3, ceil(len(tasks)/3), index + 1)
-
-                x1 = list(range(0, ste_data.shape[0]))
-                x2 = list(range(0, task_data.shape[0]))
-
-                if do_smoothing:
-                    y1 = _localutil.smooth(ste_data[perf_measure].values, window_len=window_len)
-                    y2 = _localutil.smooth(task_data[perf_measure].values, window_len=window_len)
-                else:
-                    y1 = ste_data[perf_measure].values
-                    y2 = task_data[perf_measure].values
-
-                ax.scatter(x1, y1, marker='*', linestyle='None', label='STE')
-                ax.scatter(x2, y2, marker='*', linestyle='None', label=task_name)
-                ax.set(xlabel=input_xlabel, ylabel=perf_measure)
-                ax.grid()
-                plt.legend()
-            else:
-                print(f"STE data for task cannot be found: {task_name}")
-        else:
-            print(f"Task name cannot be found in scenario: {task_name}")
-
-    fig.subplots_adjust(wspace=0.35, hspace=0.35)
-
-    if do_save:
-        plot_filename = 'ste_plot.png'
-        print(f'Saving figure with name: {plot_filename.replace(" ", "_")}')
-        fig.savefig(plot_filename.replace(" ", "_"))
-
-    plt.show()
-
-
-def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list, do_smoothing: bool = False,
-                     col_to_plot: str = 'reward', x_axis_col: str = 'exp_num', input_title: str = "",
-                     do_save_fig: bool = False, plot_filename: str = None, input_xlabel: str = 'Episodes',
+def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
+                     do_smoothing: bool = False, window_len: int = None, x_axis_col: str = 'exp_num',
+                     y_axis_col: str = 'reward', input_title: str = "", input_xlabel: str = 'Episodes',
                      input_ylabel: str = 'Performance', show_block_boundary: bool = True,
-                     shade_test_blocks: bool = True, window_len: int = None) -> None:
+                     shade_test_blocks: bool = True, output_dir: str = '', do_save_fig: bool = False,
+                     plot_filename: str = None) -> None:
     """Plots the performance curves for the given DataFrame.
 
     Args:
         dataframe (pd.DataFrame): The performance data to plot.
         block_info (pd.DataFrame): The block info of the DataFrame.
+        unique_tasks (list): List of unique tasks in scenario.
         do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to False.
-        col_to_plot (str, optional): The column name of the metric to plot. Defaults to 'reward'.
+        window_len (int, optional): The window length for smoothing the data. Defaults to None.
         x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
-        input_title (str, optional): The title of the plot. Defaults to None.
-        do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to False.
-        plot_filename (str, optional): The filename to use for saving. Defaults to None.
+        y_axis_col (str, optional): The column name of the metric to plot. Defaults to 'reward'.
+        input_title (str, optional): The plot title. Defaults to "".
         input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
         show_block_boundary (bool, optional): Flag for enabling block boundaries. Defaults to True.
         shade_test_blocks (bool, optional): Flag for enabling block shading. Defaults to True.
-        window_len (int, optional): The window length for smoothing the data. Defaults to None.
+        output_dir (str, optional): Output directory of results. Defaults to ''.
+        do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to False.
+        plot_filename (str, optional): The filename to use for saving. Defaults to None.
     """
 
+    # Initialize figure
     fig = plt.figure(figsize=(12, 6))
     ax = fig.add_subplot(111)
 
     color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'cyan', 'orange', 'purple']
+
     if len(unique_tasks) < len(color_selection):
         task_colors = color_selection[:len(unique_tasks)]
     else:
         task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
 
+    # Loop through tasks and plot their performance curves
     for c, t in zip(task_colors, unique_tasks):
         for regime in block_info['regime_num']:
             if block_info.loc[regime, :]['task_name'] == t:
                 x = dataframe.loc[(dataframe['task_name'] == t) & (
                     dataframe['regime_num'] == regime), x_axis_col].values
                 y = dataframe.loc[(dataframe['task_name'] == t) & (
-                    dataframe['regime_num'] == regime), col_to_plot].values
+                    dataframe['regime_num'] == regime), y_axis_col].values
 
                 if do_smoothing:
                     if block_info.loc[regime, :]['block_type'] == 'train':
@@ -229,7 +163,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
                     elif block_info.loc[regime, :]['block_type'] == 'test':
                         y = y.mean() * np.ones(len(x))
 
-                ax.scatter(x, y, color=c, marker='*', linestyle='None', label=t)
+                ax.scatter(x, y, color=c, marker='*', s=8, linestyle='None', label=t)
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
@@ -268,6 +202,95 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         if not plot_filename and not input_title:
             plot_filename = 'plot.png'
         print(f'Saving figure with name: {plot_filename.replace(" ", "_")}')
-        fig.savefig(plot_filename.replace(" ", "_"))
+        fig.savefig(Path(output_dir) / plot_filename.replace(" ", "_"))
+    else:
+        plt.show()
+
+
+def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
+                  perf_measure: str = 'reward', do_smoothing: bool = False, window_len: int = None,
+                  do_normalize: bool = False, input_title: str = '', input_xlabel: str = 'Episodes',
+                  input_ylabel: str = 'Performance', output_dir: str = '', do_save: bool = False,
+                  plot_filename: str = None) -> None:
+    """Plots the relative performance of tasks compared to Single-Task Experts.
+
+    Args:
+        dataframe (pd.DataFrame): The performance data to plot.
+        block_info (pd.DataFrame): The block info of the DataFrame.
+        unique_tasks (list): List of unique tasks in scenario.
+        perf_measure (str, optional): The column name of the metric to plot. Defaults to 'reward'.
+        do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to False.
+        window_len (int, optional): The window length for smoothing the data. Defaults to None.
+        do_normalize (bool, optional): Flag for enabling normalization. Defaults to False.
+        input_title (str, optional): Plot title. Defaults to ''.
+        input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
+        input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
+        output_dir (str, optional): Output directory of results. Defaults to ''.
+        do_save (bool, optional): Flag for enabling saving figure. Defaults to False.
+        plot_filename (str, optional): The filename to use for saving. Defaults to None.
+    """
+
+    # Initialize figure
+    fig = plt.figure(figsize=(12, 6))
+    fig.suptitle(input_title)
+
+    color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'cyan', 'orange', 'purple']
+
+    if len(unique_tasks) < len(color_selection):
+        task_colors = color_selection[:len(unique_tasks)]
+    else:
+        task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
+
+    for index, (task_color, task_name) in enumerate(zip(task_colors, unique_tasks)):
+        # Get block info for task during training
+        task_blocks = block_info[(block_info['task_name'] == task_name) & (
+            block_info['block_type'] == 'train')]
+
+        # Get data concatenated data for task
+        task_data = dataframe[dataframe['regime_num'].isin(
+            task_blocks['regime_num'])]
+
+        if len(task_data):
+            # Load STE data
+            ste_data = load_ste_data(task_name)
+
+            if ste_data is not None:
+                # Create subplot
+                ax = fig.add_subplot(3, ceil(len(unique_tasks)/3), index + 1)
+
+                if do_normalize:
+                    raw_min = ste_data[perf_measure].values.min()
+                    raw_max = ste_data[perf_measure].values.max()
+                    norm_data = (ste_data[perf_measure].values - raw_min) / (raw_max - raw_min) * 100
+                    ste_data[perf_measure] = norm_data
+                    ax.set_ylim([0, 100])
+
+                x1 = list(range(0, ste_data.shape[0]))
+                x2 = list(range(0, task_data.shape[0]))
+
+                if do_smoothing:
+                    y1 = _localutil.smooth(ste_data[perf_measure].values, window_len=window_len)
+                    y2 = _localutil.smooth(task_data[perf_measure].values, window_len=window_len)
+                else:
+                    y1 = ste_data[perf_measure].values
+                    y2 = task_data[perf_measure].values
+
+                ax.scatter(x1, y1, color='orange', marker='*', s=8, linestyle='None', label='STE')
+                ax.scatter(x2, y2, color=task_color, marker='*', s=8, linestyle='None', label=task_name)
+                ax.set(xlabel=input_xlabel, ylabel=input_ylabel)
+                ax.grid()
+                plt.legend()
+            else:
+                print(f"STE data for task cannot be found: {task_name}")
+        else:
+            print(f"Task name cannot be found in scenario: {task_name}")
+
+    fig.subplots_adjust(wspace=0.3, hspace=0.4)
+
+    if do_save:
+        if plot_filename is None:
+            plot_filename = 'ste_plot.png'
+        print(f'Saving figure with name: {plot_filename.replace(" ", "_")}')
+        fig.savefig(Path(output_dir) / plot_filename.replace(" ", "_"))
     else:
         plt.show()

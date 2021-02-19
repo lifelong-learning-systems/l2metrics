@@ -33,6 +33,7 @@ import warnings
 from pathlib import Path
 from zipfile import ZipFile
 
+import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import scipy
@@ -156,56 +157,75 @@ def save_ste_data(log_dir: Path) -> None:
         raise FileNotFoundError(f"STE logs not found in expected location!")
 
 
-def compute_scenario_metrics(path: Path, perf_measure: str, transfer_method: str, do_normalize: bool,
-                             remove_outliers: bool, do_smoothing: bool) -> pd.DataFrame:
+def compute_scenario_metrics(log_dir: Path, perf_measure: str, transfer_method: str,
+                            output_dir: str = '', do_smoothing: bool = True,
+                            do_normalize: bool = False, remove_outliers: bool = False,
+                            do_plot: bool = False, save_plots: bool = False) -> pd.DataFrame:
     """Compute lifelong learning metrics for single LL logs found at input path.
 
     Args:
-        path (Path): Path to scenario directory.
+        log_dir (Path): Path to scenario directory.
         perf_measure (str): Name of column to use for metrics calculations.
         transfer_method (str): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both.'
-        do_smoothing (bool): Flag for enabling smoothing on performance data for metrics.
+        output_dir (str, optional): Output directory of results. Defaults to ''.
+        do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
+            Defaults to True.
+        do_normalize (bool, optional): Flag for enabling normalization on performance data.
+            Defaults to False.
+        remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
+        do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
+        save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
 
     Returns:
         pd.DataFrame: DataFrame containing lifelong metrics from scenarios.
     """
 
-    scenario_dir = str(path)
-
     # Initialize metrics report
     report = AgentMetricsReport(
-        log_dir=scenario_dir, perf_measure=perf_measure, transfer_method=transfer_method,
-        do_normalize=do_normalize, remove_outliers=remove_outliers, do_smoothing=do_smoothing)
+        log_dir=str(log_dir), perf_measure=perf_measure, transfer_method=transfer_method,
+        do_smoothing=do_smoothing, do_normalize=do_normalize, remove_outliers=remove_outliers)
 
-    # Calculate metrics in order of their addition to the metrics list
+    # Calculate metrics
     report.calculate()
-    ll_metrics_df = report.lifetime_metrics_df
+    ll_metrics_df = report.lifetime_metrics_df.copy()
     
+    # Append SG name to dataframe
+    ll_metrics_df['sg_name'] = log_dir.parts[-6].split('_')[1]
+
      # Append agent configuration to dataframe
-    ll_metrics_df['agent_config'] = path.parts[-4]
+    ll_metrics_df['agent_config'] = log_dir.parts[-4]
 
     # Append scenario name to dataframe
-    ll_metrics_df['scenario_name'] = path.name
+    ll_metrics_df['run_id'] = log_dir.name
+
+    # Append application-specific metric to dataframe
+    ll_metrics_df['metrics_column'] = perf_measure
 
     # Append min and max of performance data
     ll_metrics_df['min'] = report._log_data[perf_measure].min()
     ll_metrics_df['max'] = report._log_data[perf_measure].max()
 
     # Append scenario complexity and difficulty
-    with open(path / 'scenario_info.json', 'r') as json_file:
+    with open(log_dir / 'scenario_info.json', 'r') as json_file:
         scenario_info = json.load(json_file)
         if 'complexity' in scenario_info:
             ll_metrics_df['complexity'] = scenario_info['complexity']
         if 'difficulty' in scenario_info:
             ll_metrics_df['difficulty'] = scenario_info['difficulty']
-    
+
+    if do_plot:
+        report.plot(save=save_plots, output_dir=output_dir)
+        report.plot_ste_data(save=save_plots, output_dir=output_dir)
+
     return ll_metrics_df
 
 
-def compute_metrics(eval_dir: Path, perf_measure: str, transfer_method: str, do_normalize: bool,
-                    remove_outliers: bool, do_smoothing: bool) -> pd.DataFrame:
-    """Compute lifelong learning metrics for all LL logs in provided log directory.
+def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, transfer_method: str,
+                         output_dir: str = '', do_smoothing: bool = True,
+                         do_normalize: bool = False, remove_outliers: bool = False,
+                         do_plot: bool = False, save_plots: bool = False, do_save_ste: bool = True) -> pd.DataFrame:
+    """Compute lifelong learning metrics for all LL logs in provided evaluation log directory.
 
     This function iterates through all the lifelong learning logs it finds in the provided
     directory, computes the LL metrics for those logs, then sorts the metrics by scenario
@@ -214,10 +234,20 @@ def compute_metrics(eval_dir: Path, perf_measure: str, transfer_method: str, do_
 
     Args:
         eval_dir (Path): Path to evaluation directory containing LL logs.
+        ste_dir (str): Agent configuration directory of STE data. A value of '' will save all STE
+            logs in every agent configuration directory.
         perf_measure (str): Name of column to use for metrics calculations.
         transfer_method (str): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both.'
-        do_smoothing (bool): Flag for enabling smoothing on performance data for metrics.
+        output_dir (str, optional): Output directory of results. Defaults to ''.
+        do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
+            Defaults to True.
+        do_normalize (bool, optional): Flag for enabling normalization on performance data.
+            Defaults to False.
+        remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
+        do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
+        save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
+        do_save_ste (bool, optional): Flag for enabling save of STE data. Defaults to True.
 
     Raises:
         FileNotFoundError: If log directory structure does not follow the expected
@@ -227,11 +257,17 @@ def compute_metrics(eval_dir: Path, perf_measure: str, transfer_method: str, do_
         pd.DataFrame: DataFrame containing lifelong metrics from all parsed scenarios, sorted by
             scenario complexity and difficulty.
     """
+    
     # Initialize LL metric dataframe
     ll_metrics_df = pd.DataFrame()
 
     # Iterate through agent configuration directories
     for agent_config in tqdm(list(eval_dir.glob('agent_config*')), desc='Agents'):
+        # Save STE data if enabled
+        if do_save_ste:
+            if ste_dir in ['', agent_config.name]:
+                save_ste_data(eval_dir / agent_config.name)
+
         # Check for LL logs
         ll_log_dir = agent_config / 'll_logs'
 
@@ -244,17 +280,19 @@ def compute_metrics(eval_dir: Path, perf_measure: str, transfer_method: str, do_
                     # Check if current path is log directory for single run
                     if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
                         ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
-                            path=path, perf_measure=perf_measure, transfer_method=transfer_method,
-                            do_normalize=do_normalize, remove_outliers=remove_outliers,
-                            do_smoothing=do_smoothing), ignore_index=True)
+                            log_dir=path, perf_measure=perf_measure, transfer_method=transfer_method,
+                            output_dir=output_dir, do_smoothing=do_smoothing, do_normalize=do_normalize,
+                            remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots),
+                            ignore_index=True)
                     else:
                         # Iterate through subdirectories containing LL logs
                         for sub_path in tqdm(list(path.iterdir()), desc=path.name):
                             if sub_path.is_dir():
                                 ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
-                                    path=sub_path, perf_measure=perf_measure, transfer_method=transfer_method,
-                                    do_normalize=do_normalize, remove_outliers=remove_outliers,
-                                    do_smoothing=do_smoothing), ignore_index=True)
+                                    log_dir=sub_path, perf_measure=perf_measure, transfer_method=transfer_method,
+                                    output_dir=output_dir, do_smoothing=do_smoothing, do_normalize=do_normalize,
+                                    remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots),
+                                    ignore_index=True)
         else:
             raise FileNotFoundError(f"LL logs not found in expected location!")
 
@@ -264,7 +302,7 @@ def compute_metrics(eval_dir: Path, perf_measure: str, transfer_method: str, do_
     return ll_metrics_df
 
 
-def plot(ll_metrics_df: pd.DataFrame) -> None:
+def plot_summary(ll_metrics_df: pd.DataFrame) -> None:
     """Plot the aggregated lifelong metrics DataFrame as a violin plot.
 
     The plot should show trends for each of the lifelong metrics based on scenario complexity and
@@ -282,16 +320,17 @@ def plot(ll_metrics_df: pd.DataFrame) -> None:
                   'backward_transfer_ratio', 'ste_rel_perf', 'sample_efficiency']
 
     for index, metric in enumerate(ll_metrics, start=1):
-        # Create subplot for current metric
-        ax = fig.add_subplot(3, 3, index)
+        if metric in ll_metrics_df.columns:
+            # Create subplot for current metric
+            ax = fig.add_subplot(3, 3, index)
 
-        # Create grouped violin plot
-        sns.violinplot(x='complexity', y=metric, hue='difficulty',
-                       data=ll_metrics_df, palette='muted')
+            # Create grouped violin plot
+            sns.violinplot(x='complexity', y=metric, hue='difficulty',
+                        data=ll_metrics_df, palette='muted')
 
-        # Resize legend font
-        plt.setp(ax.get_legend().get_title(), fontsize='8')
-        plt.setp(ax.get_legend().get_texts(), fontsize='6')
+            # Resize legend font
+            plt.setp(ax.get_legend().get_title(), fontsize='8')
+            plt.setp(ax.get_legend().get_texts(), fontsize='6')
 
     fig.subplots_adjust(wspace=0.35, hspace=0.35)
     plt.show()
@@ -314,13 +353,21 @@ def evaluate() -> None:
     parser.add_argument('-l', '--eval-dir', required=True, type=str,
                         help='Evaluation directory containing logs')
 
+    # Evaluation directory be absolute or relative paths
+    parser.add_argument('-s', '--ste-dir', default='', type=str,
+                        help='Agent configuration directory of STE data')
+
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf-measure', default='performance', type=str,
                         help='Name of column to use for metrics calculations')
 
     # Method for calculating forward and backward transfer
-    parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-m', '--transfer-method', default='ratio', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
+
+    # Output directory
+    parser.add_argument('--output-dir', default='sg_results', type=str,
+                        help='Directory for output files')
 
     # Output file location
     parser.add_argument('-o', '--output', default='ll_metrics.tsv', type=str,
@@ -330,17 +377,29 @@ def evaluate() -> None:
     parser.add_argument('-u', '--unzip', action='store_true',
                         help='Unzip all data found in evaluation directory')
 
-    # Flag for enabling normalization
-    parser.add_argument('-n', '--normalize', action='store_true',
-                        help='Normalize performance data for metrics')
-
     # Flag for disabling smoothing
     parser.add_argument('--no-smoothing', action='store_true',
                         help='Do not smooth performance data for metrics')
 
+    # Flag for enabling normalization
+    parser.add_argument('-n', '--normalize', action='store_true',
+                        help='Normalize performance data for metrics')
+
+    # Flag for removing outliers
+    parser.add_argument('--remove-outliers', action='store_true',
+                        help='Remove outliers in data for metrics')
+
+    # Flag for disabling STE save
+    parser.add_argument('--no-save-ste', action='store_true',
+                        help='Do not store STE data')
+
     # Flag for disabling plotting
     parser.add_argument('--no-plot', action='store_true',
                         help='Do not plot metrics report')
+
+    # Flag for enabling plot save
+    parser.add_argument('--save-plots', action='store_true',
+                        help='Save scenario and STE plots')
 
     # Flag for disabling save
     parser.add_argument('--no-save', action='store_true',
@@ -349,52 +408,54 @@ def evaluate() -> None:
     # Parse arguments
     args = parser.parse_args()
     eval_dir = Path(args.eval_dir)
+    output_dir = Path(args.output_dir)
     output = Path(args.output)
-    do_normalize = args.normalize
     do_smoothing = not args.no_smoothing
     do_plot = not args.no_plot
     do_save = not args.no_save
+    do_save_ste = not args.no_save_ste
+
+    # Create output directory if it doesn't exist
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load computational cost data
-    comp_cost_df = load_computational_costs(eval_dir)
+    # comp_cost_df = load_computational_costs(eval_dir)
 
     # Load performance threshold data
-    perf_thresh_df = load_performance_thresholds(eval_dir)
+    # perf_thresh_df = load_performance_thresholds(eval_dir)
 
     # Load task similarity data
-    task_similarity_df = load_task_similarities(eval_dir)
+    # task_similarity_df = load_task_similarities(eval_dir)
 
     # Unzip logs
     if args.unzip:
         unzip_logs(eval_dir)
 
-    # Store STE log data
-    # save_ste_data(eval_dir / 'agent_config-0')
-
     # Compute LL metric data
-    ll_metrics_df = compute_metrics(
-        eval_dir, args.perf_measure, args.transfer_method, do_normalize, do_smoothing)
+    matplotlib.use('Agg')
+    ll_metrics_df = compute_eval_metrics(eval_dir=eval_dir, ste_dir=args.ste_dir, output_dir=output_dir,
+                                         perf_measure=args.perf_measure, transfer_method=args.transfer_method,
+                                         do_smoothing=do_smoothing, do_normalize=args.normalize,
+                                         remove_outliers=args.remove_outliers, do_plot=do_plot,
+                                         save_plots=args.save_plots, do_save_ste=do_save_ste)
 
     # Display aggregated data
-    display(ll_metrics_df.groupby(
-        by=['complexity', 'difficulty']).agg(['mean', 'std']))
-    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(
-        ['median', scipy.stats.iqr]))
+    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['mean', 'std']))
+    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['median', scipy.stats.iqr]))
 
     # Plot aggregated data
     if do_plot:
-        plot(ll_metrics_df)
+        matplotlib.use('TkAgg')
+        plot_summary(ll_metrics_df)
 
     # Save data
     if do_save:
-        if output.is_dir():
-            filename = output / 'll_metrics.tsv'
-        elif output.suffix != '.tsv':
+        if output.suffix != '.tsv':
             filename = Path(output.name + '.tsv')
         else:
             filename = output
 
-        with open(filename, 'w', newline='\n') as metrics_file:
+        with open(output_dir / filename, 'w', newline='\n') as metrics_file:
             ll_metrics_df.to_csv(metrics_file, sep='\t')
 
 

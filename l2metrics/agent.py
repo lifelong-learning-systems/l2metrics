@@ -573,11 +573,13 @@ class STERelativePerf(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance of each task relative to it's corresponding single-task expert"
 
-    def __init__(self, perf_measure: str, do_normalize: bool = False, do_smoothing: bool = True) -> None:
+    def __init__(self, perf_measure: str, do_smoothing: bool = True, do_normalize: bool = False,
+                 min_max_scale: Tuple[int, int, int] = (0, 100, 100)) -> None:
         super().__init__()
         self.perf_measure = perf_measure
-        self.do_normalize = do_normalize
         self.do_smoothing = do_smoothing
+        self.do_normalize = do_normalize
+        self.min_max_scale = min_max_scale
 
     def validate(self, block_info: pd.DataFrame) -> None:
         # Check if there is STE data for each task in the scenario
@@ -622,9 +624,8 @@ class STERelativePerf(AgentMetric):
                             min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
 
                             if self.do_normalize:
-                                raw_min = ste_data[self.perf_measure].values.min()
-                                raw_max = ste_data[self.perf_measure].values.max()
-                                norm_data = (ste_data[self.perf_measure].values - raw_min) / (raw_max - raw_min) * 100
+                                norm_data = (ste_data[self.perf_measure].values - self.min_max_scale[0]) / (
+                                    self.min_max_scale[1] - self.min_max_scale[0]) * self.min_max_scale[2]
                                 ste_data[self.perf_measure] = norm_data
 
                             if self.do_smoothing:
@@ -657,10 +658,12 @@ class SampleEfficiency(AgentMetric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the sample efficiency relative to the single-task expert"
 
-    def __init__(self, perf_measure: str, do_normalize: bool = False) -> None:
+    def __init__(self, perf_measure: str, do_normalize: bool = False,
+                 min_max_scale: Tuple[int, int, int] = (0, 100, 100)) -> None:
         super().__init__()
         self.perf_measure = perf_measure
         self.do_normalize = do_normalize
+        self.min_max_scale = min_max_scale
 
     def validate(self, block_info: pd.DataFrame) -> pd.DataFrame:
         # Check if there is STE data for each task in the scenario
@@ -704,9 +707,8 @@ class SampleEfficiency(AgentMetric):
                         # Check if performance measure exists in STE data
                         if self.perf_measure in ste_data.columns:
                             if self.do_normalize:
-                                raw_min = ste_data[self.perf_measure].values.min()
-                                raw_max = ste_data[self.perf_measure].values.max()
-                                norm_data = (ste_data[self.perf_measure].values - raw_min) / (raw_max - raw_min) * 100
+                                norm_data = (ste_data[self.perf_measure].values - self.min_max_scale[0]) / (
+                                    self.min_max_scale[1] - self.min_max_scale[0]) * self.min_max_scale[2]
                                 ste_data[self.perf_measure] = norm_data
 
                             # Get task saturation value and episodes to saturation
@@ -804,16 +806,15 @@ class AgentMetricsReport(core.MetricsReport):
 
         # Remove outliers
         if self.remove_outliers:
-            x = self._log_data[self.perf_measure]
-            self._log_data = self._log_data[x.between(x.quantile(.1), x.quantile(.9))]
+            self.filter_outliers(quantiles=(0.1, 0.9))
 
         # Normalize log data
+        self.data_min = self._log_data[self.perf_measure].min()
+        self.data_max = self._log_data[self.perf_measure].max()
+        self.data_scale = 100
+
         if self.do_normalize:
-            self._raw_data = self._log_data[self.perf_measure].copy()
-            raw_min = self._log_data[self.perf_measure].values.min()
-            raw_max = self._log_data[self.perf_measure].values.max()
-            norm_data = (self._log_data[self.perf_measure].values - raw_min) / (raw_max - raw_min) * 100
-            self._log_data[self.perf_measure] = norm_data
+            self.normalize_data(scale=self.data_scale)
 
         if len(self._log_data) == 0:
             raise Exception('No valid log data to compute metrics')
@@ -852,12 +853,37 @@ class AgentMetricsReport(core.MetricsReport):
         self.add(PerformanceMaintenance(self.perf_measure))
         self.add(ForwardTransfer(self.perf_measure, self.transfer_method))
         self.add(BackwardTransfer(self.perf_measure, self.transfer_method))
-        self.add(STERelativePerf(self.perf_measure, self.do_normalize, self.do_smoothing))
-        self.add(SampleEfficiency(self.perf_measure, self.do_normalize))
+        self.add(STERelativePerf(self.perf_measure, self.do_smoothing,
+                                 self.do_normalize, (self.data_min, self.data_max, self.data_scale)))
+        self.add(SampleEfficiency(self.perf_measure, self.do_normalize,
+                                  (self.data_min, self.data_max, self.data_scale)))
+
+    def filter_outliers(self, quantiles: Tuple[float, float] = (0.1, 0.9)) -> None:
+        x = self._log_data[self.perf_measure]
+        self._log_data = self._log_data[x.between(
+            x.quantile(quantiles[0]), x.quantile(quantiles[1]))]
+
+    def normalize_data(self, scale: int = 100) -> None:
+        # Save raw data in another variable
+        self._raw_data = self._log_data[self.perf_measure].copy()
+
+        # Get data range over scenario and STE data
+        unique_tasks = list(self._log_data['task_name'].unique())
+        for task in unique_tasks:
+            ste_data = util.load_ste_data(task)
+            if ste_data is not None:
+                if self.perf_measure in ste_data.columns:
+                    self.data_min = min(self.data_min, ste_data[self.perf_measure].min())
+                    self.data_max = max(self.data_max, ste_data[self.perf_measure].max())
+
+        norm_data = (self._log_data[self.perf_measure].values -
+                     self.data_min) / (self.data_max - self.data_min) * scale
+        self._log_data[self.perf_measure] = norm_data
 
     def add_noise(self, mean: float, std: float) -> None:
         # Add Gaussian noise to log data
-        noise = np.random.normal(mean, std, len(self._log_data[self.perf_measure]))
+        noise = np.random.normal(mean, std, len(
+            self._log_data[self.perf_measure]))
         self._log_data[self.perf_measure] = self._log_data[self.perf_measure] + noise
 
     def calculate(self) -> None:

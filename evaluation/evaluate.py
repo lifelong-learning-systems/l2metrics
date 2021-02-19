@@ -456,7 +456,8 @@ def evaluate() -> None:
             filename = output
 
         with open(output_dir / filename, 'w', newline='\n') as metrics_file:
-            ll_metrics_df.to_csv(metrics_file, sep='\t')
+            ll_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
+                ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
 
 
 if __name__ == '__main__':

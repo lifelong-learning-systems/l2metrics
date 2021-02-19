@@ -202,7 +202,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         if not plot_filename and not input_title:
             plot_filename = 'plot.png'
         print(f'Saving figure with name: {plot_filename.replace(" ", "_")}')
-        fig.savefig(Path(output_dir) / plot_filename.replace(" ", "_"))
+        fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + '.png'))
     else:
         plt.show()
 
@@ -291,6 +291,6 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
         if plot_filename is None:
             plot_filename = 'ste_plot.png'
         print(f'Saving figure with name: {plot_filename.replace(" ", "_")}')
-        fig.savefig(Path(output_dir) / plot_filename.replace(" ", "_"))
+        fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + '.png'))
     else:
         plt.show()

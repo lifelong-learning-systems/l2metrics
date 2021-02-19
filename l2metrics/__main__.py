@@ -55,6 +55,14 @@ def run() -> None:
     parser.add_argument('--no-smoothing', action='store_true',
                         help='Do not smooth performance data for metrics and plotting')
 
+    # Flag for enabling normalization
+    parser.add_argument('--normalize', action='store_true',
+                        help='Normalize performance data for metrics')
+
+    # Flag for removing outliers
+    parser.add_argument('--remove-outliers', action='store_true',
+                        help='Remove outliers in data for metrics')
+
     # Flag for disabling plotting
     parser.add_argument('--no-plot', action='store_true',
                         help='Do not plot performance')
@@ -74,7 +82,8 @@ def run() -> None:
     else:
         # Initialize metrics report
         report = AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
-                                    transfer_method=args.transfer_method, do_smoothing=do_smoothing)
+                                    transfer_method=args.transfer_method, do_smoothing=do_smoothing,
+                                    do_normalize=args.normalize, remove_outliers=args.remove_outliers)
 
         # Add noise to log data if mean or standard deviation is specified
         if args.noise[0] or args.noise[1]:
@@ -88,7 +97,7 @@ def run() -> None:
 
         # Plot metrics
         if do_plot:
-            report.plot(save=do_save, output=args.output)
+            report.plot(save=do_save)
             report.plot_ste_data(save=do_save)
 
 

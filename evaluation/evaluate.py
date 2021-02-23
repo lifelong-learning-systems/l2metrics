@@ -35,6 +35,7 @@ from zipfile import ZipFile
 
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import scipy
 import seaborn as sns
@@ -202,9 +203,10 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, transfer_method: 
     # Append application-specific metric to dataframe
     ll_metrics_df['metrics_column'] = perf_measure
 
-    # Append min and max of performance data
-    ll_metrics_df['min'] = report._log_data[perf_measure].min()
-    ll_metrics_df['max'] = report._log_data[perf_measure].max()
+    # Append performance data stats
+    ll_metrics_df['min'] = np.nanmin(report._log_data[perf_measure])
+    ll_metrics_df['max'] = np.nanmax(report._log_data[perf_measure])
+    ll_metrics_df['num_lx'] = report._log_data.shape[0]
 
     # Append scenario complexity and difficulty
     with open(log_dir / 'scenario_info.json', 'r') as json_file:

@@ -71,6 +71,7 @@ def smooth(x: np.ndarray, window_len: int = None, window: str = 'hanning') -> np
         raise ValueError("Window is one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
     s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
+    s = s[~np.isnan(s)]
 
     if window == 'flat':  # moving average
         w = np.ones(window_len, 'd')

@@ -159,9 +159,13 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
 
                 if do_smoothing:
                     if block_info.loc[regime, :]['block_type'] == 'train':
-                        y = _localutil.smooth(y, window_len=window_len)
+                        y = _localutil.smooth(y, window_len=window_len, window='flat')
                     elif block_info.loc[regime, :]['block_type'] == 'test':
-                        y = y.mean() * np.ones(len(x))
+                        y = np.nanmean(y) * np.ones(len(x))
+
+                # Match x and y length if data had NaNs
+                if len(x) != len(y):
+                    x = list(range(x[0], x[0] + len(y)))
 
                 ax.scatter(x, y, color=c, marker='*', s=8, linestyle='None', label=t)
 
@@ -259,21 +263,21 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
                 ax = fig.add_subplot(3, ceil(len(unique_tasks)/3), index + 1)
 
                 if do_normalize:
-                    raw_min = ste_data[perf_measure].values.min()
-                    raw_max = ste_data[perf_measure].values.max()
+                    raw_min = np.nanmin(ste_data[perf_measure].values)
+                    raw_max = np.nanmax(ste_data[perf_measure].values)
                     norm_data = (ste_data[perf_measure].values - raw_min) / (raw_max - raw_min) * 100
                     ste_data[perf_measure] = norm_data
                     ax.set_ylim([0, 100])
 
-                x1 = list(range(0, ste_data.shape[0]))
-                x2 = list(range(0, task_data.shape[0]))
-
                 if do_smoothing:
-                    y1 = _localutil.smooth(ste_data[perf_measure].values, window_len=window_len)
-                    y2 = _localutil.smooth(task_data[perf_measure].values, window_len=window_len)
+                    y1 = _localutil.smooth(ste_data[perf_measure].values, window_len=window_len, window='flat')
+                    y2 = _localutil.smooth(task_data[perf_measure].values, window_len=window_len, window='flat')
                 else:
                     y1 = ste_data[perf_measure].values
                     y2 = task_data[perf_measure].values
+                
+                x1 = list(range(0, len(y1)))
+                x2 = list(range(0, len(y2)))
 
                 ax.scatter(x1, y1, color='orange', marker='*', s=8, linestyle='None', label='STE')
                 ax.scatter(x2, y2, color=task_color, marker='*', s=8, linestyle='None', label=task_name)

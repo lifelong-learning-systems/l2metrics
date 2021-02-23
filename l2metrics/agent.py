@@ -629,15 +629,15 @@ class STERelativePerf(AgentMetric):
                                 ste_data[self.perf_measure] = norm_data
 
                             if self.do_smoothing:
-                                task_perf = _localutil.smooth(task_data.head(
-                                    min_exp)[self.perf_measure].values, window='flat').sum()
-                                ste_perf = _localutil.smooth(ste_data.head(
-                                    min_exp)[self.perf_measure].values, window='flat').sum()
+                                task_perf = np.nansum(_localutil.smooth(task_data.head(
+                                    min_exp)[self.perf_measure].values, window='flat'))
+                                ste_perf = np.nansum(_localutil.smooth(ste_data.head(
+                                    min_exp)[self.perf_measure].values, window='flat'))
                             else:
-                                task_perf = task_data.head(
-                                    min_exp)[self.perf_measure].values.sum()
-                                ste_perf = ste_data.head(
-                                    min_exp)[self.perf_measure].values.sum()
+                                task_perf = np.nansum(task_data.head(
+                                    min_exp)[self.perf_measure].values)
+                                ste_perf = np.nansum(ste_data.head(
+                                    min_exp)[self.perf_measure].values)
 
                             rel_perf = task_perf / ste_perf
                             ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
@@ -809,8 +809,8 @@ class AgentMetricsReport(core.MetricsReport):
             self.filter_outliers(quantiles=(0.1, 0.9))
 
         # Normalize log data
-        self.data_min = self._log_data[self.perf_measure].min()
-        self.data_max = self._log_data[self.perf_measure].max()
+        self.data_min = np.nanmin(self._log_data[self.perf_measure])
+        self.data_max = np.nanmax(self._log_data[self.perf_measure])
         self.data_scale = 100
 
         if self.do_normalize:
@@ -873,8 +873,8 @@ class AgentMetricsReport(core.MetricsReport):
             ste_data = util.load_ste_data(task)
             if ste_data is not None:
                 if self.perf_measure in ste_data.columns:
-                    self.data_min = min(self.data_min, ste_data[self.perf_measure].min())
-                    self.data_max = max(self.data_max, ste_data[self.perf_measure].max())
+                    self.data_min = min(self.data_min, np.nanmin(ste_data[self.perf_measure]))
+                    self.data_max = max(self.data_max, np.nanmax(ste_data[self.perf_measure]))
 
         norm_data = (self._log_data[self.perf_measure].values -
                      self.data_min) / (self.data_max - self.data_min) * scale

@@ -1092,6 +1092,7 @@ class AgentMetricsReport(core.MetricsReport):
 
         util.plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
                            perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,
-                           window_len=window_len, do_normalize=self.do_normalize,
+                           window_len=window_len, do_normalize=self.do_normalize, min_max_scale=(
+                               self.data_min, self.data_max, self.data_scale),
                            input_title=input_title, output_dir=output_dir, do_save=save,
                            plot_filename=plot_filename)

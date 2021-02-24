@@ -20,6 +20,7 @@ import os
 from collections import OrderedDict
 from math import ceil
 from pathlib import Path
+from typing import Tuple
 
 import l2logger.util as l2l
 import matplotlib.pyplot as plt
@@ -213,7 +214,8 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
 
 def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
                   perf_measure: str = 'reward', do_smoothing: bool = False, window_len: int = None,
-                  do_normalize: bool = False, input_title: str = '', input_xlabel: str = 'Episodes',
+                  do_normalize: bool = False, min_max_scale: Tuple[int, int, int] = (0, 100, 100),
+                  input_title: str = '', input_xlabel: str = 'Episodes',
                   input_ylabel: str = 'Performance', output_dir: str = '', do_save: bool = False,
                   plot_filename: str = None) -> None:
     """Plots the relative performance of tasks compared to Single-Task Experts.
@@ -226,6 +228,8 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
         do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to False.
         window_len (int, optional): The window length for smoothing the data. Defaults to None.
         do_normalize (bool, optional): Flag for enabling normalization. Defaults to False.
+        min_max_scale (Tuple[int, int, int], optional): Min, max, and scale of normalization.
+            Defaults to (0, 100, 100).
         input_title (str, optional): Plot title. Defaults to ''.
         input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
@@ -263,11 +267,10 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
                 ax = fig.add_subplot(3, ceil(len(unique_tasks)/3), index + 1)
 
                 if do_normalize:
-                    raw_min = np.nanmin(ste_data[perf_measure].values)
-                    raw_max = np.nanmax(ste_data[perf_measure].values)
-                    norm_data = (ste_data[perf_measure].values - raw_min) / (raw_max - raw_min) * 100
-                    ste_data[perf_measure] = norm_data
-                    ax.set_ylim([0, 100])
+                    norm_ste_data = (ste_data[perf_measure].values - min_max_scale[0]) / (
+                        min_max_scale[1] - min_max_scale[0]) * min_max_scale[2]
+                    ste_data[perf_measure] = norm_ste_data
+                    plt.ylim(0, min_max_scale[2])
 
                 if do_smoothing:
                     y1 = _localutil.smooth(ste_data[perf_measure].values, window_len=window_len, window='flat')

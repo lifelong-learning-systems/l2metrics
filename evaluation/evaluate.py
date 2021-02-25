@@ -41,7 +41,7 @@ import scipy
 import seaborn as sns
 from IPython.display import display
 from l2metrics import util
-from l2metrics.agent import AgentMetricsReport
+from l2metrics.report import MetricsReport
 
 sns.set_style("dark")
 sns.set_context("paper")
@@ -183,7 +183,7 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, transfer_method: 
     """
 
     # Initialize metrics report
-    report = AgentMetricsReport(
+    report = MetricsReport(
         log_dir=str(log_dir), perf_measure=perf_measure, transfer_method=transfer_method,
         do_smoothing=do_smoothing, do_normalize=do_normalize, remove_outliers=remove_outliers)
 

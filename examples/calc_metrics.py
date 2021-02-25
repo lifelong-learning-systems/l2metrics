@@ -25,10 +25,11 @@ import argparse
 
 import pandas as pd
 from l2metrics import _localutil
-from l2metrics.agent import AgentMetric, AgentMetricsReport
+from l2metrics.core import Metric
+from l2metrics.report import MetricsReport
 
 
-class MyCustomAgentMetric(AgentMetric):
+class MyCustomAgentMetric(Metric):
     name = "An Example Custom Metric for illustration"
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent'}
@@ -38,6 +39,9 @@ class MyCustomAgentMetric(AgentMetric):
         super().__init__()
         self.perf_measure = perf_measure
 
+    def validate(self, block_info):
+        pass
+
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         max_values = {}
 
@@ -46,14 +50,9 @@ class MyCustomAgentMetric(AgentMetric):
             max_values[idx] = max_regime_value
 
         # This is the line that fills the metric into the dataframe. Comment it out to suppress this behavior
-        metrics_df = _localutil.fill_metrics_df(max_values, 'max_value', metrics_df)
+        metrics_df = _localutil.fill_metrics_df(
+            max_values, 'max_value', metrics_df)
         return metrics_df
-
-    def plot(self, result):
-        pass
-
-    def validate(self, block_info):
-        pass
 
 
 def run() -> None:
@@ -88,6 +87,14 @@ def run() -> None:
     parser.add_argument('--no-smoothing', action='store_true',
                         help='Do not smooth performance data for metrics and plotting')
 
+    # Flag for enabling normalization
+    parser.add_argument('--normalize', action='store_true',
+                        help='Normalize performance data for metrics')
+
+    # Flag for removing outliers
+    parser.add_argument('--remove-outliers', action='store_true',
+                        help='Remove outliers in data for metrics')
+
     # Flag for disabling plotting
     parser.add_argument('--no-plot', action='store_true',
                         help='Do not plot performance')
@@ -102,9 +109,12 @@ def run() -> None:
     do_plot = not args.no_plot
     do_save = not args.no_save
 
+
     # Initialize metrics report
-    report = AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
-                                transfer_method=args.transfer_method, do_smoothing=do_smoothing)
+    # Initialize metrics report
+    report = MetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
+                           transfer_method=args.transfer_method, do_smoothing=do_smoothing,
+                           do_normalize=args.normalize, remove_outliers=args.remove_outliers)
 
     # Add example of custom metric
     report.add(MyCustomAgentMetric(args.perf_measure))

@@ -16,60 +16,43 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
-import abc
-
 import pandas as pd
 
+from ._localutil import fill_metrics_df, get_block_saturation_perf
+from .core import Metric
 
-class Metric(abc.ABC):
-    """
-    A single metric
-    """
-    @property
-    def capability(self):
-        """
-        A string (one of the core capabilities that the metric calculates):
-            continual_learning
-            adapt_to_new_tasks
-            goal_driven_perception
-            selective_plasticity
-            safety_and_monitoring            
-        """
+
+class BlockSaturation(Metric):
+    name = "Average Within Block Saturation Calculation"
+    capability = "continual_learning"
+    requires = {'syllabus_type': 'agent'}
+    description = "Calculates the max performance within each block"
+
+    def __init__(self, perf_measure: str) -> None:
+        super().__init__()
+        self.perf_measure = perf_measure
+
+    def validate(self, block_info) -> None:
         pass
 
-    @property
-    def name(self):
-        """
-        A short label that uniquely identifies this metric. 
-        """
-        return ""
-
-    @property
-    def description(self):
-        """
-        A more detailed description for this metric
-        """
-        return ""
-
-    @property
-    def requires(self):
-        """
-        A dictionary of requirements for this metric. Keys 
-          syllabus_type: one of 'type1", "type2", etc.
-        """
-        return {}
-
-    @abc.abstractmethod
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate metric
+        # Initialize metric dictionaries
+        saturation_values = {}
+        eps_to_saturation = {}
 
-        Args:
-            dataframe (pd.DataFrame): Dataframe containing log data
-            block_info (pd.DataFrame): High-level block summary of log data
-            metrics_df (pd.DataFrame): Incremental Dataframe with columns corresponding to
-                calculated metrics along with some of the block_info information.
+        # Iterate over all of the blocks and compute the within block performance
+        for idx in range(block_info.loc[:, 'regime_num'].max() + 1):
+            # Need to get the part of the data corresponding to the block
+            block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
-        Returns:
-            pd.DataFrame: Updated metrics dataframe.
-        """
-        return None
+            # Make within block calculations
+            sat_value, eps_to_sat, _ = get_block_saturation_perf(
+                block_data, col_to_use=self.perf_measure)
+
+            # Record them
+            saturation_values[idx] = sat_value
+            eps_to_saturation[idx] = eps_to_sat
+
+        metrics_df = fill_metrics_df(saturation_values, 'saturation', metrics_df)
+
+        return fill_metrics_df(eps_to_saturation, 'eps_to_sat', metrics_df)

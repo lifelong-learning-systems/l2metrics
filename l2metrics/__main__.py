@@ -20,7 +20,7 @@ import argparse
 import traceback
 
 from l2metrics import util
-from l2metrics.agent import AgentMetricsReport
+from l2metrics.report import MetricsReport
 
 
 def run() -> None:
@@ -81,9 +81,9 @@ def run() -> None:
         util.save_ste_data(args.log_dir)
     else:
         # Initialize metrics report
-        report = AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
-                                    transfer_method=args.transfer_method, do_smoothing=do_smoothing,
-                                    do_normalize=args.normalize, remove_outliers=args.remove_outliers)
+        report = MetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
+                               transfer_method=args.transfer_method, do_smoothing=do_smoothing,
+                               do_normalize=args.normalize, remove_outliers=args.remove_outliers)
 
         # Add noise to log data if mean or standard deviation is specified
         if args.noise[0] or args.noise[1]:

@@ -93,6 +93,11 @@ class SampleEfficiency(Metric):
                             # Get STE saturation value and episodes to saturation
                             ste_saturation, ste_eps_to_sat, _ = get_block_saturation_perf(
                                 ste_data, col_to_use=self.perf_measure)
+                            
+                            # Check for valid performance
+                            if task_eps_to_sat == 0 or ste_eps_to_sat == 0:
+                                print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
+                                continue
 
                             # Compute sample efficiency
                             se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation

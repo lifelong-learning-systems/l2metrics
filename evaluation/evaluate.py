@@ -40,12 +40,18 @@ import numpy as np
 import pandas as pd
 import scipy
 import seaborn as sns
+from IPython import get_ipython
 from IPython.display import display
 from l2metrics import util
 from l2metrics.report import MetricsReport
 
 sns.set_style("dark")
 sns.set_context("paper")
+
+if get_ipython() is None:
+    from tqdm import tqdm
+else:
+    from tqdm.notebook import tqdm
 
 
 def load_computational_costs(eval_dir: Path) -> pd.DataFrame:
@@ -252,6 +258,7 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
     if do_plot:
         report.plot(save=save_plots, output_dir=output_dir)
         report.plot_ste_data(save=save_plots, output_dir=output_dir)
+        plt.close('all')
 
     return ll_metrics_df, ll_metrics_dict
 
@@ -500,18 +507,15 @@ def evaluate() -> None:
 
     # Save data
     if do_save:
-        with open(output_dir / (output + '.tsv'), 'w', newline='\n') as metrics_file:
+        with open(output_dir.parent / (output + '.tsv'), 'w', newline='\n') as metrics_file:
             ll_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
                 ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
-        with open(output_dir / (output + '.json'), 'w', newline='\n') as metrics_file:
+        with open(output_dir.parent / (output + '.json'), 'w', newline='\n') as metrics_file:
             json.dump(ll_metrics_dicts, metrics_file)
 
 if __name__ == '__main__':
-    from tqdm import tqdm
     try:
         evaluate()
     except Exception as e:
         print(f'Error: {e}')
         traceback.print_exc()
-else:
-    from tqdm.notebook import tqdm

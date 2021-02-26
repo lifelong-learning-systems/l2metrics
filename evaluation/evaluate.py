@@ -31,6 +31,7 @@ import os
 import traceback
 import warnings
 from pathlib import Path
+from typing import Tuple
 from zipfile import ZipFile
 
 import matplotlib
@@ -159,9 +160,9 @@ def save_ste_data(log_dir: Path) -> None:
 
 
 def compute_scenario_metrics(log_dir: Path, perf_measure: str, transfer_method: str,
-                            output_dir: str = '', do_smoothing: bool = True,
-                            do_normalize: bool = False, remove_outliers: bool = False,
-                            do_plot: bool = False, save_plots: bool = False) -> pd.DataFrame:
+                             output_dir: str = '', do_smoothing: bool = True,
+                             do_normalize: bool = False, remove_outliers: bool = False,
+                             do_plot: bool = False, save_plots: bool = False) -> Tuple[pd.DataFrame, dict]:
     """Compute lifelong learning metrics for single LL logs found at input path.
 
     Args:
@@ -190,37 +191,66 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, transfer_method: 
     # Calculate metrics
     report.calculate()
     ll_metrics_df = report.lifetime_metrics_df.copy()
-    
-    # Append SG name to dataframe
-    ll_metrics_df['sg_name'] = log_dir.parts[-6].split('_')[1]
+    ll_metrics_dict = {}
 
-     # Append agent configuration to dataframe
+    # Append SG name to dataframe
+    # TODO: Figure out solution that isn't as hard-coded
+    ll_metrics_df['sg_name'] = log_dir.parts[-6].split('_')[1]
+    ll_metrics_dict['sg_name'] = log_dir.parts[-6].split('_')[1]
+
+    # Append agent configuration to dataframe
     ll_metrics_df['agent_config'] = log_dir.parts[-4]
+    ll_metrics_dict['agent_config'] = log_dir.parts[-4]
 
     # Append scenario name to dataframe
     ll_metrics_df['run_id'] = log_dir.name
-
-    # Append application-specific metric to dataframe
-    ll_metrics_df['metrics_column'] = perf_measure
-
-    # Append performance data stats
-    ll_metrics_df['min'] = np.nanmin(report._log_data[perf_measure])
-    ll_metrics_df['max'] = np.nanmax(report._log_data[perf_measure])
-    ll_metrics_df['num_lx'] = report._log_data.shape[0]
+    ll_metrics_dict['run_id'] = log_dir.name
 
     # Append scenario complexity and difficulty
     with open(log_dir / 'scenario_info.json', 'r') as json_file:
         scenario_info = json.load(json_file)
         if 'complexity' in scenario_info:
             ll_metrics_df['complexity'] = scenario_info['complexity']
+            ll_metrics_dict['complexity'] = scenario_info['complexity']
         if 'difficulty' in scenario_info:
             ll_metrics_df['difficulty'] = scenario_info['difficulty']
+            ll_metrics_dict['difficulty'] = scenario_info['difficulty']
+
+    # Append application-specific metric to dataframe
+    ll_metrics_df['metrics_column'] = perf_measure
+    ll_metrics_dict['metrics_column'] = perf_measure
+
+    # Append performance data stats
+    log_summary = report.log_summary()
+    ll_metrics_df['min'] = np.nanmin(report._log_data[perf_measure])
+    ll_metrics_df['max'] = np.nanmax(report._log_data[perf_measure])
+    ll_metrics_df['num_lx'] = log_summary['LX'].sum()
+    ll_metrics_df['num_ex'] = log_summary['EX'].sum()
+
+    ll_metrics_dict['min'] = np.nanmin(report._log_data[perf_measure])
+    ll_metrics_dict['max'] = np.nanmax(report._log_data[perf_measure])
+    ll_metrics_dict['num_lx'] = int(log_summary['LX'].sum())
+    ll_metrics_dict['num_ex'] = int(log_summary['EX'].sum())
+
+    # Append lifetime and task metrics to dictionary
+    ll_metrics_dict.update(report.lifetime_metrics_df.loc[0].T.to_dict())
+    ll_metrics_dict['task_metrics'] = report.task_metrics_df.T.to_dict()
+
+    for task in report._unique_tasks:
+        ll_metrics_dict['task_metrics'][task]['min'] = np.nanmin(
+            report._log_data[report._log_data['task_name'] == task][perf_measure])
+        ll_metrics_dict['task_metrics'][task]['max'] = np.nanmax(
+            report._log_data[report._log_data['task_name'] == task][perf_measure])
+        ll_metrics_dict['task_metrics'][task]['num_lx'] = int(
+            log_summary.loc[task, 'LX'])
+        ll_metrics_dict['task_metrics'][task]['num_ex'] = int(
+            log_summary.loc[task, 'EX'])
 
     if do_plot:
         report.plot(save=save_plots, output_dir=output_dir)
         report.plot_ste_data(save=save_plots, output_dir=output_dir)
 
-    return ll_metrics_df
+    return ll_metrics_df, ll_metrics_dict
 
 
 def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, transfer_method: str,
@@ -262,6 +292,7 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, trans
     
     # Initialize LL metric dataframe
     ll_metrics_df = pd.DataFrame()
+    ll_metrics_dicts = []
 
     # Iterate through agent configuration directories
     for agent_config in tqdm(list(eval_dir.glob('agent_config*')), desc='Agents'):
@@ -281,27 +312,29 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, trans
                 if path.is_dir():
                     # Check if current path is log directory for single run
                     if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
-                        ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
+                        metrics_df, metrics_dict = compute_scenario_metrics(
                             log_dir=path, perf_measure=perf_measure, transfer_method=transfer_method,
                             output_dir=output_dir, do_smoothing=do_smoothing, do_normalize=do_normalize,
-                            remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots),
-                            ignore_index=True)
+                            remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots)
+                        ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
+                        ll_metrics_dicts.append(metrics_dict)
                     else:
                         # Iterate through subdirectories containing LL logs
                         for sub_path in tqdm(list(path.iterdir()), desc=path.name):
                             if sub_path.is_dir():
-                                ll_metrics_df = ll_metrics_df.append(compute_scenario_metrics(
+                                metrics_df, metrics_dict = compute_scenario_metrics(
                                     log_dir=sub_path, perf_measure=perf_measure, transfer_method=transfer_method,
                                     output_dir=output_dir, do_smoothing=do_smoothing, do_normalize=do_normalize,
-                                    remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots),
-                                    ignore_index=True)
+                                    remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots)
+                                ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
+                                ll_metrics_dicts.append(metrics_dict)
         else:
             raise FileNotFoundError(f"LL logs not found in expected location!")
 
         # Sort data by complexity and difficulty
         ll_metrics_df = ll_metrics_df.sort_values(by=['complexity', 'difficulty'])
 
-    return ll_metrics_df
+    return ll_metrics_df, ll_metrics_dicts
 
 
 def plot_summary(ll_metrics_df: pd.DataFrame) -> None:
@@ -372,7 +405,7 @@ def evaluate() -> None:
                         help='Directory for output files')
 
     # Output file location
-    parser.add_argument('-o', '--output', default='ll_metrics.tsv', type=str,
+    parser.add_argument('-o', '--output', default='ll_metrics', type=str,
                         help='Output filename for results')
 
     # Flag for enabling unzipping of logs
@@ -411,7 +444,7 @@ def evaluate() -> None:
     args = parser.parse_args()
     eval_dir = Path(args.eval_dir)
     output_dir = Path(args.output_dir)
-    output = Path(args.output)
+    output = args.output
     do_smoothing = not args.no_smoothing
     do_plot = not args.no_plot
     do_save = not args.no_save
@@ -421,13 +454,13 @@ def evaluate() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load computational cost data
-    # comp_cost_df = load_computational_costs(eval_dir)
+    comp_cost_df = load_computational_costs(eval_dir)
 
     # Load performance threshold data
-    # perf_thresh_df = load_performance_thresholds(eval_dir)
+    perf_thresh_df = load_performance_thresholds(eval_dir)
 
     # Load task similarity data
-    # task_similarity_df = load_task_similarities(eval_dir)
+    task_similarity_df = load_task_similarities(eval_dir)
 
     # Unzip logs
     if args.unzip:
@@ -435,11 +468,11 @@ def evaluate() -> None:
 
     # Compute LL metric data
     matplotlib.use('Agg')
-    ll_metrics_df = compute_eval_metrics(eval_dir=eval_dir, ste_dir=args.ste_dir, output_dir=output_dir,
-                                         perf_measure=args.perf_measure, transfer_method=args.transfer_method,
-                                         do_smoothing=do_smoothing, do_normalize=args.normalize,
-                                         remove_outliers=args.remove_outliers, do_plot=do_plot,
-                                         save_plots=args.save_plots, do_save_ste=do_save_ste)
+    ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(eval_dir=eval_dir, ste_dir=args.ste_dir, output_dir=output_dir,
+                                                           perf_measure=args.perf_measure, transfer_method=args.transfer_method,
+                                                           do_smoothing=do_smoothing, do_normalize=args.normalize,
+                                                           remove_outliers=args.remove_outliers, do_plot=do_plot,
+                                                           save_plots=args.save_plots, do_save_ste=do_save_ste)
 
     # Display aggregated data
     display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['mean', 'std']))
@@ -452,15 +485,11 @@ def evaluate() -> None:
 
     # Save data
     if do_save:
-        if output.suffix != '.tsv':
-            filename = Path(output.name + '.tsv')
-        else:
-            filename = output
-
-        with open(output_dir / filename, 'w', newline='\n') as metrics_file:
+        with open(output_dir / (output + '.tsv'), 'w', newline='\n') as metrics_file:
             ll_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
                 ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
-
+        with open(output_dir / (output + '.json'), 'w', newline='\n') as metrics_file:
+            json.dump(ll_metrics_dicts, metrics_file)
 
 if __name__ == '__main__':
     from tqdm import tqdm

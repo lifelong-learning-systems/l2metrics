@@ -235,55 +235,48 @@ class MetricsReport():
         if self.maintenance_method in ['mrlep', 'both']:
             self.task_metrics_df['maintenance_val_mrlep'] = [[]] * num_tasks
         if self.transfer_method in ['contrast', 'both']:
-            self.task_metrics_df['forward_transfer_contrast'] = [[np.nan] * num_tasks] * num_tasks
-            self.task_metrics_df['backward_transfer_contrast'] = [[np.nan] * num_tasks] * num_tasks
-            self.forward_transfers_contrast = defaultdict(dict)
-            self.backward_transfers_contrast = defaultdict(dict)
+            self.task_metrics_df['forward_transfer_contrast'] = [{}] * num_tasks
+            self.task_metrics_df['backward_transfer_contrast'] = [{}] * num_tasks
+            self.forward_transfer_contrast = defaultdict(dict)
+            self.backward_transfer_contrast = defaultdict(dict)
         if self.transfer_method in ['ratio', 'both']:
-            self.task_metrics_df['forward_transfer_ratio'] = [[np.nan] * num_tasks] * num_tasks
-            self.task_metrics_df['backward_transfer_ratio'] = [[np.nan] * num_tasks] * num_tasks
-            self.forward_transfers_ratio = defaultdict(dict)
-            self.backward_transfers_ratio = defaultdict(dict)
+            self.task_metrics_df['forward_transfer_ratio'] = [{}] * num_tasks
+            self.task_metrics_df['backward_transfer_ratio'] = [{}] * num_tasks
+            self.forward_transfer_ratio = defaultdict(dict)
+            self.backward_transfer_ratio = defaultdict(dict)
 
         # Create data structures for transfer values
         for _, row in self._metrics_df.iterrows():
             if 'forward_transfer_contrast' in self._metrics_df:
                 if type(row['forward_transfer_contrast']) is dict:
                     [(other_task, transfer_value)] = row['forward_transfer_contrast'].items()
-                    key = (self._unique_tasks.index(other_task),
-                           self._unique_tasks.index(row['task_name']))
-                    self.forward_transfers_contrast[key[0]][key[1]] = round(
-                        transfer_value, 2)
+                    key = (other_task, row['task_name'])
+                    self.forward_transfer_contrast[key[0]][key[1]] = transfer_value
             if 'forward_transfer_ratio' in self._metrics_df:
                 if type(row['forward_transfer_ratio']) is dict:
                     [(other_task, transfer_value)] = row['forward_transfer_ratio'].items()
-                    key = (self._unique_tasks.index(other_task),
-                           self._unique_tasks.index(row['task_name']))
-                    self.forward_transfers_ratio[key[0]][key[1]] = round(
-                        transfer_value, 2)
-
+                    key = (other_task, row['task_name'])
+                    self.forward_transfer_ratio[key[0]][key[1]] = transfer_value
             if 'backward_transfer_contrast' in self._metrics_df:
                 if type(row['backward_transfer_contrast']) is dict:
                     [(other_task, transfer_value)] = row['backward_transfer_contrast'].items()
-                    key = (self._unique_tasks.index(other_task),
-                           self._unique_tasks.index(row['task_name']))
-                    if key[0] not in self.backward_transfers_contrast.keys():
-                        self.backward_transfers_contrast[key[0]][key[1]] = [transfer_value]
-                    elif key[1] not in self.backward_transfers_contrast[key[0]].keys():
-                        self.backward_transfers_contrast[key[0]][key[1]] = [transfer_value]
+                    key = (other_task, row['task_name'])
+                    if key[0] not in self.backward_transfer_contrast.keys():
+                        self.backward_transfer_contrast[key[0]][key[1]] = [transfer_value]
+                    elif key[1] not in self.backward_transfer_contrast[key[0]].keys():
+                        self.backward_transfer_contrast[key[0]][key[1]] = [transfer_value]
                     else:
-                        self.backward_transfers_contrast[key[0]][key[1]].append(transfer_value)
+                        self.backward_transfer_contrast[key[0]][key[1]].append(transfer_value)
             if 'backward_transfer_ratio' in self._metrics_df:
                 if type(row['backward_transfer_ratio']) is dict:
                     [(other_task, transfer_value)] = row['backward_transfer_ratio'].items()
-                    key = (self._unique_tasks.index(other_task),
-                           self._unique_tasks.index(row['task_name']))
-                    if key[0] not in self.backward_transfers_ratio.keys():
-                        self.backward_transfers_ratio[key[0]][key[1]] = [transfer_value]
-                    elif key[1] not in self.backward_transfers_ratio[key[0]].keys():
-                        self.backward_transfers_ratio[key[0]][key[1]] = [transfer_value]
+                    key = (other_task, row['task_name'])
+                    if key[0] not in self.backward_transfer_ratio.keys():
+                        self.backward_transfer_ratio[key[0]][key[1]] = [transfer_value]
+                    elif key[1] not in self.backward_transfer_ratio[key[0]].keys():
+                        self.backward_transfer_ratio[key[0]][key[1]] = [transfer_value]
                     else:
-                        self.backward_transfers_ratio[key[0]][key[1]].append(transfer_value)
+                        self.backward_transfer_ratio[key[0]][key[1]].append(transfer_value)
 
         # Fill task metrics dataframe
         for task in self._unique_tasks:
@@ -293,38 +286,16 @@ class MetricsReport():
             # Iterate over task metrics
             for metric in self.task_metrics:
                 if metric in tm.keys():
-                    if metric == 'perf_maintenance_mrtlp':
+                    if metric in ['perf_maintenance_mrtlp', 'perf_maintenance_mrlep']:
                         pm = tm[metric].dropna().values
                         self.task_metrics_df.at[task, metric] = pm[0] if len(pm) else np.NaN
-                        maintenance_values = list(tm['maintenance_val_mrtlp'].values)
-                        self.task_metrics_df.at[task, 'maintenance_val_mrtlp'] = [
+                        maintenance_val_name = 'maintenance_val_' + metric.split('_')[-1]
+                        maintenance_values = list(tm[maintenance_val_name].values)
+                        self.task_metrics_df.at[task, maintenance_val_name] = [
                             maintenance_values[s] for s in np.ma.clump_unmasked(np.ma.masked_invalid(maintenance_values))]
-                    elif metric == 'perf_maintenance_mrlep':
-                        pm = tm[metric].dropna().values
-                        self.task_metrics_df.at[task, metric] = pm[0] if len(pm) else np.NaN
-                        maintenance_values = list(tm['maintenance_val_mrlep'].values)
-                        self.task_metrics_df.at[task, 'maintenance_val_mrlep'] = [
-                            maintenance_values[s] for s in np.ma.clump_unmasked(np.ma.masked_invalid(maintenance_values))]
-                    elif metric == 'forward_transfer_contrast':
-                        transfer_row = self.task_metrics_df.at[task, metric].copy()
-                        for k, v in self.forward_transfers_contrast[self._unique_tasks.index(task)].items():
-                            transfer_row[k] = v
-                        self.task_metrics_df.at[task, metric] = transfer_row
-                    elif metric == 'forward_transfer_ratio':
-                        transfer_row = self.task_metrics_df.at[task, metric].copy()
-                        for k, v in self.forward_transfers_ratio[self._unique_tasks.index(task)].items():
-                            transfer_row[k] = v
-                        self.task_metrics_df.at[task, metric] = transfer_row
-                    elif metric == 'backward_transfer_contrast':
-                        transfer_row = self.task_metrics_df.at[task, metric].copy()
-                        for k, v in self.backward_transfers_contrast[self._unique_tasks.index(task)].items():
-                            transfer_row[k] = round(np.mean(v), 2)
-                        self.task_metrics_df.at[task, metric] = transfer_row
-                    elif metric == 'backward_transfer_ratio':
-                        transfer_row = self.task_metrics_df.at[task, metric].copy()
-                        for k, v in self.backward_transfers_ratio[self._unique_tasks.index(task)].items():
-                            transfer_row[k] = round(np.mean(v), 2)
-                        self.task_metrics_df.at[task, metric] = transfer_row
+                    elif metric in ['forward_transfer_contrast', 'forward_transfer_ratio',
+                                    'backward_transfer_contrast', 'backward_transfer_ratio']:
+                        self.task_metrics_df.at[task, metric] = getattr(self, metric)[task]
                     else:
                         # Drop NaN values
                         metric_values = tm[metric].dropna().values
@@ -343,23 +314,18 @@ class MetricsReport():
         for metric in self.task_metrics:
             if metric in self.task_metrics_df:
                 if metric in ['forward_transfer_contrast', 'forward_transfer_ratio']:
+                    # Flatten lists and drop NaNs
                     metric_vals = self.task_metrics_df[metric].values
-
-                    # Flatten lists
-                    metric_vals = np.asarray([item for sublist in metric_vals for item in sublist])
-
-                    # Drop NaNs
+                    metric_vals = np.concatenate([list(item.values()) for item in metric_vals])
                     metric_vals = metric_vals[~np.isnan(metric_vals)]
-                elif metric == 'backward_transfer_contrast':
+                elif metric in ['backward_transfer_contrast', 'backward_transfer_ratio']:
                     # Get the first calculated backward transfer values for each task pair
-                    metric_vals = [v2[0] for k, v in self.backward_transfers_contrast.items() for k2, v2 in v.items()]
-                elif metric == 'backward_transfer_ratio':
-                    # Get the first calculated backward transfer values for each task pair
-                    metric_vals = [v2[0] for k, v in self.backward_transfers_ratio.items() for k2, v2 in v.items()]
+                    metric_vals = [v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()]
                 else:
                     metric_vals = self.task_metrics_df[metric].dropna().values
 
                 if len(metric_vals):
+                    # Aggregate metric values with median operator
                     self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
 
     def report(self, save: bool = False, output: str = None) -> None:

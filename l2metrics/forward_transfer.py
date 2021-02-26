@@ -17,7 +17,6 @@
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
 import warnings
-from collections import defaultdict
 from itertools import permutations
 
 import numpy as np
@@ -33,16 +32,18 @@ class ForwardTransfer(Metric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the forward transfer for valid task pairs"
 
-    def __init__(self, perf_measure: str = 'reward', transfer_method: str = 'contrast') -> None:
+    def __init__(self, perf_measure: str, method: str = 'contrast') -> None:
         super().__init__()
         self.perf_measure = perf_measure
-        self.transfer_method = transfer_method
 
-    def validate(self, block_info: pd.DataFrame) -> dict:
         # Check for valid transfer method
-        if self.transfer_method not in ['contrast', 'ratio', 'both']:
-            raise Exception(f'Invalid transfer method: {self.transfer_method}')
+        if method not in ['contrast', 'ratio', 'both']:
+            raise Exception(f'Invalid transfer method: {method}')
+        else:
+            self.do_contrast = method in ['contrast', 'both']
+            self.do_ratio = method in ['ratio', 'both']
 
+    def validate(self, block_info: pd.DataFrame) -> None:
         # Initialize variables for checking block type format
         last_block_num = -1
         last_block_type = ''
@@ -63,83 +64,58 @@ class ForwardTransfer(Metric):
                         break
                     last_block_type = 'train'
 
-        # Find eligible tasks for forward transfer
-        unique_tasks = block_info.loc[:, 'task_name'].unique()
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
+        try:
+            # Validate data
+            self.validate(block_info)
 
-        # Initialize list of tasks for transfer matrix
-        tasks_for_ft = defaultdict(dict)
+            # Initialize metric dictionary
+            forward_transfer = {'ratio': {}, 'contrast': {}}
 
-        # Determine valid transfer pairs
-        for task_pair in permutations(unique_tasks, 2):
-            # Get testing and training indices for task pair
-            training_blocks = block_info[(block_info['task_name'] == task_pair[0]) & (
-                block_info['block_type'] == 'train')]['block_num'].values
+            # Find eligible tasks for forward transfer
+            unique_tasks = block_info.loc[:, 'task_name'].unique()
 
-            other_blocks = block_info[block_info['task_name'] == task_pair[1]]
-            other_test_blocks = other_blocks[other_blocks['block_type'] == 'test']['block_num'].values
-            other_training_blocks = other_blocks[other_blocks['block_type'] == 'train']['block_num'].values
+            # Determine valid transfer pairs
+            for task, other_task in permutations(unique_tasks, 2):
+                # Get testing and training indices for task pair
+                training_regs = block_info[(block_info['task_name'] == task) & (
+                    block_info['block_type'] == 'train')]['regime_num'].values
 
-            # FT - Must have tested task 2 before task 2 then tested task 2 again
-            if len(training_blocks):
-                # Get valid training blocks for first task
-                valid_training_blocks = training_blocks[training_blocks < np.min(
-                    other_training_blocks)] if len(other_training_blocks) else training_blocks
+                other_blocks = block_info[block_info['task_name'] == other_task]
+                other_test_regs = other_blocks[other_blocks['block_type'] == 'test']['regime_num'].values
+                other_training_regs = other_blocks[other_blocks['block_type'] == 'train']['regime_num'].values
 
-                if len(valid_training_blocks) and len(other_test_blocks) >= 2:
-                    for idx in range(len(other_test_blocks) - 1):
-                        for t_idx in valid_training_blocks:
-                            if other_test_blocks[idx] < t_idx < other_test_blocks[idx + 1]:
-                                tasks_for_ft[task_pair[0]][task_pair[1]] = (
-                                    other_test_blocks[idx], other_test_blocks[idx + 1])
+                # FT - Must have tested task 2 before training task 1 then tested task 2 again
+                if len(training_regs):
+                    # Get valid training regimes for first task
+                    valid_training_regs = training_regs[training_regs < np.min(
+                        other_training_regs)] if len(other_training_regs) else training_regs
+
+                    for training_regime in valid_training_regs:
+                        for test_regime_1, test_regime_2 in zip(other_test_regs, other_test_regs[1:]):
+                            if test_regime_1 < training_regime < test_regime_2:
+                                tp_1 = metrics_df[metrics_df['regime_num'] == test_regime_1]['term_perf'].values[0]
+                                tp_2 = metrics_df[metrics_df['regime_num'] == test_regime_2]['term_perf'].values[0]
+
+                                if self.do_contrast:
+                                    forward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
+                                if self.do_ratio:
+                                    forward_transfer['ratio'][test_regime_2] = [{task: tp_2 / tp_1}]
                                 break   # Only compute one value per task pair
                         else:
                             continue
                         break
 
-        if np.sum([len(value) for _, value in tasks_for_ft.items()]) == 0:
-            raise Exception('No valid task pairs for forward transfer')
+            if not (forward_transfer['contrast'] or forward_transfer['ratio']):
+                raise Exception('No valid task pairs for forward transfer')
+            else:
+                if self.do_contrast:
+                    metrics_df = fill_metrics_df(
+                        forward_transfer['contrast'], 'forward_transfer_contrast', metrics_df)
+                if self.do_ratio:
+                    metrics_df = fill_metrics_df(
+                        forward_transfer['ratio'], 'forward_transfer_ratio', metrics_df)
 
-        return tasks_for_ft
-
-    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
-        try:
-            # Validate data and get pairs eligible for forward transfer
-            tasks_for_ft = self.validate(block_info)
-
-            # Initialize flags for transfer methods
-            do_contrast = False
-            do_ratio = False
-
-            if self.transfer_method in ['contrast', 'both']:
-                do_contrast = True
-            if self.transfer_method in ['ratio', 'both']:
-                do_ratio = True
-
-            # Initialize metric dictionaries
-            forward_transfer_contrast = {}
-            forward_transfer_ratio = {}
-
-            # Calculate forward transfer for valid task pairs
-            for task, value in tasks_for_ft.items():
-                for trans_task, trans_blocks in value.items():
-                    tp_1 = metrics_df[(metrics_df['task_name'] == trans_task) & (
-                        metrics_df['block_num'] == trans_blocks[0])]['term_perf'].values[0]
-                    tp_2 = metrics_df[(metrics_df['task_name'] == trans_task) & (
-                        metrics_df['block_num'] == trans_blocks[1])]['term_perf'].values[0]
-                    idx = block_info[(block_info['task_name'] == trans_task) & (
-                        block_info['block_num'] == trans_blocks[1])]['regime_num'].values[0]
-
-                    if do_contrast:
-                        forward_transfer_contrast[idx] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
-                    if do_ratio:
-                        forward_transfer_ratio[idx] = [{task: tp_2 / tp_1}]
-
-            if do_contrast:
-                metrics_df = fill_metrics_df(
-                    forward_transfer_contrast, 'forward_transfer_contrast', metrics_df)
-            if do_ratio:
-                metrics_df = fill_metrics_df(
-                    forward_transfer_ratio, 'forward_transfer_ratio', metrics_df)
             return metrics_df
         except Exception as e:
             print(f"Cannot compute {self.name} - {e}")

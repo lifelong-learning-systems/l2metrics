@@ -57,6 +57,11 @@ class MetricsReport():
         else:
             self.perf_measure = 'reward'
 
+        if 'maintenance_method' in kwargs:
+            self.maintenance_method = kwargs['maintenance_method']
+        else:
+            self.maintenance_method = 'mrlep'
+
         if 'transfer_method' in kwargs:
             self.transfer_method = kwargs['transfer_method']
         else:
@@ -78,7 +83,11 @@ class MetricsReport():
             self.remove_outliers = False
 
         # Initialize list of LL metrics
-        self.task_metrics = ['perf_recovery', 'perf_maintenance']
+        self.task_metrics = ['perf_recovery']
+        if self.maintenance_method in ['mrtlp', 'both']:
+            self.task_metrics.extend(['perf_maintenance_mrtlp'])
+        if self.maintenance_method in ['mrlep', 'both']:
+            self.task_metrics.extend(['perf_maintenance_mrlep'])
         if self.transfer_method in ['contrast', 'both']:
             self.task_metrics.extend(['forward_transfer_contrast', 'backward_transfer_contrast'])
         if self.transfer_method in ['ratio', 'both']:
@@ -156,7 +165,7 @@ class MetricsReport():
         self.add(TerminalPerformance(self.perf_measure, self.do_smoothing))
         self.add(RecoveryTime(self.perf_measure, self.do_smoothing))
         self.add(PerformanceRecovery(self.perf_measure))
-        self.add(PerformanceMaintenance(self.perf_measure))
+        self.add(PerformanceMaintenance(self.perf_measure, self.maintenance_method))
         self.add(ForwardTransfer(self.perf_measure, self.transfer_method))
         self.add(BackwardTransfer(self.perf_measure, self.transfer_method))
         self.add(STERelativePerf(self.perf_measure, self.do_smoothing,
@@ -221,6 +230,10 @@ class MetricsReport():
         # Initialize transfer arrays to NaNs
         num_tasks = len(self._unique_tasks)
 
+        if self.maintenance_method in ['mrtlp', 'both']:
+            self.task_metrics_df['maintenance_val_mrtlp'] = [[]] * num_tasks
+        if self.maintenance_method in ['mrlep', 'both']:
+            self.task_metrics_df['maintenance_val_mrlep'] = [[]] * num_tasks
         if self.transfer_method in ['contrast', 'both']:
             self.task_metrics_df['forward_transfer_contrast'] = [[np.nan] * num_tasks] * num_tasks
             self.task_metrics_df['backward_transfer_contrast'] = [[np.nan] * num_tasks] * num_tasks
@@ -280,8 +293,19 @@ class MetricsReport():
             # Iterate over task metrics
             for metric in self.task_metrics:
                 if metric in tm.keys():
-                    # Create transfer matrix for forward and backward transfer
-                    if metric == 'forward_transfer_contrast':
+                    if metric == 'perf_maintenance_mrtlp':
+                        pm = tm[metric].dropna().values
+                        self.task_metrics_df.at[task, metric] = pm[0] if len(pm) else np.NaN
+                        maintenance_values = list(tm['maintenance_val_mrtlp'].values)
+                        self.task_metrics_df.at[task, 'maintenance_val_mrtlp'] = [
+                            maintenance_values[s] for s in np.ma.clump_unmasked(np.ma.masked_invalid(maintenance_values))]
+                    elif metric == 'perf_maintenance_mrlep':
+                        pm = tm[metric].dropna().values
+                        self.task_metrics_df.at[task, metric] = pm[0] if len(pm) else np.NaN
+                        maintenance_values = list(tm['maintenance_val_mrlep'].values)
+                        self.task_metrics_df.at[task, 'maintenance_val_mrlep'] = [
+                            maintenance_values[s] for s in np.ma.clump_unmasked(np.ma.masked_invalid(maintenance_values))]
+                    elif metric == 'forward_transfer_contrast':
                         transfer_row = self.task_metrics_df.at[task, metric].copy()
                         for k, v in self.forward_transfers_contrast[self._unique_tasks.index(task)].items():
                             transfer_row[k] = v
@@ -346,14 +370,6 @@ class MetricsReport():
         print(tabulate(self.lifetime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql',
                        floatfmt=".2f", showindex=False))
 
-        # Print task-level metrics
-        print('\nTask Metrics:')
-        print(tabulate(self.task_metrics_df, headers='keys', tablefmt='psql', floatfmt=".2f"))
-
-        # Print regime-level metrics
-        # print('\nRegime Metrics:')
-        # print(tabulate(self.regime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql', floatfmt=".2f"))
-
         if save:
             # Generate filename
             if output is None:
@@ -380,7 +396,7 @@ class MetricsReport():
             task_experiences['EX'].append(self._log_data[(self._log_data['task_name'] == task) & (
                 self._log_data['block_type'] == 'test')].shape[0])
 
-        return pd.DataFrame(task_experiences)
+        return pd.DataFrame(task_experiences).set_index('task_name')
 
     def plot(self, save: bool = False, output_dir: str = '', input_title: str = None) -> None:
         if input_title is None:

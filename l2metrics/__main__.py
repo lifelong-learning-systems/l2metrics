@@ -39,8 +39,12 @@ def run() -> None:
     parser.add_argument('-p', '--perf-measure', default='reward',
                         help='Name of column to use for metrics calculations')
 
+    # Method for calculating performance maintenance
+    parser.add_argument('-m', '--maintenance-method', default='mrlep', choices=['mrtlp', 'mrlep', 'both'],
+                        help='Method for computing performance maintenance')
+
     # Method for calculating forward and backward transfer
-    parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
     # Mean and standard deviation for adding noise to log data
@@ -82,6 +86,7 @@ def run() -> None:
     else:
         # Initialize metrics report
         report = MetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
+                               maintenance_method=args.maintenance_method,
                                transfer_method=args.transfer_method, do_smoothing=do_smoothing,
                                do_normalize=args.normalize, remove_outliers=args.remove_outliers)
 

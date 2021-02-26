@@ -159,8 +159,8 @@ def save_ste_data(log_dir: Path) -> None:
         raise FileNotFoundError(f"STE logs not found in expected location!")
 
 
-def compute_scenario_metrics(log_dir: Path, perf_measure: str, transfer_method: str,
-                             output_dir: str = '', do_smoothing: bool = True,
+def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_method: str,
+                             transfer_method: str, output_dir: str = '', do_smoothing: bool = True,
                              do_normalize: bool = False, remove_outliers: bool = False,
                              do_plot: bool = False, save_plots: bool = False) -> Tuple[pd.DataFrame, dict]:
     """Compute lifelong learning metrics for single LL logs found at input path.
@@ -168,6 +168,8 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, transfer_method: 
     Args:
         log_dir (Path): Path to scenario directory.
         perf_measure (str): Name of column to use for metrics calculations.
+        maintenance_method (str): Method for computing maintenance values.
+            Valid values are 'mrtlp', 'mrlep', and 'both.'
         transfer_method (str): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both.'
         output_dir (str, optional): Output directory of results. Defaults to ''.
@@ -185,8 +187,9 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, transfer_method: 
 
     # Initialize metrics report
     report = MetricsReport(
-        log_dir=str(log_dir), perf_measure=perf_measure, transfer_method=transfer_method,
-        do_smoothing=do_smoothing, do_normalize=do_normalize, remove_outliers=remove_outliers)
+        log_dir=str(log_dir), perf_measure=perf_measure, maintenance_method=maintenance_method,
+        transfer_method=transfer_method, do_smoothing=do_smoothing, do_normalize=do_normalize,
+        remove_outliers=remove_outliers)
 
     # Calculate metrics
     report.calculate()
@@ -253,8 +256,8 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, transfer_method: 
     return ll_metrics_df, ll_metrics_dict
 
 
-def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, transfer_method: str,
-                         output_dir: str = '', do_smoothing: bool = True,
+def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maintenance_method: str,
+                         transfer_method: str, output_dir: str = '', do_smoothing: bool = True,
                          do_normalize: bool = False, remove_outliers: bool = False,
                          do_plot: bool = False, save_plots: bool = False, do_save_ste: bool = True) -> pd.DataFrame:
     """Compute lifelong learning metrics for all LL logs in provided evaluation log directory.
@@ -269,6 +272,8 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, trans
         ste_dir (str): Agent configuration directory of STE data. A value of '' will save all STE
             logs in every agent configuration directory.
         perf_measure (str): Name of column to use for metrics calculations.
+        maintenance_method (str): Method for computing maintenance values.
+            Valid values are 'mrtlp', 'mrlep', and 'both.'
         transfer_method (str): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both.'
         output_dir (str, optional): Output directory of results. Defaults to ''.
@@ -313,8 +318,9 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, trans
                     # Check if current path is log directory for single run
                     if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
                         metrics_df, metrics_dict = compute_scenario_metrics(
-                            log_dir=path, perf_measure=perf_measure, transfer_method=transfer_method,
-                            output_dir=output_dir, do_smoothing=do_smoothing, do_normalize=do_normalize,
+                            log_dir=path, perf_measure=perf_measure, maintenance_method=maintenance_method,
+                            transfer_method=transfer_method, output_dir=output_dir,
+                            do_smoothing=do_smoothing, do_normalize=do_normalize,
                             remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots)
                         ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                         ll_metrics_dicts.append(metrics_dict)
@@ -323,8 +329,10 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, trans
                         for sub_path in tqdm(list(path.iterdir()), desc=path.name):
                             if sub_path.is_dir():
                                 metrics_df, metrics_dict = compute_scenario_metrics(
-                                    log_dir=sub_path, perf_measure=perf_measure, transfer_method=transfer_method,
-                                    output_dir=output_dir, do_smoothing=do_smoothing, do_normalize=do_normalize,
+                                    log_dir=sub_path, perf_measure=perf_measure,
+                                    maintenance_method=maintenance_method,
+                                    transfer_method=transfer_method, output_dir=output_dir,
+                                    do_smoothing=do_smoothing, do_normalize=do_normalize,
                                     remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots)
                                 ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                                 ll_metrics_dicts.append(metrics_dict)
@@ -350,8 +358,8 @@ def plot_summary(ll_metrics_df: pd.DataFrame) -> None:
 
     fig = plt.figure(figsize=(12, 8))
 
-    ll_metrics = ['perf_recovery', 'perf_maintenance', 'forward_transfer_contrast',
-                  'backward_transfer_contrast', 'forward_transfer_ratio',
+    ll_metrics = ['perf_recovery', 'perf_maintenance_mrtlp', 'perf_maintenance_mrlep',
+                  'forward_transfer_contrast', 'backward_transfer_contrast', 'forward_transfer_ratio',
                   'backward_transfer_ratio', 'ste_rel_perf', 'sample_efficiency']
 
     for index, metric in enumerate(ll_metrics, start=1):
@@ -396,8 +404,12 @@ def evaluate() -> None:
     parser.add_argument('-p', '--perf-measure', default='performance', type=str,
                         help='Name of column to use for metrics calculations')
 
+    # Method for calculating performance maintenance
+    parser.add_argument('-m', '--maintenance-method', default='mrlep', choices=['mrtlp', 'mrlep', 'both'],
+                        help='Method for computing performance maintenance')
+
     # Method for calculating forward and backward transfer
-    parser.add_argument('-m', '--transfer-method', default='ratio', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='ratio', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
     # Output directory
@@ -468,8 +480,11 @@ def evaluate() -> None:
 
     # Compute LL metric data
     matplotlib.use('Agg')
-    ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(eval_dir=eval_dir, ste_dir=args.ste_dir, output_dir=output_dir,
-                                                           perf_measure=args.perf_measure, transfer_method=args.transfer_method,
+    ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(eval_dir=eval_dir, ste_dir=args.ste_dir,
+                                                           output_dir=output_dir,
+                                                           perf_measure=args.perf_measure,
+                                                           maintenance_method=args.maintenance_method,
+                                                           transfer_method=args.transfer_method,
                                                            do_smoothing=do_smoothing, do_normalize=args.normalize,
                                                            remove_outliers=args.remove_outliers, do_plot=do_plot,
                                                            save_plots=args.save_plots, do_save_ste=do_save_ste)

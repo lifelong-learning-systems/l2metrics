@@ -182,11 +182,11 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
     return terminal_value, episodes_to_terminal_perf, episodes_to_recovery
 
 
-def fill_metrics_df(metric: dict, metric_string_name: str, metrics_df: pd.DataFrame, dict_key: str = None) -> pd.DataFrame:
+def fill_metrics_df(data: dict, metric_string_name: str, metrics_df: pd.DataFrame, dict_key: str = None) -> pd.DataFrame:
     """Fills the metrics DataFrame with additional data.
 
     Args:
-        metric (dict): The new metric data to insert into the metrics DataFrame.
+        data (dict): The new metric data to insert into the metrics DataFrame.
         metric_string_name (str): The name of the new metric to add.
         metrics_df (pd.DataFrame): The metrics DataFrame to insert the new data into.
         dict_key (str, optional): The dictionary key of the metrics DataFrame to insert the new
@@ -198,12 +198,12 @@ def fill_metrics_df(metric: dict, metric_string_name: str, metrics_df: pd.DataFr
 
     if not dict_key:
         metrics_df[metric_string_name] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
-        for idx in metric.keys():
-            metrics_df.loc[idx, metric_string_name] = metric[idx]
+        for idx in data.keys():
+            metrics_df.loc[idx, metric_string_name] = data[idx]
     else:
         metrics_df[dict_key][metric_string_name] = np.full_like(metrics_df[dict_key]['regime_num'], np.nan, dtype=np.double)
-        for idx in metric.keys():
-            metrics_df[dict_key].loc[idx, metric_string_name] = metric[idx]
+        for idx in data.keys():
+            metrics_df[dict_key].loc[idx, metric_string_name] = data[idx]
 
     return metrics_df
 

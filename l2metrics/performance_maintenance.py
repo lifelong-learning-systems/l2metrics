@@ -40,8 +40,8 @@ class PerformanceMaintenance(Metric):
         if method not in ['mrtlp', 'mrlep', 'both']:
             raise Exception(f'Invalid performance maintenance method: {method}')
         else:
-           self.do_mrtlp = method in ['mrtlp', 'both']
-           self.do_mrlep = method in ['mrlep', 'both']
+            self.do_mrtlp = method in ['mrtlp', 'both']
+            self.do_mrlep = method in ['mrlep', 'both']
 
     def validate(self, block_info: pd.DataFrame) -> None:
         # Initialize variables for checking block type format

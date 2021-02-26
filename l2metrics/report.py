@@ -25,7 +25,6 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
-from . import core, util
 from .backward_transfer import BackwardTransfer
 from .block_saturation import BlockSaturation
 from .core import Metric
@@ -36,6 +35,7 @@ from .recovery_time import RecoveryTime
 from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
+from .util import load_ste_data, plot_performance, plot_ste_data
 
 
 class MetricsReport():
@@ -105,6 +105,10 @@ class MetricsReport():
         # Gets all data from the relevant log files
         self._log_data = l2l.read_log_data(self.log_dir)
 
+        # Do a check to make sure the performance measure is logged
+        if self.perf_measure not in self._log_data.columns:
+            raise Exception(f'Performance measure ({self.perf_measure}) not found in the log data')
+
         # Validate scenario info
         l2l.validate_scenario_info(self.log_dir)
 
@@ -123,6 +127,9 @@ class MetricsReport():
         if self.remove_outliers:
             self.filter_outliers(quantiles=(0.1, 0.9))
 
+        if len(self._log_data) == 0:
+            raise Exception('No valid log data to compute metrics')
+
         # Normalize log data
         self.data_min = np.nanmin(self._log_data[self.perf_measure])
         self.data_max = np.nanmax(self._log_data[self.perf_measure])
@@ -131,19 +138,12 @@ class MetricsReport():
         if self.do_normalize:
             self.normalize_data(scale=self.data_scale)
 
-        if len(self._log_data) == 0:
-            raise Exception('No valid log data to compute metrics')
-
         # Get block summary
         _, self.block_info = l2l.parse_blocks(self._log_data)
 
-        # Store unique task names
+        # Store unique task names by order of training
         self._unique_tasks = list(self.block_info.sort_values(
             ['block_type', 'block_num'], ascending=[False, True])['task_name'].unique())
-
-        # Do a check to make sure the performance measure is logged
-        if self.perf_measure not in self._log_data.columns:
-            raise Exception(f'Performance measure ({self.perf_measure}) not found in the log data')
 
         # Adds default metrics
         self._add_default_metrics()
@@ -157,7 +157,10 @@ class MetricsReport():
         self._metrics_df = self.block_info[block_info_keys_to_include].copy()
 
     def add(self, metrics_list: Union[Metric, List[Metric]]) -> None:
-        self._metrics.append(metrics_list)
+        if isinstance(metrics_list, list):
+            self._metrics.extend(metrics_list)
+        else:
+            self._metrics.append(metrics_list)
 
     def _add_default_metrics(self) -> None:
         # Default metrics no matter the syllabus type
@@ -185,15 +188,14 @@ class MetricsReport():
         # Get data range over scenario and STE data
         unique_tasks = list(self._log_data['task_name'].unique())
         for task in unique_tasks:
-            ste_data = util.load_ste_data(task)
+            ste_data = load_ste_data(task)
             if ste_data is not None:
                 if self.perf_measure in ste_data.columns:
                     self.data_min = min(self.data_min, np.nanmin(ste_data[self.perf_measure]))
                     self.data_max = max(self.data_max, np.nanmax(ste_data[self.perf_measure]))
 
-        norm_data = (self._log_data[self.perf_measure].values -
-                     self.data_min) / (self.data_max - self.data_min) * scale
-        self._log_data[self.perf_measure] = norm_data
+        self._log_data[self.perf_measure] = (self._log_data[self.perf_measure].values -
+                                             self.data_min) / (self.data_max - self.data_min) * scale
 
     def add_noise(self, mean: float, std: float) -> None:
         # Add Gaussian noise to log data
@@ -368,7 +370,7 @@ class MetricsReport():
         if input_title is None:
             input_title = os.path.split(self.log_dir)[-1]
 
-        util.plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
+        plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
                               do_smoothing=self.do_smoothing, y_axis_col=self.perf_measure,
                               input_title=input_title, output_dir=output_dir, do_save_fig=save)
 
@@ -378,7 +380,7 @@ class MetricsReport():
             input_title = 'Performance Relative to STE\n' + os.path.split(self.log_dir)[-1]
         plot_filename = 'ste_' + os.path.split(self.log_dir)[-1]
 
-        util.plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
+        plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
                            perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,
                            window_len=window_len, do_normalize=self.do_normalize, min_max_scale=(
                                self.data_min, self.data_max, self.data_scale),

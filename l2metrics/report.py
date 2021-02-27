@@ -25,16 +25,15 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
-from .backward_transfer import BackwardTransfer
 from .block_saturation import BlockSaturation
 from .core import Metric
-from .forward_transfer import ForwardTransfer
 from .performance_maintenance import PerformanceMaintenance
 from .performance_recovery import PerformanceRecovery
 from .recovery_time import RecoveryTime
 from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
+from .transfer import Transfer
 from .util import load_ste_data, plot_performance, plot_ste_data
 
 
@@ -169,8 +168,7 @@ class MetricsReport():
         self.add(RecoveryTime(self.perf_measure, self.do_smoothing))
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure, self.maintenance_method))
-        self.add(ForwardTransfer(self.perf_measure, self.transfer_method))
-        self.add(BackwardTransfer(self.perf_measure, self.transfer_method))
+        self.add(Transfer(self.perf_measure, self.transfer_method))
         self.add(STERelativePerf(self.perf_measure, self.do_smoothing,
                                  self.do_normalize, (self.data_min, self.data_max, self.data_scale)))
         self.add(SampleEfficiency(self.perf_measure, self.do_normalize,

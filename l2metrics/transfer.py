@@ -26,11 +26,11 @@ from ._localutil import fill_metrics_df
 from .core import Metric
 
 
-class ForwardTransfer(Metric):
-    name = "Forward Transfer"
+class Transfer(Metric):
+    name = "Transfer"
     capability = "adapt_to_new_tasks"
     requires = {'syllabus_type': 'agent'}
-    description = "Calculates the forward transfer for valid task pairs"
+    description = "Calculates the forward and backward transfer for valid task pairs"
 
     def __init__(self, perf_measure: str, method: str = 'contrast') -> None:
         super().__init__()
@@ -69,8 +69,9 @@ class ForwardTransfer(Metric):
             # Validate data
             self.validate(block_info)
 
-            # Initialize metric dictionary
+            # Initialize metric dictionaries
             forward_transfer = {'ratio': {}, 'contrast': {}}
+            backward_transfer = {'ratio': {}, 'contrast': {}}
 
             # Find eligible tasks for forward transfer
             unique_tasks = block_info.loc[:, 'task_name'].unique()
@@ -87,11 +88,16 @@ class ForwardTransfer(Metric):
 
                 # FT - Must have tested task 2 before training task 1 then tested task 2 again
                 if len(training_regs):
-                    # Get valid training regimes for first task
-                    valid_training_regs = training_regs[training_regs < np.min(
+                    # Get valid training regimes for first task forward transfer
+                    valid_ft_training_regs = training_regs[training_regs < np.min(
                         other_training_regs)] if len(other_training_regs) else training_regs
 
-                    for training_regime in valid_training_regs:
+                    # Get valid training regimes for first task backward transfer
+                    valid_bt_training_regs = training_regs[training_regs > np.min(
+                        other_training_regs)] if len(other_training_regs) else []
+
+                    # Calculate forward transfer
+                    for training_regime in valid_ft_training_regs:
                         for test_regime_1, test_regime_2 in zip(other_test_regs, other_test_regs[1:]):
                             if test_regime_1 < training_regime < test_regime_2:
                                 tp_1 = metrics_df[metrics_df['regime_num'] == test_regime_1]['term_perf'].values[0]
@@ -101,13 +107,21 @@ class ForwardTransfer(Metric):
                                     forward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
                                 if self.do_ratio:
                                     forward_transfer['ratio'][test_regime_2] = [{task: tp_2 / tp_1}]
-                                break   # Only compute one value per task pair
-                        else:
-                            continue
-                        break
+
+                    # Calculate backward transfer
+                    for training_regime in valid_bt_training_regs:
+                        for test_regime_1, test_regime_2 in zip(other_test_regs, other_test_regs[1:]):
+                            if test_regime_1 < training_regime < test_regime_2:                                    
+                                tp_1 = metrics_df[(metrics_df['regime_num'] == test_regime_1)]['term_perf'].values[0]
+                                tp_2 = metrics_df[(metrics_df['regime_num'] == test_regime_2)]['term_perf'].values[0]
+
+                                if self.do_contrast:
+                                    backward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
+                                if self.do_ratio:
+                                    backward_transfer['ratio'][test_regime_2] = [{task: tp_2 / tp_1}]
 
             if not (forward_transfer['contrast'] or forward_transfer['ratio']):
-                raise Exception('No valid task pairs for forward transfer')
+                print('No valid task pairs for forward transfer')
             else:
                 if self.do_contrast:
                     metrics_df = fill_metrics_df(
@@ -115,6 +129,16 @@ class ForwardTransfer(Metric):
                 if self.do_ratio:
                     metrics_df = fill_metrics_df(
                         forward_transfer['ratio'], 'forward_transfer_ratio', metrics_df)
+
+            if not (backward_transfer['contrast'] or backward_transfer['ratio']):
+                print('No valid task pairs for backward transfer')
+            else:
+                if self.do_contrast:
+                    metrics_df = fill_metrics_df(
+                        backward_transfer['contrast'], 'backward_transfer_contrast', metrics_df)
+                if self.do_ratio:
+                    metrics_df = fill_metrics_df(
+                        backward_transfer['ratio'], 'backward_transfer_ratio', metrics_df)
 
             return metrics_df
         except Exception as e:

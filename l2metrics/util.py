@@ -150,48 +150,36 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
 
     # Loop through tasks and plot their performance curves
-    for c, t in zip(task_colors, unique_tasks):
-        for regime in block_info['regime_num']:
-            if block_info.loc[regime, :]['task_name'] == t:
-                x = dataframe.loc[(dataframe['task_name'] == t) & (
-                    dataframe['regime_num'] == regime), x_axis_col].values
-                y = dataframe.loc[(dataframe['task_name'] == t) & (
-                    dataframe['regime_num'] == regime), y_axis_col].values
+    for color, task in zip(task_colors, unique_tasks):
+        for _, row in block_info[block_info['task_name'] == task].iterrows():
+            regime_num = row['regime_num']
+            block_type = row['block_type']
 
-                if do_smoothing:
-                    if block_info.loc[regime, :]['block_type'] == 'train':
-                        y = _localutil.smooth(y, window_len=window_len, window='flat')
-                    elif block_info.loc[regime, :]['block_type'] == 'test':
-                        y = np.nanmean(y) * np.ones(len(x))
+            # Get data for current regime
+            x = dataframe.loc[dataframe['regime_num'] == regime_num, x_axis_col].values
+            y = dataframe.loc[dataframe['regime_num'] == regime_num, y_axis_col].values
 
-                # Match x and y length if data had NaNs
-                if len(x) != len(y):
-                    x = list(range(x[0], x[0] + len(y)))
+            if do_smoothing:
+                if block_type == 'train':
+                    y = _localutil.smooth(y, window_len=window_len, window='flat')
+                elif block_type == 'test':
+                    y = np.nanmean(y) * np.ones(len(x))
 
-                ax.scatter(x, y, color=c, marker='*', s=8, linestyle='None', label=t)
+            # Match x and y length if data had NaNs
+            if len(x) != len(y):
+                x = list(range(x[0], x[0] + len(y)))
+
+            ax.scatter(x, y, color=color, marker='*', s=8, label=task)
+
+            if show_block_boundary:
+                ax.axes.axvline(x[0], linewidth=1, linestyle=':')
+
+            if shade_test_blocks and block_type == 'test':
+                ax.axvspan(x[0], x[-1], alpha=0.1, color='black')
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys())
-
-    if show_block_boundary:
-        unique_blocks = dataframe.loc[:, 'regime_num'].unique()
-        df2 = dataframe.set_index("exp_num", drop=False)
-        for b in unique_blocks:
-            idx = df2[df2['regime_num'] == b].index[0]
-            ax.axes.axvline(idx, linewidth=1, linestyle=':')
-
-    if shade_test_blocks:
-        blocks = dataframe.loc[:, ['block_num', 'block_type']].drop_duplicates()
-        df2 = dataframe.set_index("exp_num", drop=False)
-
-        for _, block in blocks.iterrows():
-            if block['block_type'] == 'test':
-                df3 = df2[(df2['block_num'] == block['block_num']) &
-                          (df2['block_type'] == block['block_type'])]
-                x1 = df3.index[0]
-                x2 = df3.index[-1]
-                ax.axvspan(x1, x2, alpha=0.1, color='black')
 
     if os.path.dirname(input_title) != "":
         _, plot_filename = os.path.split(input_title)
@@ -242,6 +230,13 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
     fig = plt.figure(figsize=(12, 6))
     fig.suptitle(input_title)
 
+    # Calculate subplot dimensions
+    cols = min(len(unique_tasks), 2)
+    rows = ceil(len(unique_tasks) / cols)
+
+    # Initialize max limit for x-axis
+    x_limit = 0
+
     color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'cyan', 'orange', 'purple']
 
     if len(unique_tasks) < len(color_selection):
@@ -264,13 +259,12 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
 
             if ste_data is not None:
                 # Create subplot
-                ax = fig.add_subplot(3, ceil(len(unique_tasks)/3), index + 1)
+                ax = fig.add_subplot(rows, cols, index + 1)
 
                 if do_normalize:
                     norm_ste_data = (ste_data[perf_measure].values - min_max_scale[0]) / (
                         min_max_scale[1] - min_max_scale[0]) * min_max_scale[2]
                     ste_data[perf_measure] = norm_ste_data
-                    plt.ylim(0, min_max_scale[2])
 
                 if do_smoothing:
                     y1 = _localutil.smooth(ste_data[perf_measure].values, window_len=window_len, window='flat')
@@ -281,6 +275,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
                 
                 x1 = list(range(0, len(y1)))
                 x2 = list(range(0, len(y2)))
+                x_limit = max(x_limit, len(y1), len(y2))
 
                 ax.scatter(x1, y1, color='orange', marker='*', s=8, linestyle='None', label='STE')
                 ax.scatter(x2, y2, color=task_color, marker='*', s=8, linestyle='None', label=task_name)
@@ -293,6 +288,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
             print(f"Task name cannot be found in scenario: {task_name}")
 
     fig.subplots_adjust(wspace=0.3, hspace=0.4)
+    plt.setp(fig.axes, xlim=(0, x_limit), ylim=(0, min_max_scale[2]))
 
     if do_save:
         if plot_filename is None:

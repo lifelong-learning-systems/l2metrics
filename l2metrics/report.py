@@ -251,12 +251,22 @@ class MetricsReport():
                 if type(row['forward_transfer_contrast']) is dict:
                     [(other_task, transfer_value)] = row['forward_transfer_contrast'].items()
                     key = (other_task, row['task_name'])
-                    self.forward_transfer_contrast[key[0]][key[1]] = transfer_value
+                    if key[0] not in self.forward_transfer_contrast.keys():
+                        self.forward_transfer_contrast[key[0]][key[1]] = [transfer_value]
+                    elif key[1] not in self.forward_transfer_contrast[key[0]].keys():
+                        self.forward_transfer_contrast[key[0]][key[1]] = [transfer_value]
+                    else:
+                        self.forward_transfer_contrast[key[0]][key[1]].append(transfer_value)
             if 'forward_transfer_ratio' in self._metrics_df:
                 if type(row['forward_transfer_ratio']) is dict:
                     [(other_task, transfer_value)] = row['forward_transfer_ratio'].items()
                     key = (other_task, row['task_name'])
-                    self.forward_transfer_ratio[key[0]][key[1]] = transfer_value
+                    if key[0] not in self.forward_transfer_ratio.keys():
+                        self.forward_transfer_ratio[key[0]][key[1]] = [transfer_value]
+                    elif key[1] not in self.forward_transfer_ratio[key[0]].keys():
+                        self.forward_transfer_ratio[key[0]][key[1]] = [transfer_value]
+                    else:
+                        self.forward_transfer_ratio[key[0]][key[1]].append(transfer_value)
             if 'backward_transfer_contrast' in self._metrics_df:
                 if type(row['backward_transfer_contrast']) is dict:
                     [(other_task, transfer_value)] = row['backward_transfer_contrast'].items()
@@ -313,13 +323,9 @@ class MetricsReport():
 
         for metric in self.task_metrics:
             if metric in self.task_metrics_df:
-                if metric in ['forward_transfer_contrast', 'forward_transfer_ratio']:
-                    # Flatten lists and drop NaNs
-                    metric_vals = self.task_metrics_df[metric].values
-                    metric_vals = np.concatenate([list(item.values()) for item in metric_vals])
-                    metric_vals = metric_vals[~np.isnan(metric_vals)]
-                elif metric in ['backward_transfer_contrast', 'backward_transfer_ratio']:
-                    # Get the first calculated backward transfer values for each task pair
+                if metric in ['forward_transfer_contrast', 'forward_transfer_ratio',
+                              'backward_transfer_contrast', 'backward_transfer_ratio']:
+                    # Get the first calculated transfer values for each task pair
                     metric_vals = [v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()]
                 else:
                     metric_vals = self.task_metrics_df[metric].dropna().values

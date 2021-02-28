@@ -62,7 +62,7 @@ class RecoveryTime(Metric):
                 assess_indices[task].append(block_idx)
                 ref_indices[task].append(tr_indices[idx - 1])
 
-        if not ref_indices or not assess_indices:
+        if not (ref_indices and assess_indices):
             raise Exception('Not enough blocks to assess recovery time')
 
         return ref_indices, assess_indices

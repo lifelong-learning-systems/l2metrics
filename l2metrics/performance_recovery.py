@@ -65,7 +65,7 @@ class PerformanceRecovery(Metric):
                 if len(y) > 1:
                     slope, _, _, _ = stats.theilslopes(y)
 
-                    # Set performance recovery value as slope
+                    # Set performance recovery value as negative slope (greater is better)
                     idx = block_info[block_info['task_name'] == task]['regime_num'].max()
                     pr_values[idx] = -slope
                 else:

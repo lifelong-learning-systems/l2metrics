@@ -126,10 +126,11 @@ class MetricsReport():
         if self.remove_outliers:
             self.filter_outliers(quantiles=(0.1, 0.9))
 
+        # Check for non-zero log data length
         if len(self._log_data) == 0:
             raise Exception('No valid log data to compute metrics')
 
-        # Normalize log data
+        # Initialize feature range and scale for normalization
         self.data_min = np.nanmin(self._log_data[self.perf_measure])
         self.data_max = np.nanmax(self._log_data[self.perf_measure])
         self.data_scale = 100
@@ -224,12 +225,12 @@ class MetricsReport():
             self.regime_metrics_df = self.regime_metrics_df.dropna(axis=1)
 
     def calculate_task_metrics(self) -> None:
+        # Initialize task metrics dataframe
         self.task_metrics_df = pd.DataFrame(index=self._unique_tasks, columns=self.task_metrics)
         self.task_metrics_df.index.name = 'task_name'
 
-        # Initialize transfer arrays to NaNs
+        # Initialize certain task metrics data objects
         num_tasks = len(self._unique_tasks)
-
         if self.maintenance_method in ['mrtlp', 'both']:
             self.task_metrics_df['maintenance_val_mrtlp'] = [[]] * num_tasks
         if self.maintenance_method in ['mrlep', 'both']:
@@ -247,46 +248,17 @@ class MetricsReport():
 
         # Create data structures for transfer values
         for _, row in self._metrics_df.iterrows():
-            if 'forward_transfer_contrast' in self._metrics_df:
-                if type(row['forward_transfer_contrast']) is dict:
-                    [(other_task, transfer_value)] = row['forward_transfer_contrast'].items()
+            for transfer_metric in ['forward_transfer_contrast', 'forward_transfer_ratio',
+                                    'backward_transfer_contrast', 'backward_transfer_ratio']:
+                if transfer_metric in self._metrics_df and type(row[transfer_metric]) is dict:
+                    [(other_task, transfer_value)] = row[transfer_metric].items()
                     key = (other_task, row['task_name'])
-                    if key[0] not in self.forward_transfer_contrast.keys():
-                        self.forward_transfer_contrast[key[0]][key[1]] = [transfer_value]
-                    elif key[1] not in self.forward_transfer_contrast[key[0]].keys():
-                        self.forward_transfer_contrast[key[0]][key[1]] = [transfer_value]
+                    if key[0] not in getattr(self, transfer_metric).keys():
+                        getattr(self, transfer_metric)[key[0]][key[1]] = [transfer_value]
+                    elif key[1] not in getattr(self, transfer_metric)[key[0]].keys():
+                        getattr(self, transfer_metric)[key[0]][key[1]] = [transfer_value]
                     else:
-                        self.forward_transfer_contrast[key[0]][key[1]].append(transfer_value)
-            if 'forward_transfer_ratio' in self._metrics_df:
-                if type(row['forward_transfer_ratio']) is dict:
-                    [(other_task, transfer_value)] = row['forward_transfer_ratio'].items()
-                    key = (other_task, row['task_name'])
-                    if key[0] not in self.forward_transfer_ratio.keys():
-                        self.forward_transfer_ratio[key[0]][key[1]] = [transfer_value]
-                    elif key[1] not in self.forward_transfer_ratio[key[0]].keys():
-                        self.forward_transfer_ratio[key[0]][key[1]] = [transfer_value]
-                    else:
-                        self.forward_transfer_ratio[key[0]][key[1]].append(transfer_value)
-            if 'backward_transfer_contrast' in self._metrics_df:
-                if type(row['backward_transfer_contrast']) is dict:
-                    [(other_task, transfer_value)] = row['backward_transfer_contrast'].items()
-                    key = (other_task, row['task_name'])
-                    if key[0] not in self.backward_transfer_contrast.keys():
-                        self.backward_transfer_contrast[key[0]][key[1]] = [transfer_value]
-                    elif key[1] not in self.backward_transfer_contrast[key[0]].keys():
-                        self.backward_transfer_contrast[key[0]][key[1]] = [transfer_value]
-                    else:
-                        self.backward_transfer_contrast[key[0]][key[1]].append(transfer_value)
-            if 'backward_transfer_ratio' in self._metrics_df:
-                if type(row['backward_transfer_ratio']) is dict:
-                    [(other_task, transfer_value)] = row['backward_transfer_ratio'].items()
-                    key = (other_task, row['task_name'])
-                    if key[0] not in self.backward_transfer_ratio.keys():
-                        self.backward_transfer_ratio[key[0]][key[1]] = [transfer_value]
-                    elif key[1] not in self.backward_transfer_ratio[key[0]].keys():
-                        self.backward_transfer_ratio[key[0]][key[1]] = [transfer_value]
-                    else:
-                        self.backward_transfer_ratio[key[0]][key[1]].append(transfer_value)
+                        getattr(self, transfer_metric)[key[0]][key[1]].append(transfer_value)
 
         # Fill task metrics dataframe
         for task in self._unique_tasks:

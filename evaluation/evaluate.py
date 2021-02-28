@@ -420,7 +420,7 @@ def evaluate() -> None:
                         help='Method for computing forward and backward transfer')
 
     # Output directory
-    parser.add_argument('--output-dir', default='sg_results', type=str,
+    parser.add_argument('--output-dir', default='results', type=str,
                         help='Directory for output files')
 
     # Output file location

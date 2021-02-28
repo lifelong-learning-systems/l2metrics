@@ -44,7 +44,7 @@ def process_evaluation(args):
 
     # Build file and directory strings
     eval_dir = Path('../../sg_' + sg_name + '_eval/m9_eval/')
-    output_dir = Path('sg_results/' + config + '/' + sg_name + '_' + config)
+    output_dir = Path('results/' + config + '/' + sg_name + '_' + config)
     output = sg_name + '_metrics_' + config
 
     # Create output directory if it doesn't exist

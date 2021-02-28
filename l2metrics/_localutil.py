@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 
-def smooth(x: np.ndarray, window_len: int = None, window: str = 'hanning') -> np.ndarray:
+def smooth(x: np.ndarray, window_len: int = None, window: str = 'flat') -> np.ndarray:
     """Smooths the data using a window with requested size.
 
     Code from https://scipy-cookbook.readthedocs.io/items/SignalSmooth.html

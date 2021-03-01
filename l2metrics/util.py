@@ -115,7 +115,7 @@ def save_ste_data(log_dir: str) -> None:
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
                      do_smoothing: bool = False, window_len: int = None, x_axis_col: str = 'exp_num',
                      y_axis_col: str = 'reward', input_title: str = "", input_xlabel: str = 'Episodes',
-                     input_ylabel: str = 'Performance', show_block_boundary: bool = True,
+                     input_ylabel: str = 'Performance', show_block_boundary: bool = False,
                      shade_test_blocks: bool = True, output_dir: str = '', do_save_fig: bool = False,
                      plot_filename: str = None) -> None:
     """Plots the performance curves for the given DataFrame.
@@ -159,6 +159,12 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
             x = dataframe.loc[dataframe['regime_num'] == regime_num, x_axis_col].values
             y = dataframe.loc[dataframe['regime_num'] == regime_num, y_axis_col].values
 
+            if show_block_boundary:
+                ax.axes.axvline(x[0], linewidth=1, linestyle=':')
+
+            if shade_test_blocks and block_type == 'test':
+                ax.axvspan(x[0], x[-1] + 1, alpha=0.1, facecolor='black')
+
             if do_smoothing:
                 if block_type == 'train':
                     y = _localutil.smooth(y, window_len=window_len, window='flat')
@@ -170,12 +176,6 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
                 x = list(range(x[0], x[0] + len(y)))
 
             ax.scatter(x, y, color=color, marker='*', s=8, label=task)
-
-            if show_block_boundary:
-                ax.axes.axvline(x[0], linewidth=1, linestyle=':')
-
-            if shade_test_blocks and block_type == 'test':
-                ax.axvspan(x[0], x[-1], alpha=0.1, color='black')
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
@@ -288,7 +288,11 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
             print(f"Task name cannot be found in scenario: {task_name}")
 
     fig.subplots_adjust(wspace=0.3, hspace=0.4)
-    plt.setp(fig.axes, xlim=(0, x_limit), ylim=(0, min_max_scale[2]))
+
+    if do_normalize:
+        plt.setp(fig.axes, xlim=(0, x_limit), ylim=(0, min_max_scale[2]))
+    else:
+        plt.setp(fig.axes, xlim=(0, x_limit))
 
     if do_save:
         if plot_filename is None:

@@ -231,6 +231,7 @@ class MetricsReport():
 
         # Initialize certain task metrics data objects
         num_tasks = len(self._unique_tasks)
+        self.task_metrics_df['recovery_times'] = [[]] * num_tasks
         if self.maintenance_method in ['mrtlp', 'both']:
             self.task_metrics_df['maintenance_val_mrtlp'] = [[]] * num_tasks
         if self.maintenance_method in ['mrlep', 'both']:
@@ -268,7 +269,12 @@ class MetricsReport():
             # Iterate over task metrics
             for metric in self.task_metrics:
                 if metric in tm.keys():
-                    if metric in ['perf_maintenance_mrtlp', 'perf_maintenance_mrlep']:
+                    if metric == 'perf_recovery':
+                        pr = tm[metric].dropna().values
+                        self.task_metrics_df.at[task, metric] = np.NaN if len(pr) == 0 else pr[0]
+                        self.task_metrics_df.at[task, 'recovery_times'] = list(
+                            tm['recovery_time'].dropna().values)
+                    elif metric in ['perf_maintenance_mrtlp', 'perf_maintenance_mrlep']:
                         pm = tm[metric].dropna().values
                         self.task_metrics_df.at[task, metric] = pm[0] if len(pm) else np.NaN
                         maintenance_val_name = 'maintenance_val_' + metric.split('_')[-1]

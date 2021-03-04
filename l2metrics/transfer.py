@@ -106,7 +106,10 @@ class Transfer(Metric):
                                 if self.do_contrast:
                                     forward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
                                 if self.do_ratio:
-                                    forward_transfer['ratio'][test_regime_2] = [{task: tp_2 / tp_1}]
+                                    if tp_1 == 0:
+                                        continue
+                                    else:
+                                        forward_transfer['ratio'][test_regime_2] = [{task: tp_2 / tp_1}]
 
                     # Calculate backward transfer
                     for training_regime in valid_bt_training_regs:
@@ -118,7 +121,10 @@ class Transfer(Metric):
                                 if self.do_contrast:
                                     backward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
                                 if self.do_ratio:
-                                    backward_transfer['ratio'][test_regime_2] = [{task: tp_2 / tp_1}]
+                                    if tp_1 == 0:
+                                        continue
+                                    else:
+                                        backward_transfer['ratio'][test_regime_2] = [{task: tp_2 / tp_1}]
 
             if not (forward_transfer['contrast'] or forward_transfer['ratio']):
                 print('No valid task pairs for forward transfer')

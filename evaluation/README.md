@@ -16,7 +16,7 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 usage: python -m evaluation.evaluate [-h] -l EVAL_DIR [-s STE_DIR] [-p PERF_MEASURE]
                    [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
                    [-n {task,run}] [--output-dir OUTPUT_DIR] [-o OUTPUT] [-u]
-                   [--no-smoothing] [--normalize] [--remove-outliers]
+                   [--no-smoothing] [-r] [--normalize] [--remove-outliers]
                    [--no-save-ste] [--no-plot] [--save-plots] [--no-save]
 
 Run L2M evaluation from the command line
@@ -41,6 +41,7 @@ optional arguments:
                         Output filename for results
   -u, --unzip           Unzip all data found in evaluation directory
   --no-smoothing        Do not smooth performance data for metrics
+  -r, --show-raw-data   Show raw data points under smoothed data for plotting
   --normalize           Normalize performance data for metrics
   --remove-outliers     Remove outliers in data for metrics
   --no-save-ste         Do not store STE data
@@ -50,3 +51,56 @@ optional arguments:
 ```
 
 **Note**: Valid values for the performance measure input argument are determined by the `metrics_columns` dictionary in `logger_info.json`.
+
+## Example Evaluation
+
+This directory also contains the outputs of an example evaluation produced by running the following command:
+
+```bash
+python -m evaluation.evaluate --eval-dir=./example_eval/m9_eval/ --ste-dir=agent_config-0 --perf-measure=performance --maintenance-method=both --transfer-method=both --normalization-method=task --output-dir=example_results/normalized/example_normalized --output=example_metrics_normalized --show-raw-data --normalize --save-plots
+```
+
+### Metrics TSV File
+
+The TSV file lists all the computed LL metrics from the scenarios found in the specified evaluation directory. The headers in the file are as follows:
+
+- `sg_name`: Name of system group, extracted from the evaluation directory
+- `agent_config`: Corresponding agent configuration of scenario
+- `run_id`: Run ID or scenario name, extracted from scenario directory name
+- `perf_recovery`: Lifetime performance recovery
+- `perf_maintenance_mrtlp`: Lifetime performance maintenance, most recent terminal learning performance
+- `perf_maintenance_mrlep`: Lifetime performance maintenance, most recent learning evaluation performance
+- `forward_transfer_contrast`: Lifetime forward transfer, contrast
+- `backward_transfer_contrast`: Lifetime backward transfer, contrast
+- `forward_transfer_ratio`: Lifetime forward transfer, ratio
+- `backward_transfer_ratio`: Lifetime backward transfer, ratio
+- `ste_rel_perf`: Lifetime relative performance compared to STE
+- `sample_efficiency`: Lifetime sample efficiency
+- `complexity`: Scenario complexity
+- `difficulty`: Scenario difficulty
+- `metrics_column`: Application metric used to compute metrics
+- `min`: Minimum value of data in scenario
+- `max`: Maximum value of data in scenario
+- `num_lx`: Total number of LXs in scenario
+- `num_ex`: Total number of EXs in scenario
+
+### Metrics JSON File
+
+The JSON file lists all the task-level metrics in addition to all the computed LL metrics from the scenario found in the specified evaluation directory. This file is JSON formatted due to the complex nested structures and varying object types corresponding to each metric. The task-level metrics reported for each scenario are as follows:
+
+- `perf_recovery`: Task performance recovery
+- `perf_maintenance_mrtlp`: Task performance maintenance, most recent terminal learning performance
+- `perf_maintenance_mrlep`: Task performance maintenance, most recent learning evaluation performance
+- `forward_transfer_contrast`: Task forward transfer, contrast
+- `backward_transfer_contrast`: Task backward transfer, contrast
+- `forward_transfer_ratio`: Task forward transfer, ratio
+- `backward_transfer_ratio`: Task backward transfer, ratio
+- `ste_rel_perf`: Task relative performance compared to STE
+- `sample_efficiency`: Task sample efficiency
+- `recovery_times`: List of recovery times used for computing performance recovery
+- `maintenance_val_mrtlp`: List of maintenance values used for computing performance maintenance, MRTLP
+- `maintenance_val_mrlep`: List of maintenance values used for computing performance maintenance, MRLEP
+- `min`: Minimum value of task data in scenario
+- `max`: Minimum value of task data in scenario
+- `num_lx`: Total number of task LXs in scenario
+- `num_ex`: Total number of task EXs in scenario

@@ -383,17 +383,21 @@ def plot_summary(ll_metrics_df: pd.DataFrame) -> None:
                   'backward_transfer_ratio', 'ste_rel_perf', 'sample_efficiency']
 
     for index, metric in enumerate(ll_metrics, start=1):
-        if metric in ll_metrics_df.columns:
-            # Create subplot for current metric
-            ax = fig.add_subplot(3, 3, index)
+        try:
+            if metric in ll_metrics_df.columns:
+                # Create subplot for current metric
+                ax = fig.add_subplot(3, 3, index)
 
-            # Create grouped violin plot
-            sns.violinplot(x='complexity', y=metric, hue='difficulty',
-                        data=ll_metrics_df, palette='muted')
+                # Create grouped violin plot
+                sns.violinplot(x='complexity', y=metric, hue='difficulty',
+                               data=ll_metrics_df, palette='muted')
 
-            # Resize legend font
-            plt.setp(ax.get_legend().get_title(), fontsize='8')
-            plt.setp(ax.get_legend().get_texts(), fontsize='6')
+                # Resize legend font
+                plt.setp(ax.get_legend().get_title(), fontsize='8')
+                plt.setp(ax.get_legend().get_texts(), fontsize='6')
+        except Exception as e:
+            print(e)
+            continue
 
     fig.subplots_adjust(wspace=0.35, hspace=0.35)
     plt.show()

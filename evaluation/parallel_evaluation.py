@@ -40,7 +40,8 @@ perf_measure = {
 
 
 def process_evaluation(args):
-    sg_name, config, ste_dir, do_save_ste, maintenance_method, transfer_method, do_plot, save_plots, do_save = args
+    sg_name, config, ste_dir, do_save_ste, maintenance_method, transfer_method, \
+        normalization_method, do_plot, save_plots, do_save = args
 
     # Build file and directory strings
     eval_dir = Path('../../sg_' + sg_name + '_eval/m9_eval/')
@@ -60,6 +61,7 @@ def process_evaluation(args):
                                                            perf_measure=perf_measure[sg_name],
                                                            maintenance_method=maintenance_method,
                                                            transfer_method=transfer_method,
+                                                           normalization_method=normalization_method,
                                                            do_smoothing=do_smoothing,
                                                            do_normalize=do_normalize,
                                                            remove_outliers=remove_outliers,
@@ -84,6 +86,7 @@ def run():
     ste_dir = ''
     maintenance_method = 'both'
     transfer_method = 'both'
+    normalization_method = 'task'
     do_save_ste = False
     do_plot = True
     save_plots = True
@@ -91,8 +94,8 @@ def run():
 
     # Parallel processing
     sg_configs = list(product(sg_names, configurations))
-    other_args = (ste_dir, do_save_ste, maintenance_method,
-                  transfer_method, do_plot, save_plots, do_save)
+    other_args = (ste_dir, do_save_ste, maintenance_method, transfer_method,
+                  normalization_method, do_plot, save_plots, do_save)
     par_args = [x + other_args for x in sg_configs]
 
     with Pool(psutil.cpu_count(logical=False)) as p:

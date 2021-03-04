@@ -20,7 +20,6 @@ import os
 from collections import OrderedDict
 from math import ceil
 from pathlib import Path
-from typing import Tuple
 
 import l2logger.util as l2l
 import matplotlib.pyplot as plt
@@ -202,7 +201,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
 
 def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
                   perf_measure: str = 'reward', do_smoothing: bool = False, window_len: int = None,
-                  do_normalize: bool = False, min_max_scale: Tuple[int, int, int] = (0, 100, 100),
+                  do_normalize: bool = False, normalizer = None,
                   input_title: str = '', input_xlabel: str = 'Episodes',
                   input_ylabel: str = 'Performance', output_dir: str = '', do_save: bool = False,
                   plot_filename: str = None) -> None:
@@ -216,8 +215,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
         do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to False.
         window_len (int, optional): The window length for smoothing the data. Defaults to None.
         do_normalize (bool, optional): Flag for enabling normalization. Defaults to False.
-        min_max_scale (Tuple[int, int, int], optional): Min, max, and scale of normalization.
-            Defaults to (0, 100, 100).
+        normalizer (Normalizer, optional): Normalizer instance for normalization. Defaults to None.
         input_title (str, optional): Plot title. Defaults to ''.
         input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
@@ -261,10 +259,8 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
                 # Create subplot
                 ax = fig.add_subplot(rows, cols, index + 1)
 
-                if do_normalize:
-                    norm_ste_data = (ste_data[perf_measure].values - min_max_scale[0]) / (
-                        min_max_scale[1] - min_max_scale[0]) * min_max_scale[2]
-                    ste_data[perf_measure] = norm_ste_data
+                if do_normalize and normalizer is not None:
+                    ste_data = normalizer.normalize(ste_data)
 
                 if do_smoothing:
                     y1 = _localutil.smooth(ste_data[perf_measure].values, window_len=window_len, window='flat')
@@ -290,7 +286,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
     fig.subplots_adjust(wspace=0.3, hspace=0.4)
 
     if do_normalize:
-        plt.setp(fig.axes, xlim=(0, x_limit), ylim=(0, min_max_scale[2]))
+        plt.setp(fig.axes, xlim=(0, x_limit), ylim=(0, normalizer.scale))
     else:
         plt.setp(fig.axes, xlim=(0, x_limit))
 

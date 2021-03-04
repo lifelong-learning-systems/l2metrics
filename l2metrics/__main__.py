@@ -47,8 +47,14 @@ def run() -> None:
     parser.add_argument('-t', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
+    # Method for normalization
+    parser.add_argument('-n', '--normalization-method', default='task', choices=['task', 'run'],
+                        help='Method for normalizing data')
+
+    # TODO: Input file for task ranges
+
     # Mean and standard deviation for adding noise to log data
-    parser.add_argument('-n', '--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
+    parser.add_argument('--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
                         help='Mean and standard deviation for Gaussian noise in log data')
 
     # Output filename
@@ -57,11 +63,11 @@ def run() -> None:
 
     # Flag for disabling smoothing
     parser.add_argument('--no-smoothing', action='store_true',
-                        help='Do not smooth performance data for metrics and plotting')
+                        help='Do not smooth data for metrics and plotting')
 
     # Flag for enabling normalization
     parser.add_argument('--normalize', action='store_true',
-                        help='Normalize performance data for metrics')
+                        help='Normalize data for metrics')
 
     # Flag for removing outliers
     parser.add_argument('--remove-outliers', action='store_true',
@@ -87,7 +93,8 @@ def run() -> None:
         # Initialize metrics report
         report = MetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
                                maintenance_method=args.maintenance_method,
-                               transfer_method=args.transfer_method, do_smoothing=do_smoothing,
+                               transfer_method=args.transfer_method,
+                               normalization_method=args.normalization_method, do_smoothing=do_smoothing,
                                do_normalize=args.normalize, remove_outliers=args.remove_outliers)
 
         # Add noise to log data if mean or standard deviation is specified

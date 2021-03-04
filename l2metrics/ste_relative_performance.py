@@ -17,13 +17,13 @@
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
 import warnings
-from typing import Tuple
 
 import numpy as np
 import pandas as pd
 
 from ._localutil import fill_metrics_df, smooth
 from .core import Metric
+from .normalizer import Normalizer
 from .util import get_ste_data_names, load_ste_data
 
 
@@ -34,12 +34,12 @@ class STERelativePerf(Metric):
     description = "Calculates the performance of each task relative to it's corresponding single-task expert"
 
     def __init__(self, perf_measure: str, do_smoothing: bool = True, do_normalize: bool = False,
-                 min_max_scale: Tuple[int, int, int] = (0, 100, 100)) -> None:
+                 normalizer: Normalizer = None) -> None:
         super().__init__()
         self.perf_measure = perf_measure
         self.do_smoothing = do_smoothing
         self.do_normalize = do_normalize
-        self.min_max_scale = min_max_scale
+        self.do_normalizer = normalizer
 
     def validate(self, block_info: pd.DataFrame) -> None:
         # Check if there is STE data for each task in the scenario
@@ -83,10 +83,8 @@ class STERelativePerf(Metric):
                             # Compute relative performance
                             min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
 
-                            if self.do_normalize:
-                                norm_data = (ste_data[self.perf_measure].values - self.min_max_scale[0]) / (
-                                    self.min_max_scale[1] - self.min_max_scale[0]) * self.min_max_scale[2]
-                                ste_data[self.perf_measure] = norm_data
+                            if self.do_normalize and self.do_normalizer is not None:
+                                ste_data = self.do_normalizer.normalize(ste_data)
 
                             if self.do_smoothing:
                                 task_perf = np.nansum(smooth(task_data.head(

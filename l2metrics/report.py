@@ -27,6 +27,7 @@ from tabulate import tabulate
 
 from .block_saturation import BlockSaturation
 from .core import Metric
+from .normalizer import Normalizer
 from .performance_maintenance import PerformanceMaintenance
 from .performance_recovery import PerformanceRecovery
 from .recovery_time import RecoveryTime
@@ -34,12 +35,12 @@ from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
 from .transfer import Transfer
-from .util import load_ste_data, plot_performance, plot_ste_data
+from .util import plot_performance, plot_ste_data
 
 
 class MetricsReport():
     """
-    Aggregates a list of metrics for an Agent learner
+    Aggregates a list of metrics for an agent learner.
     """
 
     def __init__(self, **kwargs) -> None:
@@ -75,6 +76,16 @@ class MetricsReport():
             self.do_normalize = kwargs['do_normalize']
         else:
             self.do_normalize = False
+
+        if 'normalization_method' in kwargs:
+            self.normalization_method = kwargs['normalization_method']
+        else:
+            self.normalization_method = 'task'
+
+        if 'data_range' in kwargs:
+            self.data_range = kwargs['data_range']
+        else:
+            self.data_range = None
 
         if 'remove_outliers' in kwargs:
             self.remove_outliers = kwargs['remove_outliers']
@@ -130,13 +141,19 @@ class MetricsReport():
         if len(self._log_data) == 0:
             raise Exception('No valid log data to compute metrics')
 
-        # Initialize feature range and scale for normalization
-        self.data_min = np.nanmin(self._log_data[self.perf_measure])
-        self.data_max = np.nanmax(self._log_data[self.perf_measure])
-        self.data_scale = 100
-
         if self.do_normalize:
-            self.normalize_data(scale=self.data_scale)
+            # Instantiate normalizer
+            self.normalizer = Normalizer(perf_measure=self.perf_measure,
+                                         data=self._log_data[['task_name', self.perf_measure]].set_index('task_name'),
+                                         data_range=self.data_range, method=self.normalization_method)
+
+            # Save raw data in another variable
+            self._raw_data = self._log_data[self.perf_measure].copy()
+
+            # Normalize data
+            self._log_data = self.normalizer.normalize(self._log_data)
+        else:
+            self.normalizer = None
 
         # Get block summary
         _, self.block_info = l2l.parse_blocks(self._log_data)
@@ -170,31 +187,15 @@ class MetricsReport():
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure, self.maintenance_method))
         self.add(Transfer(self.perf_measure, self.transfer_method))
-        self.add(STERelativePerf(self.perf_measure, self.do_smoothing,
-                                 self.do_normalize, (self.data_min, self.data_max, self.data_scale)))
+        self.add(STERelativePerf(self.perf_measure, self.do_smoothing, self.do_normalize,
+                                 self.normalizer))
         self.add(SampleEfficiency(self.perf_measure, self.do_normalize,
-                                  (self.data_min, self.data_max, self.data_scale)))
+                                  self.normalizer))
 
     def filter_outliers(self, quantiles: Tuple[float, float] = (0.1, 0.9)) -> None:
         x = self._log_data[self.perf_measure]
         self._log_data = self._log_data[x.between(
             x.quantile(quantiles[0]), x.quantile(quantiles[1]))]
-
-    def normalize_data(self, scale: int = 100) -> None:
-        # Save raw data in another variable
-        self._raw_data = self._log_data[self.perf_measure].copy()
-
-        # Get data range over scenario and STE data
-        unique_tasks = list(self._log_data['task_name'].unique())
-        for task in unique_tasks:
-            ste_data = load_ste_data(task)
-            if ste_data is not None:
-                if self.perf_measure in ste_data.columns:
-                    self.data_min = min(self.data_min, np.nanmin(ste_data[self.perf_measure]))
-                    self.data_max = max(self.data_max, np.nanmax(ste_data[self.perf_measure]))
-
-        self._log_data[self.perf_measure] = (self._log_data[self.perf_measure].values -
-                                             self.data_min) / (self.data_max - self.data_min) * scale
 
     def add_noise(self, mean: float, std: float) -> None:
         # Add Gaussian noise to log data
@@ -364,7 +365,6 @@ class MetricsReport():
 
         plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
                            perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,
-                           window_len=window_len, do_normalize=self.do_normalize, min_max_scale=(
-                               self.data_min, self.data_max, self.data_scale),
-                           input_title=input_title, output_dir=output_dir, do_save=save,
-                           plot_filename=plot_filename)
+                           window_len=window_len, do_normalize=self.do_normalize,
+                           normalizer=self.normalizer, input_title=input_title,
+                           output_dir=output_dir, do_save=save, plot_filename=plot_filename)

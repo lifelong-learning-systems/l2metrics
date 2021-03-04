@@ -166,7 +166,8 @@ def save_ste_data(log_dir: Path) -> None:
 
 
 def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_method: str,
-                             transfer_method: str, output_dir: str = '', do_smoothing: bool = True,
+                             transfer_method: str = 'both', normalization_method: str = 'task',
+                             output_dir: str = '', do_smoothing: bool = True,
                              do_normalize: bool = False, remove_outliers: bool = False,
                              do_plot: bool = False, save_plots: bool = False) -> Tuple[pd.DataFrame, dict]:
     """Compute lifelong learning metrics for single LL logs found at input path.
@@ -175,9 +176,11 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
         log_dir (Path): Path to scenario directory.
         perf_measure (str): Name of column to use for metrics calculations.
         maintenance_method (str): Method for computing maintenance values.
-            Valid values are 'mrtlp', 'mrlep', and 'both.'
-        transfer_method (str): Method for computing forward and backward transfer.
-            Valid values are 'contrast', 'ratio', and 'both.'
+            Valid values are 'mrtlp', 'mrlep', and 'both'.
+        transfer_method (str, optional): Method for computing forward and backward transfer.
+            Valid values are 'contrast', 'ratio', and 'both'. Defaults to 'both'.
+        normalization_method (str, optional): Method for normalizing data.
+            Valid values are 'task' and 'run'. Defaults to 'task'.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
             Defaults to True.
@@ -188,14 +191,14 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
         save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
 
     Returns:
-        pd.DataFrame: DataFrame containing lifelong metrics from scenarios.
+        Tuple[pd.DataFrame, dict]: DataFrame containing lifelong metrics from scenarios.
     """
 
     # Initialize metrics report
     report = MetricsReport(
         log_dir=str(log_dir), perf_measure=perf_measure, maintenance_method=maintenance_method,
-        transfer_method=transfer_method, do_smoothing=do_smoothing, do_normalize=do_normalize,
-        remove_outliers=remove_outliers)
+        transfer_method=transfer_method, normalization_method=normalization_method,
+        do_smoothing=do_smoothing, do_normalize=do_normalize, remove_outliers=remove_outliers)
 
     # Calculate metrics
     report.calculate()
@@ -264,7 +267,8 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
 
 
 def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maintenance_method: str,
-                         transfer_method: str, output_dir: str = '', do_smoothing: bool = True,
+                         transfer_method: str, normalization_method: str = 'task',
+                         output_dir: str = '', do_smoothing: bool = True,
                          do_normalize: bool = False, remove_outliers: bool = False,
                          do_plot: bool = False, save_plots: bool = False, do_save_ste: bool = True) -> pd.DataFrame:
     """Compute lifelong learning metrics for all LL logs in provided evaluation log directory.
@@ -283,6 +287,8 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
             Valid values are 'mrtlp', 'mrlep', and 'both.'
         transfer_method (str): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both.'
+        normalization_method (str, optional): Method for normalizing data.
+            Valid values are 'task' and 'run'. Defaults to 'task'.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
             Defaults to True.
@@ -326,8 +332,8 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
                     if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
                         metrics_df, metrics_dict = compute_scenario_metrics(
                             log_dir=path, perf_measure=perf_measure, maintenance_method=maintenance_method,
-                            transfer_method=transfer_method, output_dir=output_dir,
-                            do_smoothing=do_smoothing, do_normalize=do_normalize,
+                            transfer_method=transfer_method, normalization_method=normalization_method,
+                            output_dir=output_dir, do_smoothing=do_smoothing, do_normalize=do_normalize,
                             remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots)
                         ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                         ll_metrics_dicts.append(metrics_dict)
@@ -338,7 +344,8 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
                                 metrics_df, metrics_dict = compute_scenario_metrics(
                                     log_dir=sub_path, perf_measure=perf_measure,
                                     maintenance_method=maintenance_method,
-                                    transfer_method=transfer_method, output_dir=output_dir,
+                                    transfer_method=transfer_method,
+                                    normalization_method=normalization_method, output_dir=output_dir,
                                     do_smoothing=do_smoothing, do_normalize=do_normalize,
                                     remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots)
                                 ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
@@ -419,6 +426,10 @@ def evaluate() -> None:
     parser.add_argument('-t', '--transfer-method', default='ratio', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
+    # Method for normalization
+    parser.add_argument('-n', '--normalization-method', default='task', choices=['task', 'run'],
+                        help='Method for normalizing data')
+
     # Output directory
     parser.add_argument('--output-dir', default='results', type=str,
                         help='Directory for output files')
@@ -492,6 +503,7 @@ def evaluate() -> None:
                                                            perf_measure=args.perf_measure,
                                                            maintenance_method=args.maintenance_method,
                                                            transfer_method=args.transfer_method,
+                                                           normalization_method=args.normalization_method,
                                                            do_smoothing=do_smoothing, do_normalize=args.normalize,
                                                            remove_outliers=args.remove_outliers, do_plot=do_plot,
                                                            save_plots=args.save_plots, do_save_ste=do_save_ste)

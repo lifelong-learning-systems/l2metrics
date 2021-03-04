@@ -71,12 +71,22 @@ def run() -> None:
     parser.add_argument('-p', '--perf-measure', default='reward',
                         help='Name of column to use for metrics calculations')
 
+    # Method for calculating performance maintenance
+    parser.add_argument('-m', '--maintenance-method', default='mrlep', choices=['mrtlp', 'mrlep', 'both'],
+                        help='Method for computing performance maintenance')
+
     # Method for calculating forward and backward transfer
-    parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
+    # Method for normalization
+    parser.add_argument('-n', '--normalization-method', default='task', choices=['task', 'run'],
+                        help='Method for normalizing data')
+
+    # TODO: Input file for task ranges
+
     # Mean and standard deviation for adding noise to log data
-    parser.add_argument('-n', '--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
+    parser.add_argument('--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
                         help='Mean and standard deviation for Gaussian noise in log data')
 
     # Output filename
@@ -85,11 +95,11 @@ def run() -> None:
 
     # Flag for disabling smoothing
     parser.add_argument('--no-smoothing', action='store_true',
-                        help='Do not smooth performance data for metrics and plotting')
+                        help='Do not smooth data for metrics and plotting')
 
     # Flag for enabling normalization
     parser.add_argument('--normalize', action='store_true',
-                        help='Normalize performance data for metrics')
+                        help='Normalize data for metrics')
 
     # Flag for removing outliers
     parser.add_argument('--remove-outliers', action='store_true',
@@ -109,12 +119,13 @@ def run() -> None:
     do_plot = not args.no_plot
     do_save = not args.no_save
 
-
-    # Initialize metrics report
     # Initialize metrics report
     report = MetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
-                           transfer_method=args.transfer_method, do_smoothing=do_smoothing,
-                           do_normalize=args.normalize, remove_outliers=args.remove_outliers)
+                           maintenance_method=args.maintenance_method,
+                           transfer_method=args.transfer_method,
+                           normalization_method=args.normalization_method, do_smoothing=do_smoothing,
+                           do_normalize=args.normalize, normalization_method=args.normalization_method,
+                           remove_outliers=args.remove_outliers)
 
     # Add example of custom metric
     report.add(MyCustomAgentMetric(args.perf_measure))
@@ -131,7 +142,8 @@ def run() -> None:
 
     # Plot metrics
     if do_plot:
-        report.plot(save=do_save, output=args.output)
+        report.plot(save=do_save)
+        report.plot_ste_data(save=do_save)
 
 
 if __name__ == "__main__":

@@ -167,7 +167,7 @@ def save_ste_data(log_dir: Path) -> None:
 
 def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_method: str,
                              transfer_method: str = 'both', normalization_method: str = 'task',
-                             output_dir: str = '', do_smoothing: bool = True,
+                             output_dir: str = '', do_smoothing: bool = True, show_raw_data: bool = False,
                              do_normalize: bool = False, remove_outliers: bool = False,
                              do_plot: bool = False, save_plots: bool = False) -> Tuple[pd.DataFrame, dict]:
     """Compute lifelong learning metrics for single LL logs found at input path.
@@ -184,6 +184,8 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
             Defaults to True.
+        show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
+            Defaults to False.
         do_normalize (bool, optional): Flag for enabling normalization on performance data.
             Defaults to False.
         remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
@@ -259,7 +261,7 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
             log_summary.loc[task, 'EX'])
 
     if do_plot:
-        report.plot(save=save_plots, output_dir=output_dir)
+        report.plot(save=save_plots, show_raw_data=show_raw_data, output_dir=output_dir)
         report.plot_ste_data(save=save_plots, output_dir=output_dir)
         plt.close('all')
 
@@ -268,7 +270,7 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
 
 def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maintenance_method: str,
                          transfer_method: str, normalization_method: str = 'task',
-                         output_dir: str = '', do_smoothing: bool = True,
+                         output_dir: str = '', do_smoothing: bool = True, show_raw_data: bool = False,
                          do_normalize: bool = False, remove_outliers: bool = False,
                          do_plot: bool = False, save_plots: bool = False, do_save_ste: bool = True) -> pd.DataFrame:
     """Compute lifelong learning metrics for all LL logs in provided evaluation log directory.
@@ -292,6 +294,8 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
             Defaults to True.
+        show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
+            Defaults to False.
         do_normalize (bool, optional): Flag for enabling normalization on performance data.
             Defaults to False.
         remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
@@ -333,8 +337,9 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
                         metrics_df, metrics_dict = compute_scenario_metrics(
                             log_dir=path, perf_measure=perf_measure, maintenance_method=maintenance_method,
                             transfer_method=transfer_method, normalization_method=normalization_method,
-                            output_dir=output_dir, do_smoothing=do_smoothing, do_normalize=do_normalize,
-                            remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots)
+                            output_dir=output_dir, do_smoothing=do_smoothing, show_raw_data=show_raw_data,
+                            do_normalize=do_normalize, remove_outliers=remove_outliers, do_plot=do_plot,
+                            save_plots=save_plots)
                         ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                         ll_metrics_dicts.append(metrics_dict)
                     else:
@@ -346,8 +351,9 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
                                     maintenance_method=maintenance_method,
                                     transfer_method=transfer_method,
                                     normalization_method=normalization_method, output_dir=output_dir,
-                                    do_smoothing=do_smoothing, do_normalize=do_normalize,
-                                    remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots)
+                                    do_smoothing=do_smoothing, show_raw_data=show_raw_data,
+                                    do_normalize=do_normalize, remove_outliers=remove_outliers,
+                                    do_plot=do_plot, save_plots=save_plots)
                                 ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                                 ll_metrics_dicts.append(metrics_dict)
         else:
@@ -446,6 +452,10 @@ def evaluate() -> None:
     parser.add_argument('--no-smoothing', action='store_true',
                         help='Do not smooth performance data for metrics')
 
+    # Flag for showing raw performance data under smoothed data
+    parser.add_argument('-r', '--show-raw-data', action='store_true',
+                        help='Show raw data points under smoothed data for plotting')
+
     # Flag for enabling normalization
     parser.add_argument('--normalize', action='store_true',
                         help='Normalize performance data for metrics')
@@ -504,7 +514,8 @@ def evaluate() -> None:
                                                            maintenance_method=args.maintenance_method,
                                                            transfer_method=args.transfer_method,
                                                            normalization_method=args.normalization_method,
-                                                           do_smoothing=do_smoothing, do_normalize=args.normalize,
+                                                           do_smoothing=do_smoothing, show_raw_data=args.show_raw_data,
+                                                           do_normalize=args.normalize,
                                                            remove_outliers=args.remove_outliers, do_plot=do_plot,
                                                            save_plots=args.save_plots, do_save_ste=do_save_ste)
 

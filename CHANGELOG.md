@@ -18,6 +18,7 @@ All notable changes to this repository are documented here. We are using [Semant
 - Implemented alternative methods for performance maintenance (MRTLP and MILER)
 - Recombined forward and backward transfer into a single transfer metric module
 - Created parallel evaluation script with multiprocessing
+- Added functionality to plot raw data behind smoothed performance curve
 - Updated README and example logs/files
 
 ## 2.5.1 - 2021-02-09

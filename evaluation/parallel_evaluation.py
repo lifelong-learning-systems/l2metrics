@@ -40,13 +40,22 @@ perf_measure = {
 
 
 def process_evaluation(args):
-    sg_name, config, ste_dir, do_save_ste, maintenance_method, transfer_method, \
-        normalization_method, do_plot, save_plots, do_save = args
+    sg_name, config = args
 
     # Build file and directory strings
     eval_dir = Path('../../sg_' + sg_name + '_eval/m9_eval/')
     output_dir = Path('results/' + config + '/' + sg_name + '_' + config)
     output = sg_name + '_metrics_' + config
+
+    ste_dir = ''
+    maintenance_method = 'both'
+    transfer_method = 'both'
+    normalization_method = 'task'
+    show_raw_data = False
+    do_save_ste = False
+    do_plot = True
+    save_plots = True
+    do_save = True
 
     # Create output directory if it doesn't exist
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -63,6 +72,7 @@ def process_evaluation(args):
                                                            transfer_method=transfer_method,
                                                            normalization_method=normalization_method,
                                                            do_smoothing=do_smoothing,
+                                                           show_raw_data=show_raw_data,
                                                            do_normalize=do_normalize,
                                                            remove_outliers=remove_outliers,
                                                            do_plot=do_plot,
@@ -83,23 +93,11 @@ def run():
     sg_names = ['argonne', 'hrl', 'sri', 'teledyne', 'upenn']
     configurations = ['raw', 'smoothed', 'normalized', 'normalized_no_outliers']
 
-    ste_dir = ''
-    maintenance_method = 'both'
-    transfer_method = 'both'
-    normalization_method = 'task'
-    do_save_ste = False
-    do_plot = True
-    save_plots = True
-    do_save = True
-
     # Parallel processing
     sg_configs = list(product(sg_names, configurations))
-    other_args = (ste_dir, do_save_ste, maintenance_method, transfer_method,
-                  normalization_method, do_plot, save_plots, do_save)
-    par_args = [x + other_args for x in sg_configs]
 
     with Pool(psutil.cpu_count(logical=False)) as p:
-        list(tqdm(p.imap(process_evaluation, par_args), total=len(par_args)))
+        list(tqdm(p.imap(process_evaluation, sg_configs), total=len(sg_configs)))
 
 
 if __name__ == '__main__':

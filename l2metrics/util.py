@@ -112,11 +112,11 @@ def save_ste_data(log_dir: str) -> None:
 
 
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
-                     do_smoothing: bool = False, window_len: int = None, x_axis_col: str = 'exp_num',
-                     y_axis_col: str = 'reward', input_title: str = "", input_xlabel: str = 'Episodes',
-                     input_ylabel: str = 'Performance', show_block_boundary: bool = False,
-                     shade_test_blocks: bool = True, output_dir: str = '', do_save_fig: bool = False,
-                     plot_filename: str = None) -> None:
+                     do_smoothing: bool = False, window_len: int = None, show_raw_data: bool = False,
+                     x_axis_col: str = 'exp_num', y_axis_col: str = 'reward', input_title: str = "",
+                     input_xlabel: str = 'Episodes', input_ylabel: str = 'Performance',
+                     show_block_boundary: bool = False, shade_test_blocks: bool = True,
+                     output_dir: str = '', do_save_fig: bool = False, plot_filename: str = None) -> None:
     """Plots the performance curves for the given DataFrame.
 
     Args:
@@ -125,6 +125,8 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         unique_tasks (list): List of unique tasks in scenario.
         do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to False.
         window_len (int, optional): The window length for smoothing the data. Defaults to None.
+        show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
+            Defaults to False.
         x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
         y_axis_col (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         input_title (str, optional): The plot title. Defaults to "".
@@ -155,26 +157,32 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
             block_type = row['block_type']
 
             # Get data for current regime
-            x = dataframe.loc[dataframe['regime_num'] == regime_num, x_axis_col].values
-            y = dataframe.loc[dataframe['regime_num'] == regime_num, y_axis_col].values
+            x_raw = dataframe.loc[dataframe['regime_num'] == regime_num, x_axis_col].values
+            y_raw = dataframe.loc[dataframe['regime_num'] == regime_num, y_axis_col].values
 
             if show_block_boundary:
-                ax.axes.axvline(x[0], linewidth=1, linestyle=':')
+                ax.axes.axvline(x_raw[0], linewidth=1, linestyle=':')
 
             if shade_test_blocks and block_type == 'test':
-                ax.axvspan(x[0], x[-1] + 1, alpha=0.1, facecolor='black')
+                ax.axvspan(x_raw[0], x_raw[-1] + 1, alpha=0.1, facecolor='black')
 
             if do_smoothing:
+                x_smoothed = x_raw
                 if block_type == 'train':
-                    y = _localutil.smooth(y, window_len=window_len, window='flat')
+                    y_smoothed = _localutil.smooth(y_raw, window_len=window_len, window='flat')
                 elif block_type == 'test':
-                    y = np.nanmean(y) * np.ones(len(x))
-
-            # Match x and y length if data had NaNs
-            if len(x) != len(y):
-                x = list(range(x[0], x[0] + len(y)))
-
-            ax.scatter(x, y, color=color, marker='*', s=8, label=task)
+                    y_smoothed = np.nanmean(y_raw) * np.ones(len(x_raw))
+                
+                # Match smoothed x and y length if data had NaNs
+                if len(x_smoothed) != len(y_smoothed):
+                    x_smoothed = list(range(x_smoothed[0], x_smoothed[0] + len(y_smoothed)))
+                
+                ax.scatter(x_smoothed, y_smoothed, color=color, marker='*', s=8, label=task)
+                
+                if show_raw_data:
+                    ax.scatter(x_raw, y_raw, color=color, marker='*', s=8, alpha=0.05)
+            else:
+                ax.scatter(x_raw, y_raw, color=color, marker='*', s=8, label=task)
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))

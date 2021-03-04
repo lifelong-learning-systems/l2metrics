@@ -68,6 +68,10 @@ def run() -> None:
     parser.add_argument('--no-smoothing', action='store_true',
                         help='Do not smooth data for metrics and plotting')
 
+    # Flag for showing raw performance data under smoothed data
+    parser.add_argument('-r', '--show-raw-data', action='store_true',
+                        help='Show raw data points under smoothed data for plotting')
+
     # Flag for enabling normalization
     parser.add_argument('--normalize', action='store_true',
                         help='Normalize data for metrics')
@@ -120,7 +124,7 @@ def run() -> None:
 
         # Plot metrics
         if do_plot:
-            report.plot(save=do_save)
+            report.plot(save=do_save, show_raw_data=args.show_raw_data)
             report.plot_ste_data(save=do_save)
 
 

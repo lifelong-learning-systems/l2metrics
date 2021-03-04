@@ -120,7 +120,7 @@ This section describes how to run L2Metrics from the command line. By default, t
 usage: python -m l2metrics [-h] -l LOG_DIR [-s] [-p PERF_MEASURE]
                    [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
                    [-n {task,run}] [-f DATA_RANGE_FILE] [--noise MEAN STD]
-                   [-o OUTPUT] [--no-smoothing] [--normalize]
+                   [-o OUTPUT] [--no-smoothing] [-r] [--normalize]
                    [--remove-outliers] [--no-plot] [--no-save]
 
 Run L2Metrics from the command line
@@ -148,6 +148,7 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Specify output filename for plot and results
   --no-smoothing        Do not smooth data for metrics and plotting
+  -r, --show-raw-data   Show raw data points under smoothed data for plotting
   --normalize           Normalize data for metrics
   --remove-outliers     Remove outliers in data for metrics
   --no-plot             Do not plot performance

@@ -349,13 +349,15 @@ class MetricsReport():
 
         return pd.DataFrame(task_experiences).set_index('task_name')
 
-    def plot(self, save: bool = False, output_dir: str = '', input_title: str = None) -> None:
+    def plot(self, save: bool = False, show_raw_data: bool = False, output_dir: str = '',
+             input_title: str = None) -> None:
         if input_title is None:
             input_title = os.path.split(self.log_dir.strip('/\\'))[-1]
 
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
-                              do_smoothing=self.do_smoothing, y_axis_col=self.perf_measure,
-                              input_title=input_title, output_dir=output_dir, do_save_fig=save)
+                         do_smoothing=self.do_smoothing, show_raw_data=show_raw_data,
+                         y_axis_col=self.perf_measure, input_title=input_title,
+                         output_dir=output_dir, do_save_fig=save)
 
     def plot_ste_data(self, window_len: int = None, input_title: str = None,
                       save: bool = False, output_dir: str = '') -> None:
@@ -365,7 +367,7 @@ class MetricsReport():
         plot_filename = 'ste_' + os.path.split(self.log_dir.strip('/\\'))[-1]
 
         plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
-                           perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,
-                           window_len=window_len, do_normalize=self.do_normalize,
-                           normalizer=self.normalizer, input_title=input_title,
-                           output_dir=output_dir, do_save=save, plot_filename=plot_filename)
+                      perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,
+                      window_len=window_len, do_normalize=self.do_normalize,
+                      normalizer=self.normalizer, input_title=input_title,
+                      output_dir=output_dir, do_save=save, plot_filename=plot_filename)

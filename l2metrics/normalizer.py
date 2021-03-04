@@ -52,6 +52,8 @@ class Normalizer():
     def calculate_data_range(self, data: pd.DataFrame) -> None:
         """Calculates data range per task for given data.
 
+        A task data range is the minimum and maximum value of the task performance.
+
         Args:
             data (pd.DataFrame): Reference data for calculating data range. Assumed
                 DataFrame with task name as index and one column of performance data.

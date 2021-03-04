@@ -107,10 +107,10 @@ This section describes how to run L2Metrics from the command line. By default, t
 
 - Performance measure is "reward".
 - Performance maintenance uses the most recent learning evaluation performance (`mrlep`) as opposed to the most recent terminal learning performance (`mrtlp`).
-- Forward and backward transfer uses contrast.
+- Forward and backward transfer use contrast.
 - Smoothing is enabled via rectangular sliding window.
 - Normalization is disabled.
-- If enabled, default normalization is per-task using data within scenario.
+  - If enabled, default normalization will rescale data (0-100) for each task based on task minimum and maximum values within scenario.
 - Outlier removal is disabled.
 - Gaussian noise is disabled.
 - Plotting is enabled.
@@ -191,7 +191,7 @@ The framework should also produce a performance relative to STE plot shown below
 
 ![diagram](examples/ste_multi_task.png)
 
-Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following tables show an example of a metrics report output:
+Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following table shows an example of a metrics report output:
 
 ### Lifetime Metrics
 

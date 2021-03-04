@@ -88,8 +88,8 @@ class PerformanceMaintenance(Metric):
                                           (block_info['block_type'] == 'test')]['regime_num'].values
 
                 # Get reference test regimes
-                ref_test_regs = np.array(
-                    [test_regs[np.argmax(test_regs > x)] for x in training_regs])
+                ref_test_regs = np.array([test_regs[np.argmax(
+                    test_regs > x)] for x in training_regs if np.any(test_regs > x)])
 
                 # Iterate over test regimes
                 for test_regime in test_regs:

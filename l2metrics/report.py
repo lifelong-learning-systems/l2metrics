@@ -324,7 +324,7 @@ class MetricsReport():
         if save:
             # Generate filename
             if output is None:
-                _, filename = os.path.split(self.log_dir)
+                _, filename = os.path.split(self.log_dir.strip('/\\'))
             else:
                 filename = output.replace(" ", "_")
 
@@ -351,7 +351,7 @@ class MetricsReport():
 
     def plot(self, save: bool = False, output_dir: str = '', input_title: str = None) -> None:
         if input_title is None:
-            input_title = os.path.split(self.log_dir)[-1]
+            input_title = os.path.split(self.log_dir.strip('/\\'))[-1]
 
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
                               do_smoothing=self.do_smoothing, y_axis_col=self.perf_measure,
@@ -360,8 +360,9 @@ class MetricsReport():
     def plot_ste_data(self, window_len: int = None, input_title: str = None,
                       save: bool = False, output_dir: str = '') -> None:
         if input_title is None:
-            input_title = 'Performance Relative to STE\n' + os.path.split(self.log_dir)[-1]
-        plot_filename = 'ste_' + os.path.split(self.log_dir)[-1]
+            input_title = 'Performance Relative to STE\n' + \
+                os.path.split(self.log_dir.strip('/\\'))[-1]
+        plot_filename = 'ste_' + os.path.split(self.log_dir.strip('/\\'))[-1]
 
         plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
                            perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,

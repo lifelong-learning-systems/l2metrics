@@ -22,6 +22,7 @@ custom metric.
 """
 
 import argparse
+import json
 
 import pandas as pd
 from l2metrics import _localutil
@@ -83,7 +84,9 @@ def run() -> None:
     parser.add_argument('-n', '--normalization-method', default='task', choices=['task', 'run'],
                         help='Method for normalizing data')
 
-    # TODO: Input file for task ranges
+    # Data range file for normalization
+    parser.add_argument('-f', '--data-range-file', type=str,
+                        help='JSON file containing task performance ranges for normalization')
 
     # Mean and standard deviation for adding noise to log data
     parser.add_argument('--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
@@ -119,12 +122,19 @@ def run() -> None:
     do_plot = not args.no_plot
     do_save = not args.no_save
 
+    # Load data range data for normalization
+    if args.data_range_file:
+        with open(args.data_range_file) as json_file:
+            data_range = json.load(json_file)
+    else:
+        data_range = None
+
     # Initialize metrics report
     report = MetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
                            maintenance_method=args.maintenance_method,
                            transfer_method=args.transfer_method,
-                           normalization_method=args.normalization_method, do_smoothing=do_smoothing,
-                           do_normalize=args.normalize, normalization_method=args.normalization_method,
+                           normalization_method=args.normalization_method, data_range=data_range,
+                           do_smoothing=do_smoothing, do_normalize=args.normalize,
                            remove_outliers=args.remove_outliers)
 
     # Add example of custom metric

@@ -447,7 +447,7 @@ def evaluate() -> None:
                         help='Do not smooth performance data for metrics')
 
     # Flag for enabling normalization
-    parser.add_argument('-n', '--normalize', action='store_true',
+    parser.add_argument('--normalize', action='store_true',
                         help='Normalize performance data for metrics')
 
     # Flag for removing outliers

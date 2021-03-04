@@ -2,6 +2,24 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.6.0 - 2021-03-01
+
+- Throw warnings instead of raising exception when checking for alternating blocks
+- Print valid application measures in error message when input is invalid
+- Implement feature to add Gaussian noise to log data
+- Added relative Single-Task Expert plotting
+- Modified evaluation script to loop over every agent configuration in the given evaluation directory
+- Implemented function for recursively unzipping logs in evaluation directory
+- Added fields to output TSV and also report task-level metrics in JSON format
+- Modified terminal performance calculation to average over all evaluation block data
+- Added functionality for normalization and outlier removal
+- Created input parameter for passing in task performance ranges for normalization
+- Separated LL metrics into individual modules
+- Implemented alternative methods for performance maintenance (MRTLP and MILER)
+- Recombined forward and backward transfer into a single transfer metric module
+- Created parallel evaluation script with multiprocessing
+- Updated README and example logs/files
+
 ## 2.5.1 - 2021-02-09
 
 - Handled scenarios with tasks that are not all trained

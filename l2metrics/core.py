@@ -18,6 +18,8 @@
 
 import abc
 
+import pandas as pd
+
 
 class Metric(abc.ABC):
     """
@@ -58,39 +60,16 @@ class Metric(abc.ABC):
         return {}
 
     @abc.abstractmethod
-    def calculate(self, data, metadata, metrics_dict):
-        """
-        Returns a dict of values
+    def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
+        """Calculate metric
+
+        Args:
+            dataframe (pd.DataFrame): Dataframe containing log data
+            block_info (pd.DataFrame): High-level block summary of log data
+            metrics_df (pd.DataFrame): Incremental Dataframe with columns corresponding to
+                calculated metrics along with some of the block_info information.
+
+        Returns:
+            pd.DataFrame: Updated metrics dataframe.
         """
         return None
-
-    @abc.abstractmethod
-    def plot(self, result):
-        """
-        Visualizes the metric using matplotlib visualizations
-        """
-        pass
-
-
-class MetricsReport(object):
-    """
-    Aggregates a list of metrics for a learner
-    """
-
-    def __init__(self, **kwargs):
-
-        self._metrics = []
-
-        if 'log_dir' in kwargs:
-            self.log_dir = kwargs['log_dir']
-        else:
-            raise RuntimeError("log_dir is required")
-
-    def calculate(self):
-        pass
-
-    def plot(self):
-        pass
-
-    def add(self, metrics_lst):
-        self._metrics.extend(metrics_lst)

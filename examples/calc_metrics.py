@@ -22,13 +22,15 @@ custom metric.
 """
 
 import argparse
+import json
 
 import pandas as pd
 from l2metrics import _localutil
-from l2metrics.agent import AgentMetric, AgentMetricsReport
+from l2metrics.core import Metric
+from l2metrics.report import MetricsReport
 
 
-class MyCustomAgentMetric(AgentMetric):
+class MyCustomAgentMetric(Metric):
     name = "An Example Custom Metric for illustration"
     capability = "continual_learning"
     requires = {'syllabus_type': 'agent'}
@@ -38,6 +40,9 @@ class MyCustomAgentMetric(AgentMetric):
         super().__init__()
         self.perf_measure = perf_measure
 
+    def validate(self, block_info):
+        pass
+
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         max_values = {}
 
@@ -46,14 +51,9 @@ class MyCustomAgentMetric(AgentMetric):
             max_values[idx] = max_regime_value
 
         # This is the line that fills the metric into the dataframe. Comment it out to suppress this behavior
-        metrics_df = _localutil.fill_metrics_df(max_values, 'max_value', metrics_df)
+        metrics_df = _localutil.fill_metrics_df(
+            max_values, 'max_value', metrics_df)
         return metrics_df
-
-    def plot(self, result):
-        pass
-
-    def validate(self, block_info):
-        pass
 
 
 def run() -> None:
@@ -72,9 +72,25 @@ def run() -> None:
     parser.add_argument('-p', '--perf-measure', default='reward',
                         help='Name of column to use for metrics calculations')
 
+    # Method for calculating performance maintenance
+    parser.add_argument('-m', '--maintenance-method', default='mrlep', choices=['mrtlp', 'mrlep', 'both'],
+                        help='Method for computing performance maintenance')
+
     # Method for calculating forward and backward transfer
-    parser.add_argument('-m', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
+
+    # Method for normalization
+    parser.add_argument('-n', '--normalization-method', default='task', choices=['task', 'run'],
+                        help='Method for normalizing data')
+
+    # Data range file for normalization
+    parser.add_argument('-f', '--data-range-file', type=str,
+                        help='JSON file containing task performance ranges for normalization')
+
+    # Mean and standard deviation for adding noise to log data
+    parser.add_argument('--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
+                        help='Mean and standard deviation for Gaussian noise in log data')
 
     # Output filename
     parser.add_argument('-o', '--output', default=None,
@@ -82,7 +98,19 @@ def run() -> None:
 
     # Flag for disabling smoothing
     parser.add_argument('--no-smoothing', action='store_true',
-                        help='Do not smooth performance data for metrics and plotting')
+                        help='Do not smooth data for metrics and plotting')
+
+    # Flag for showing raw performance data under smoothed data
+    parser.add_argument('-r', '--show-raw-data', action='store_true',
+                        help='Show raw data points under smoothed data for plotting')
+
+    # Flag for enabling normalization
+    parser.add_argument('--normalize', action='store_true',
+                        help='Normalize data for metrics')
+
+    # Flag for removing outliers
+    parser.add_argument('--remove-outliers', action='store_true',
+                        help='Remove outliers in data for metrics')
 
     # Flag for disabling plotting
     parser.add_argument('--no-plot', action='store_true',
@@ -98,12 +126,27 @@ def run() -> None:
     do_plot = not args.no_plot
     do_save = not args.no_save
 
+    # Load data range data for normalization
+    if args.data_range_file:
+        with open(args.data_range_file) as json_file:
+            data_range = json.load(json_file)
+    else:
+        data_range = None
+
     # Initialize metrics report
-    report = AgentMetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
-                                transfer_method=args.transfer_method, do_smoothing=do_smoothing)
+    report = MetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
+                           maintenance_method=args.maintenance_method,
+                           transfer_method=args.transfer_method,
+                           normalization_method=args.normalization_method, data_range=data_range,
+                           do_smoothing=do_smoothing, do_normalize=args.normalize,
+                           remove_outliers=args.remove_outliers)
 
     # Add example of custom metric
     report.add(MyCustomAgentMetric(args.perf_measure))
+
+    # Add noise to log data if mean or standard deviation is specified
+    if args.noise[0] or args.noise[1]:
+        report.add_noise(mean=args.noise[0], std=args.noise[1])
 
     # Calculate metrics in order of their addition to the metrics list.
     report.calculate()
@@ -113,7 +156,8 @@ def run() -> None:
 
     # Plot metrics
     if do_plot:
-        report.plot(save=do_save, output=args.output)
+        report.plot(save=do_save, show_raw_data=args.show_raw_data)
+        report.plot_ste_data(save=do_save)
 
 
 if __name__ == "__main__":

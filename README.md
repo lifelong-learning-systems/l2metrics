@@ -99,33 +99,59 @@ pip install -e <path_to_l2metrics>
 
 To calculate metrics on the performance of your system, you must first generate log files in accordance with the L2Logger format version 1.0. Please refer to the L2Logger documentation for more details on how to generate compatible logs.
 
-Once these logs are generated, you'll need to store Single-Task Expert (STE) data and pass the log directory as a command-line argument to compute STE-related metrics. Example log directories are provided to get you started.
+Once these logs are generated, you'll need to store Single-Task Expert (STE) data and pass the log directory as a command-line argument to compute STE-related metrics. Example log directories are provided to get you started. Additionally, an example `data_range.json` file is included to show how the user can specify task normalization ranges.
 
 ### Command-Line Execution
 
+This section describes how to run L2Metrics from the command line. By default, the L2Metrics package will calculate metrics with the following options:
+
+- Performance measure is "reward".
+- Performance maintenance uses the most recent learning evaluation performance (`mrlep`) as opposed to the most recent terminal learning performance (`mrtlp`).
+- Forward and backward transfer use contrast.
+- Smoothing is enabled via rectangular sliding window.
+- Normalization is disabled.
+  - If enabled, default normalization will rescale data (0-100) for each task based on task minimum and maximum values within scenario.
+- Outlier removal is disabled.
+- Gaussian noise is disabled.
+- Plotting is enabled.
+- Results output is enabled.
+
 ```
-usage: l2metrics [-h] -l LOG_DIR [-s] [-p PERF_MEASURE]
-                 [-m {contrast,ratio}] [-o OUTPUT] [--no-smoothing]
-                 [--no-plot] [--no-save]
+usage: python -m l2metrics [-h] -l LOG_DIR [-s] [-p PERF_MEASURE]
+                   [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
+                   [-n {task,run}] [-f DATA_RANGE_FILE] [--noise MEAN STD]
+                   [-o OUTPUT] [--no-smoothing] [-r] [--normalize]
+                   [--remove-outliers] [--no-plot] [--no-save]
 
 Run L2Metrics from the command line
 
 required arguments:
-
-  -l LOG_DIR --log-dir LOG_DIR
+  -l LOG_DIR, --log-dir LOG_DIR
                         Log directory of scenario
 
 optional arguments:
-
+  -h, --help            show this help message and exit
   -s, --store-ste-data  Flag for storing log data as STE
   -p PERF_MEASURE, --perf-measure PERF_MEASURE
                         Name of column to use for metrics calculations
-  -m {contrast,ratio}, --transfer-method {contrast,ratio}
+  -m {mrtlp,mrlep,both}, --maintenance-method {mrtlp,mrlep,both}
+                        Method for computing performance maintenance
+  -t {contrast,ratio,both}, --transfer-method {contrast,ratio,both}
                         Method for computing forward and backward transfer
+  -n {task,run}, --normalization-method {task,run}
+                        Method for normalizing data
+  -f DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
+                        JSON file containing task performance ranges for
+                        normalization
+  --noise MEAN STD      Mean and standard deviation for Gaussian noise in log
+                        data
   -o OUTPUT, --output OUTPUT
                         Specify output filename for plot and results
-  --no-smoothing        Do not smooth performance data for metrics
-  --no-plot             Do not plot metrics report
+  --no-smoothing        Do not smooth data for metrics and plotting
+  -r, --show-raw-data   Show raw data points under smoothed data for plotting
+  --normalize           Normalize data for metrics
+  --remove-outliers     Remove outliers in data for metrics
+  --no-plot             Do not plot performance
   --no-save             Do not save metrics outputs
 ```
 
@@ -141,7 +167,7 @@ python -m l2metrics -s -l examples/ste_task2
 python -m l2metrics -s -l examples/ste_task3
 ```
 
-The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single-task expert data is pickled and saved. Storing STE data assumes the provided log only contains data for a single task and only saves training data.
+The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single-task expert data is pickled and saved. Storing STE data assumes the provided log only contains data for a single task/variant and only saves training data.
 
 Replace the log directory with logs for other STE tasks and repeat until all STE data is stored.
 
@@ -157,37 +183,21 @@ If you do not wish to provide a fully qualified path to your log directory, you 
 
 The output figure of performance over episodes (saved by default) should look like this:
 
-![diagram](examples/multi_task/multi_task.png)
+![diagram](examples/multi_task.png)
 
 The white areas represent blocks in which learning is occurring while the gray areas represent evaluation blocks.
 
-Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following tables show an example of a metrics report output:
+The framework should also produce a performance relative to STE plot shown below where the task performance curves are generated by concatenating all the training data from the scenario:
+
+![diagram](examples/ste_multi_task.png)
+
+Additionally, the script will print the metrics report to the console and save the values to a TSV file by default. The following table shows an example of a metrics report output:
 
 ### Lifetime Metrics
 
-| perf_recovery | perf_maintenance | forward_transfer | backward_transfer | ste_rel_perf | sample_efficiency |
+| perf_recovery | perf_maintenance_mrlep | forward_transfer_contrast | backward_transfer_contrast | ste_rel_perf | sample_efficiency |
 | ------------- | ---------------- | ---------------- | ----------------- | ------------ | ----------------- |
-| 0.0           | -1.81            | 0.71             | -0.02             | 1.10         | 0.71              |
-
-### Task Metrics
-
-| task_name | perf_recovery | perf_maintenance | forward_transfer_contrast | backward_transfer_contrast | ste_rel_perf | sample_efficiency |
-| --------- | ------------- | ---------------- | ------------------------- | -------------------------- | ------------ | ----------------- |
-| task1     | 0.0           | -5.22            | [nan, 0.83, 0.71]         | [nan, 0.02, 0.0]           | 0.94         | 0.70              |
-| task2     | 0.0           | -1.81            | [nan, nan, 0.53]          | [-0.02, nan, 0.01]         | 1.10         | 0.71              |
-| task3     | 0.0           | 1.86             | [nan, nan, nan]           | [-0.04, -0.02, nan]        | 1.20         | 0.71              |
-
-Where the transfer rows can be interpreted as follows:
-
-- `task1`'s forward transfer to `task2` is 0.83.
-- `task1`'s forward transfer to `task3` is 0.71.
-- `task2`'s forward transfer to `task3` is 0.53.
-- `task1`'s backward transfer to `task2` is 0.02.
-- `task1`'s backward transfer to `task3` is 0.0.
-- `task2`'s backward transfer to `task1` is -0.02.
-- `task2`'s backward transfer to `task3` is 0.01.
-- `task3`'s backward transfer to `task1` is -0.04.
-- `task3`'s backward transfer to `task2` is -0.02.
+| 0.0           | -2.67            | 0.71             | -0.02             | 1.10         | 0.71              |
 
 ### Custom Metrics
 

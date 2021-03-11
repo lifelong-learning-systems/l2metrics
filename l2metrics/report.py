@@ -156,7 +156,7 @@ class MetricsReport():
             self.normalizer = None
 
         # Get block summary
-        _, self.block_info = l2l.parse_blocks(self._log_data)
+        self.block_info = l2l.parse_blocks(self._log_data)
 
         # Store unique task names by order of training
         self._unique_tasks = list(self.block_info.sort_values(

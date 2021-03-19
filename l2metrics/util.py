@@ -148,7 +148,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
     if len(unique_tasks) < len(color_selection):
         task_colors = color_selection[:len(unique_tasks)]
     else:
-        task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
+        task_colors = [color_selection[i % len(color_selection)] for i in range(len(unique_tasks))]
 
     # Loop through tasks and plot their performance curves
     for color, task in zip(task_colors, unique_tasks):

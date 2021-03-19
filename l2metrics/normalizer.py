@@ -84,16 +84,14 @@ class Normalizer():
 
             if ste_data is not None:
                 if self.perf_measure in ste_data.columns:
-                    self.data_range['min'][task] = min(
-                        task_min, np.nanmin(ste_data[self.perf_measure]))
-                    self.data_range['max'][task] = max(
-                        task_max, np.nanmax(ste_data[self.perf_measure]))
+                    self.data_range['min'][task] = min(task_min, np.nanmin(ste_data[self.perf_measure]))
+                    self.data_range['max'][task] = max(task_max, np.nanmax(ste_data[self.perf_measure]))
             else:
                 self.data_range['min'][task] = task_min
                 self.data_range['max'][task] = task_max
 
-        self.run_min = min([val for _, val in self.data_range['min'].items()])
-        self.run_max = max([val for _, val in self.data_range['max'].items()])
+        self.run_min = min(self.data_range['min'].values())
+        self.run_max = max(self.data_range['max'].values())
 
     def _validate_data_range(self, data_range: defaultdict) -> bool:
         """Validates data range object.

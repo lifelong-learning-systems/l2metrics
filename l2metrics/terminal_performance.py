@@ -38,21 +38,17 @@ class TerminalPerformance(Metric):
 
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         # Initialize metric dictionaries
-        terminal_perf_values = {}
+        term_perf_values = {}
         eps_to_terminal_perf = {}
 
         # Iterate over all of the blocks and compute the within block performance
-        for idx in range(block_info.loc[:, 'regime_num'].max() + 1):
+        for idx in range(max(block_info['regime_num'].values) + 1):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
             # Make within block calculations
-            term_perf, eps_to_term_perf, _ = get_terminal_perf(
+            term_perf_values[idx], eps_to_terminal_perf[idx], _ = get_terminal_perf(
                 block_data, col_to_use=self.perf_measure, do_smoothing=self.do_smoothing)
 
-            # Record them
-            terminal_perf_values[idx] = term_perf
-            eps_to_terminal_perf[idx] = eps_to_term_perf
-
-        metrics_df = fill_metrics_df(terminal_perf_values, 'term_perf', metrics_df)
+        metrics_df = fill_metrics_df(term_perf_values, 'term_perf', metrics_df)
         return fill_metrics_df(eps_to_terminal_perf, 'eps_to_term_perf', metrics_df)

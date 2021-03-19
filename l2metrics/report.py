@@ -18,7 +18,7 @@
 
 import os
 from collections import defaultdict
-from typing import List, Tuple, Union
+from typing import List, Union
 
 import l2logger.util as l2l
 import numpy as np
@@ -35,7 +35,7 @@ from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
 from .transfer import Transfer
-from .util import plot_performance, plot_ste_data
+from .util import filter_outliers, plot_performance, plot_ste_data
 
 
 class MetricsReport():
@@ -133,9 +133,13 @@ class MetricsReport():
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
 
+        # Save raw data in another variable
+        self._raw_data = self._log_data.copy()
+
         # Remove outliers
         if self.remove_outliers:
-            self.filter_outliers(quantiles=(0.1, 0.9))
+            self._log_data = filter_outliers(
+                self._log_data, perf_measure=self.perf_measure, quantiles=(0.1, 0.9))
 
         # Check for non-zero log data length
         if len(self._log_data) == 0:
@@ -146,9 +150,6 @@ class MetricsReport():
             self.normalizer = Normalizer(perf_measure=self.perf_measure,
                                          data=self._log_data[['task_name', self.perf_measure]].set_index('task_name'),
                                          data_range=self.data_range, method=self.normalization_method)
-
-            # Save raw data in another variable
-            self._raw_data = self._log_data[self.perf_measure].copy()
 
             # Normalize data
             self._log_data = self.normalizer.normalize(self._log_data)
@@ -191,11 +192,6 @@ class MetricsReport():
                                  self.normalizer))
         self.add(SampleEfficiency(self.perf_measure, self.do_normalize,
                                   self.normalizer))
-
-    def filter_outliers(self, quantiles: Tuple[float, float] = (0.1, 0.9)) -> None:
-        x = self._log_data[self.perf_measure]
-        self._log_data = self._log_data[x.between(
-            x.quantile(quantiles[0]), x.quantile(quantiles[1]))]
 
     def add_noise(self, mean: float, std: float) -> None:
         # Add Gaussian noise to log data

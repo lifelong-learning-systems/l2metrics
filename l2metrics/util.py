@@ -20,6 +20,7 @@ import os
 from collections import OrderedDict
 from math import ceil
 from pathlib import Path
+from typing import Tuple, Union
 
 import l2logger.util as l2l
 import matplotlib.pyplot as plt
@@ -44,7 +45,7 @@ def get_ste_data_names() -> list:
         return []
 
 
-def load_ste_data(task_name: str) -> pd.DataFrame:
+def load_ste_data(task_name: str) -> Union[pd.DataFrame, None]:
     """Loads the STE data corresponding to the given task name.
 
     This function searches $L2DATA/taskinfo/ for the given task name and reads the file as a
@@ -111,6 +112,41 @@ def save_ste_data(log_dir: str) -> None:
     print(f'Stored STE data for {task_name[0]}')
 
 
+def filter_outliers(data: pd.DataFrame, perf_measure: str, quantiles: Tuple[float, float] = (0.1, 0.9)) -> pd.DataFrame:
+    """Filter outliers per-task by clamping to quantiles.
+
+    Args:
+        data (pd.DataFrame): The performance data to filter.
+        perf_measure (str): The column name of the metric to plot.
+        quantiles (Tuple[float, float], optional): The quantile range for outlier detection. Defaults to (0.1, 0.9).
+
+    Returns:
+        pd.DataFrame: Filtered data frame
+    """
+
+    # Filter outliers per-task
+    for task in data['task_name'].unique():
+        # Get task data from dataframe
+        x = data[data['task_name'] == task][perf_measure].values
+
+        # Load STE data
+        ste_data = load_ste_data(task)
+
+        lower_bound = 0
+        upper_bound = 100
+
+        if ste_data is not None:
+            x_ste = ste_data[perf_measure].values
+            x_comb = np.append(x, x_ste)
+            lower_bound, upper_bound = np.quantile(x_comb, quantiles)
+        else:
+            lower_bound, upper_bound = np.quantile(x, quantiles)
+
+        data.loc[data['task_name'] == task, perf_measure] = x.clip(lower_bound, upper_bound)
+
+    return data
+
+
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
                      do_smoothing: bool = False, window_len: int = None, show_raw_data: bool = False,
                      x_axis_col: str = 'exp_num', y_axis_col: str = 'reward', input_title: str = "",
@@ -168,6 +204,8 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
 
             if do_smoothing:
                 x_smoothed = x_raw
+                y_smoothed = []
+
                 if block_type == 'train':
                     y_smoothed = _localutil.smooth(y_raw, window_len=window_len, window='flat')
                 elif block_type == 'test':

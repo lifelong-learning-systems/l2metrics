@@ -40,6 +40,10 @@ def run() -> None:
     parser.add_argument('-p', '--perf-measure', default='reward',
                         help='Name of column to use for metrics calculations')
 
+    # Method for aggregating within-lifetime metrics
+    parser.add_argument('-a', '--aggregation-method', default='median', choices=['mean', 'median'],
+                        help='Method for aggregating within-lifetime metrics')
+
     # Method for calculating performance maintenance
     parser.add_argument('-m', '--maintenance-method', default='mrlep', choices=['mrtlp', 'mrlep', 'both'],
                         help='Method for computing performance maintenance')
@@ -106,6 +110,7 @@ def run() -> None:
 
         # Initialize metrics report
         report = MetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
+                               aggregation_method=args.aggregation_method,
                                maintenance_method=args.maintenance_method,
                                transfer_method=args.transfer_method,
                                normalization_method=args.normalization_method, data_range=data_range,

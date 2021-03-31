@@ -57,6 +57,11 @@ class MetricsReport():
         else:
             self.perf_measure = 'reward'
 
+        if 'aggregation_method' in kwargs:
+            self.aggregation_method = kwargs['aggregation_method']
+        else:
+            self.aggregation_method = 'median'
+
         if 'maintenance_method' in kwargs:
             self.maintenance_method = kwargs['maintenance_method']
         else:
@@ -306,8 +311,11 @@ class MetricsReport():
                     metric_vals = self.task_metrics_df[metric].dropna().values
 
                 if len(metric_vals):
-                    # Aggregate metric values with median operator
-                    self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
+                    # Aggregate metric values
+                    if self.aggregation_method == 'median':
+                        self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
+                    elif self.aggregation_method == 'mean':
+                        self.lifetime_metrics_df[metric] = [np.mean(metric_vals)]
 
     def report(self, save: bool = False, output: str = None) -> None:
         # TODO: Handle reporting custom metrics

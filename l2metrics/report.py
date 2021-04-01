@@ -77,11 +77,6 @@ class MetricsReport():
         else:
             self.do_smoothing = True
 
-        if 'do_normalize' in kwargs:
-            self.do_normalize = kwargs['do_normalize']
-        else:
-            self.do_normalize = False
-
         if 'normalization_method' in kwargs:
             self.normalization_method = kwargs['normalization_method']
         else:
@@ -150,7 +145,7 @@ class MetricsReport():
         if len(self._log_data) == 0:
             raise Exception('No valid log data to compute metrics')
 
-        if self.do_normalize:
+        if self.normalization_method:
             # Instantiate normalizer
             self.normalizer = Normalizer(perf_measure=self.perf_measure,
                                          data=self._log_data[['task_name', self.perf_measure]].set_index('task_name'),
@@ -193,10 +188,8 @@ class MetricsReport():
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure, self.maintenance_method))
         self.add(Transfer(self.perf_measure, self.transfer_method))
-        self.add(STERelativePerf(self.perf_measure, self.do_smoothing, self.do_normalize,
-                                 self.normalizer))
-        self.add(SampleEfficiency(self.perf_measure, self.do_normalize,
-                                  self.normalizer))
+        self.add(STERelativePerf(self.perf_measure, self.do_smoothing, self.normalizer))
+        self.add(SampleEfficiency(self.perf_measure, self.normalizer))
 
     def add_noise(self, mean: float, std: float) -> None:
         # Add Gaussian noise to log data
@@ -372,6 +365,5 @@ class MetricsReport():
 
         plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
                       perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,
-                      window_len=window_len, do_normalize=self.do_normalize,
-                      normalizer=self.normalizer, input_title=input_title,
+                      window_len=window_len, normalizer=self.normalizer, input_title=input_title,
                       output_dir=output_dir, do_save=save, plot_filename=plot_filename)

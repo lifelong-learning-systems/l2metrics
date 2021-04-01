@@ -247,8 +247,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
 
 def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
                   perf_measure: str = 'reward', do_smoothing: bool = False, window_len: int = None,
-                  do_normalize: bool = False, normalizer = None,
-                  input_title: str = '', input_xlabel: str = 'Episodes',
+                  normalizer = None, input_title: str = '', input_xlabel: str = 'Episodes',
                   input_ylabel: str = 'Performance', output_dir: str = '', do_save: bool = False,
                   plot_filename: str = None) -> None:
     """Plots the relative performance of tasks compared to Single-Task Experts.
@@ -260,7 +259,6 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
         perf_measure (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to False.
         window_len (int, optional): The window length for smoothing the data. Defaults to None.
-        do_normalize (bool, optional): Flag for enabling normalization. Defaults to False.
         normalizer (Normalizer, optional): Normalizer instance for normalization. Defaults to None.
         input_title (str, optional): Plot title. Defaults to ''.
         input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
@@ -305,7 +303,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
                 # Create subplot
                 ax = fig.add_subplot(rows, cols, index + 1)
 
-                if do_normalize and normalizer is not None:
+                if normalizer is not None:
                     ste_data = normalizer.normalize(ste_data)
 
                 if do_smoothing:
@@ -331,7 +329,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
 
     fig.subplots_adjust(wspace=0.3, hspace=0.4)
 
-    if do_normalize:
+    if normalizer is not None:
         plt.setp(fig.axes, xlim=(0, x_limit), ylim=(0, normalizer.scale))
     else:
         plt.setp(fig.axes, xlim=(0, x_limit))

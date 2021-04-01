@@ -33,13 +33,12 @@ class SampleEfficiency(Metric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the sample efficiency relative to the single-task expert"
 
-    def __init__(self, perf_measure: str, do_normalize: bool = False, normalizer: Normalizer = None) -> None:
+    def __init__(self, perf_measure: str, normalizer: Normalizer = None) -> None:
         super().__init__()
         self.perf_measure = perf_measure
-        self.do_normalize = do_normalize
         self.normalizer = normalizer
 
-    def validate(self, block_info: pd.DataFrame) -> pd.DataFrame:
+    def validate(self, block_info: pd.DataFrame) -> None:
         # Check if there is STE data for each task in the scenario
         unique_tasks = block_info.loc[:, 'task_name'].unique()
         ste_names = get_ste_data_names()
@@ -80,7 +79,7 @@ class SampleEfficiency(Metric):
                     if ste_data is not None:
                         # Check if performance measure exists in STE data
                         if self.perf_measure in ste_data.columns:
-                            if self.do_normalize and self.normalizer is not None:
+                            if self.normalizer is not None:
                                 ste_data = self.normalizer.normalize(ste_data)
 
                             # Get task saturation value and episodes to saturation

@@ -220,7 +220,7 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
     ll_metrics_df['run_id'] = log_dir.name
     ll_metrics_dict['run_id'] = log_dir.name
 
-    # Append scenario complexity and difficulty
+    # Append scenario complexity, difficulty, and type
     with open(log_dir / 'scenario_info.json', 'r') as json_file:
         scenario_info = json.load(json_file)
         if 'complexity' in scenario_info:
@@ -229,6 +229,9 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
         if 'difficulty' in scenario_info:
             ll_metrics_df['difficulty'] = scenario_info['difficulty']
             ll_metrics_dict['difficulty'] = scenario_info['difficulty']
+        if 'scenario_type' in scenario_info:
+            ll_metrics_df['scenario_type'] = scenario_info['scenario_type']
+            ll_metrics_dict['scenario_type'] = scenario_info['scenario_type']
 
     # Append application-specific metric to dataframe
     ll_metrics_df['metrics_column'] = perf_measure
@@ -277,7 +280,7 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
 
     This function iterates through all the lifelong learning logs it finds in the provided
     directory, computes the LL metrics for those logs, then sorts the metrics by scenario
-    complexity and difficulty. Scenarios with missing complexity or difficulty information
+    type, complexity, and difficulty. Scenarios with missing scenario information
     might be ignored in the evaluation.
 
     Args:
@@ -359,8 +362,9 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
         else:
             raise FileNotFoundError(f"LL logs not found in expected location!")
 
-        # Sort data by complexity and difficulty
-        ll_metrics_df = ll_metrics_df.sort_values(by=['complexity', 'difficulty'])
+        # Sort data by scenario type, complexity, difficulty
+        if not ll_metrics_df.empty:
+            ll_metrics_df = ll_metrics_df.sort_values(by=['scenario_type', 'complexity', 'difficulty'])
 
     return ll_metrics_df, ll_metrics_dicts
 
@@ -368,12 +372,12 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
 def plot_summary(ll_metrics_df: pd.DataFrame) -> None:
     """Plot the aggregated lifelong metrics DataFrame as a violin plot.
 
-    The plot should show trends for each of the lifelong metrics based on scenario complexity and
-    difficulty.
+    The plot should show trends for each of the lifelong metrics based on scenario type,
+    complexity and difficulty.
 
     Args:
         ll_metrics_df (pd.DataFrame): DataFrame containing lifelong metrics from all parsed
-            scenarios, sorted by scenario complexity and difficulty.
+            scenarios, sorted by scenario type, complexity, and difficulty.
     """
 
     fig = plt.figure(figsize=(12, 8))
@@ -524,8 +528,8 @@ def evaluate() -> None:
                                                            save_plots=args.save_plots, do_save_ste=do_save_ste)
 
     # Display aggregated data
-    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['mean', 'std']))
-    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['median', scipy.stats.iqr]))
+    display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['mean', 'std']))
+    display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['median', scipy.stats.iqr]))
 
     # Plot aggregated data
     if do_plot:

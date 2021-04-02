@@ -37,7 +37,7 @@ def get_ste_data_names() -> list:
         list: The STE task names.
     """
 
-    ste_files = list(Path(l2l.get_l2root_base_dirs('taskinfo')).glob('*.pkl'))
+    ste_files = list(Path(l2l.get_l2root_base_dirs('taskinfo')).glob('*.feather'))
 
     if ste_files:
         return np.char.lower([f.stem for f in ste_files])
@@ -59,8 +59,9 @@ def load_ste_data(task_name: str) -> Union[pd.DataFrame, None]:
     """
 
     if task_name in get_ste_data_names():
-        data_file_name = l2l.get_l2root_base_dirs('taskinfo', task_name + '.pkl')
-        dataframe = pd.read_pickle(data_file_name)
+        data_file_name = l2l.get_l2root_base_dirs('taskinfo', task_name + '.feather')
+        dataframe = pd.read_feather(data_file_name)
+        dataframe = dataframe.set_index("regime_num", drop=False)
         return dataframe
     else:
         return None
@@ -87,7 +88,7 @@ def save_ste_data(log_dir: str) -> None:
 
     # Fill in regime number and sort
     ste_data = l2l.fill_regime_num(ste_data)
-    ste_data = ste_data.sort_values(by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
+    ste_data = ste_data.sort_values(by=['regime_num', 'exp_num'])
 
     # Filter out training only data
     ste_data = ste_data[ste_data['block_type'] == 'train']
@@ -104,10 +105,10 @@ def save_ste_data(log_dir: str) -> None:
         os.makedirs(l2l.get_l2root_base_dirs('taskinfo'))
 
     # Get base directory to store ste data
-    filename = l2l.get_l2root_base_dirs('taskinfo', task_name[0] + '.pkl')
+    filename = l2l.get_l2root_base_dirs('taskinfo', task_name[0] + '.feather')
 
     # Store ste data in task info directory
-    ste_data.to_pickle(filename)
+    ste_data.to_feather(filename)
 
     print(f'Stored STE data for {task_name[0]}')
 

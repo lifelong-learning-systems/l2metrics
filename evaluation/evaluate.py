@@ -31,7 +31,7 @@ import os
 import traceback
 import warnings
 from pathlib import Path
-from typing import Tuple
+from typing import List, Tuple
 from zipfile import ZipFile
 
 import matplotlib
@@ -168,8 +168,7 @@ def save_ste_data(log_dir: Path) -> None:
 def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_method: str,
                              transfer_method: str = 'both', normalization_method: str = 'task',
                              output_dir: str = '', do_smoothing: bool = True, show_raw_data: bool = False,
-                             do_normalize: bool = False, remove_outliers: bool = False,
-                             do_plot: bool = False, save_plots: bool = False) -> Tuple[pd.DataFrame, dict]:
+                             remove_outliers: bool = False, do_plot: bool = False, save_plots: bool = False) -> Tuple[pd.DataFrame, dict]:
     """Compute lifelong learning metrics for single LL logs found at input path.
 
     Args:
@@ -180,13 +179,11 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
         transfer_method (str, optional): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both'. Defaults to 'both'.
         normalization_method (str, optional): Method for normalizing data.
-            Valid values are 'task' and 'run'. Defaults to 'task'.
+            Valid values are '', 'task', and 'run'. Defaults to 'task'.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
             Defaults to True.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
-            Defaults to False.
-        do_normalize (bool, optional): Flag for enabling normalization on performance data.
             Defaults to False.
         remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
@@ -200,7 +197,7 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
     report = MetricsReport(
         log_dir=str(log_dir), perf_measure=perf_measure, maintenance_method=maintenance_method,
         transfer_method=transfer_method, normalization_method=normalization_method,
-        do_smoothing=do_smoothing, do_normalize=do_normalize, remove_outliers=remove_outliers)
+        do_smoothing=do_smoothing, remove_outliers=remove_outliers)
 
     # Calculate metrics
     report.calculate()
@@ -274,8 +271,8 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
 def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maintenance_method: str,
                          transfer_method: str, normalization_method: str = 'task',
                          output_dir: str = '', do_smoothing: bool = True, show_raw_data: bool = False,
-                         do_normalize: bool = False, remove_outliers: bool = False,
-                         do_plot: bool = False, save_plots: bool = False, do_save_ste: bool = True) -> pd.DataFrame:
+                         remove_outliers: bool = False, do_plot: bool = False, save_plots: bool = False,
+                         do_save_ste: bool = True) -> Tuple[pd.DataFrame, List]:
     """Compute lifelong learning metrics for all LL logs in provided evaluation log directory.
 
     This function iterates through all the lifelong learning logs it finds in the provided
@@ -293,13 +290,11 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
         transfer_method (str): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both.'
         normalization_method (str, optional): Method for normalizing data.
-            Valid values are 'task' and 'run'. Defaults to 'task'.
+            Valid values are '', 'task', and 'run'. Defaults to 'task'.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
             Defaults to True.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
-            Defaults to False.
-        do_normalize (bool, optional): Flag for enabling normalization on performance data.
             Defaults to False.
         remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
@@ -312,7 +307,7 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
 
     Returns:
         pd.DataFrame: DataFrame containing lifelong metrics from all parsed scenarios, sorted by
-            scenario complexity and difficulty.
+            scenario type, complexity, and difficulty.
     """
     
     # Initialize LL metric dataframe
@@ -341,8 +336,7 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
                             log_dir=path, perf_measure=perf_measure, maintenance_method=maintenance_method,
                             transfer_method=transfer_method, normalization_method=normalization_method,
                             output_dir=output_dir, do_smoothing=do_smoothing, show_raw_data=show_raw_data,
-                            do_normalize=do_normalize, remove_outliers=remove_outliers, do_plot=do_plot,
-                            save_plots=save_plots)
+                            remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots)
                         ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                         ll_metrics_dicts.append(metrics_dict)
                     else:
@@ -355,8 +349,7 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
                                     transfer_method=transfer_method,
                                     normalization_method=normalization_method, output_dir=output_dir,
                                     do_smoothing=do_smoothing, show_raw_data=show_raw_data,
-                                    do_normalize=do_normalize, remove_outliers=remove_outliers,
-                                    do_plot=do_plot, save_plots=save_plots)
+                                    remove_outliers=remove_outliers, do_plot=do_plot, save_plots=save_plots)
                                 ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                                 ll_metrics_dicts.append(metrics_dict)
         else:
@@ -367,44 +360,6 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
             ll_metrics_df = ll_metrics_df.sort_values(by=['scenario_type', 'complexity', 'difficulty'])
 
     return ll_metrics_df, ll_metrics_dicts
-
-
-def plot_summary(ll_metrics_df: pd.DataFrame) -> None:
-    """Plot the aggregated lifelong metrics DataFrame as a violin plot.
-
-    The plot should show trends for each of the lifelong metrics based on scenario type,
-    complexity and difficulty.
-
-    Args:
-        ll_metrics_df (pd.DataFrame): DataFrame containing lifelong metrics from all parsed
-            scenarios, sorted by scenario type, complexity, and difficulty.
-    """
-
-    fig = plt.figure(figsize=(12, 8))
-
-    ll_metrics = ['perf_recovery', 'perf_maintenance_mrtlp', 'perf_maintenance_mrlep',
-                  'forward_transfer_contrast', 'backward_transfer_contrast', 'forward_transfer_ratio',
-                  'backward_transfer_ratio', 'ste_rel_perf', 'sample_efficiency']
-
-    for index, metric in enumerate(ll_metrics, start=1):
-        try:
-            if metric in ll_metrics_df.columns:
-                # Create subplot for current metric
-                ax = fig.add_subplot(3, 3, index)
-
-                # Create grouped violin plot
-                sns.violinplot(x='complexity', y=metric, hue='difficulty',
-                               data=ll_metrics_df, palette='muted')
-
-                # Resize legend font
-                plt.setp(ax.get_legend().get_title(), fontsize='8')
-                plt.setp(ax.get_legend().get_texts(), fontsize='6')
-        except Exception as e:
-            print(e)
-            continue
-
-    fig.subplots_adjust(wspace=0.35, hspace=0.35)
-    plt.show()
 
 
 def evaluate() -> None:
@@ -501,15 +456,6 @@ def evaluate() -> None:
     # Create output directory if it doesn't exist
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load computational cost data
-    comp_cost_df = load_computational_costs(eval_dir)
-
-    # Load performance threshold data
-    perf_thresh_df = load_performance_thresholds(eval_dir)
-
-    # Load task similarity data
-    task_similarity_df = load_task_similarities(eval_dir)
-
     # Unzip logs
     if args.unzip:
         unzip_logs(eval_dir)
@@ -523,7 +469,6 @@ def evaluate() -> None:
                                                            transfer_method=args.transfer_method,
                                                            normalization_method=args.normalization_method,
                                                            do_smoothing=do_smoothing, show_raw_data=args.show_raw_data,
-                                                           do_normalize=args.normalize,
                                                            remove_outliers=args.remove_outliers, do_plot=do_plot,
                                                            save_plots=args.save_plots, do_save_ste=do_save_ste)
 
@@ -534,7 +479,6 @@ def evaluate() -> None:
     # Plot aggregated data
     if do_plot:
         matplotlib.use('TkAgg')
-        plot_summary(ll_metrics_df)
 
     # Save data
     if do_save:

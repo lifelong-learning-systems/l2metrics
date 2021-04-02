@@ -62,7 +62,6 @@ def process_evaluation(args):
 
     # Generate other input arguments based on configuration
     do_smoothing = config in ['smoothed', 'normalized', 'normalized_no_outliers']
-    do_normalize = config in ['normalized', 'normalized_no_outliers']
     remove_outliers = config in ['normalized_no_outliers']
 
     ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(eval_dir=eval_dir, ste_dir=ste_dir,
@@ -73,7 +72,6 @@ def process_evaluation(args):
                                                            normalization_method=normalization_method,
                                                            do_smoothing=do_smoothing,
                                                            show_raw_data=show_raw_data,
-                                                           do_normalize=do_normalize,
                                                            remove_outliers=remove_outliers,
                                                            do_plot=do_plot,
                                                            save_plots=save_plots,

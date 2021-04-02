@@ -23,6 +23,7 @@ custom metric.
 
 import argparse
 import json
+from pathlib import Path
 
 import pandas as pd
 from l2metrics import _localutil
@@ -72,6 +73,10 @@ def run() -> None:
     parser.add_argument('-p', '--perf-measure', default='reward',
                         help='Name of column to use for metrics calculations')
 
+    # Method for aggregating within-lifetime metrics
+    parser.add_argument('-a', '--aggregation-method', default='median', choices=['mean', 'median'],
+                        help='Method for aggregating within-lifetime metrics')
+
     # Method for calculating performance maintenance
     parser.add_argument('-m', '--maintenance-method', default='mrlep', choices=['mrtlp', 'mrlep', 'both'],
                         help='Method for computing performance maintenance')
@@ -81,11 +86,11 @@ def run() -> None:
                         help='Method for computing forward and backward transfer')
 
     # Method for normalization
-    parser.add_argument('-n', '--normalization-method', default='task', choices=['task', 'run'],
+    parser.add_argument('-n', '--normalization-method', default='task', choices=['', 'task', 'run'],
                         help='Method for normalizing data')
 
     # Data range file for normalization
-    parser.add_argument('-f', '--data-range-file', type=str,
+    parser.add_argument('-d', '--data-range-file', type=str,
                         help='JSON file containing task performance ranges for normalization')
 
     # Mean and standard deviation for adding noise to log data
@@ -96,50 +101,56 @@ def run() -> None:
     parser.add_argument('-o', '--output', default=None,
                         help='Specify output filename for plot and results')
 
-    # Flag for disabling smoothing
-    parser.add_argument('--no-smoothing', action='store_true',
+    # Flag for enabling/disabling smoothing
+    parser.add_argument('--do-smoothing', dest='do_smoothing', default=True, action='store_true',
+                        help='Smooth data for metrics and plotting')
+    parser.add_argument('--no-smoothing', dest='do_smoothing', action='store_false',
                         help='Do not smooth data for metrics and plotting')
 
     # Flag for showing raw performance data under smoothed data
     parser.add_argument('-r', '--show-raw-data', action='store_true',
                         help='Show raw data points under smoothed data for plotting')
 
-    # Flag for enabling normalization
-    parser.add_argument('--normalize', action='store_true',
-                        help='Normalize data for metrics')
-
     # Flag for removing outliers
     parser.add_argument('--remove-outliers', action='store_true',
                         help='Remove outliers in data for metrics')
 
-    # Flag for disabling plotting
-    parser.add_argument('--no-plot', action='store_true',
+    # Flag for enabling/disabling plotting
+    parser.add_argument('--do-plot', dest='do_plot', default=True, action='store_true',
+                        help='Plot performance')
+    parser.add_argument('--no-plot', dest='do_plot', action='store_false',
                         help='Do not plot performance')
 
-    # Flag for disabling save
-    parser.add_argument('--no-save', action='store_true',
+    # Flag for enabling/disabling save
+    parser.add_argument('--do-save', dest='do_save', default=True, action='store_true',
+                        help='Save metrics outputs')
+    parser.add_argument('--no-save', dest='do_save', action='store_false',
                         help='Do not save metrics outputs')
 
-    # Parse arguments
+    # Configuration file settings
+    parser.add_argument('--load-config', type=str,
+                        help='Load L2Metrics settings from JSON file')
+    parser.add_argument('--save-config', action='store_true',
+                        help='Save L2Metrics settings to JSON file')
+
     args = parser.parse_args()
-    do_smoothing = not args.no_smoothing
-    do_plot = not args.no_plot
-    do_save = not args.no_save
+    kwargs = vars(args)
+
+    if args.load_config:
+        with open(args.load_config, 'r') as config_file:
+            kwargs.update(json.load(config_file))
 
     # Load data range data for normalization
     if args.data_range_file:
-        with open(args.data_range_file) as json_file:
-            data_range = json.load(json_file)
+        with open(args.data_range_file) as config_json:
+            data_range = json.load(config_json)
     else:
         data_range = None
 
+    kwargs['data_range'] = data_range
+
     # Initialize metrics report
-    report = MetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
-                           maintenance_method=args.maintenance_method,
-                           transfer_method=args.transfer_method,
-                           normalization_method=args.normalization_method, data_range=data_range,
-                           do_smoothing=do_smoothing, do_normalize=args.normalize,
-                           remove_outliers=args.remove_outliers)
+    report = MetricsReport(**kwargs)
 
     # Add example of custom metric
     report.add(MyCustomAgentMetric(args.perf_measure))
@@ -152,12 +163,17 @@ def run() -> None:
     report.calculate()
 
     # Print table of metrics and save values to file
-    report.report(save=do_save, output=args.output)
+    report.report(save=kwargs['do_save'], output=args.output)
 
     # Plot metrics
-    if do_plot:
-        report.plot(save=do_save, show_raw_data=args.show_raw_data)
-        report.plot_ste_data(save=do_save)
+    if args.do_plot:
+        report.plot(save=args.do_save, show_raw_data=args.show_raw_data)
+        report.plot_ste_data(save=args.do_save)
+
+    # Save configuration settings used to run calculate metrics
+    if args.save_config:
+        with open(Path(args.log_dir).name + '_settings.json', 'w') as output_config:
+            json.dump(kwargs, output_config)
 
 
 if __name__ == "__main__":

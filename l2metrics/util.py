@@ -90,15 +90,12 @@ def save_ste_data(log_dir: str) -> None:
     ste_data = l2l.fill_regime_num(ste_data)
     ste_data = ste_data.sort_values(by=['regime_num', 'exp_num'])
 
-    # Filter out training only data
-    ste_data = ste_data[ste_data['block_type'] == 'train']
-
-    # Get task name
-    task_name = np.char.lower(list(ste_data.task_name.unique()))
+    # Get training task name
+    task_name = np.char.lower(list(ste_data[ste_data['block_type'] == 'train'].task_name.unique()))
 
     # Check for number of tasks in scenario
     if task_name.size != 1:
-        raise Exception('Scenario contains more than one task')
+        raise Exception('Scenario trains more than one task')
 
     # Create task info directory if it doesn't exist
     if not os.path.exists(l2l.get_l2root_base_dirs('taskinfo')):
@@ -132,6 +129,7 @@ def filter_outliers(data: pd.DataFrame, perf_measure: str, quantiles: Tuple[floa
 
         # Load STE data
         ste_data = load_ste_data(task)
+        ste_data = ste_data[ste_data['block_type'] == 'train']
 
         lower_bound = 0
         upper_bound = 100
@@ -299,6 +297,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
         if len(task_data):
             # Load STE data
             ste_data = load_ste_data(task_name)
+            ste_data = ste_data[ste_data['block_type'] == 'train']
 
             if ste_data is not None:
                 # Create subplot

@@ -74,6 +74,7 @@ class STERelativePerf(Metric):
                 if len(task_data):
                     # Load STE data
                     ste_data = load_ste_data(task)
+                    ste_data = ste_data[ste_data['block_type'] == 'train']
 
                     if ste_data is not None:
                         # Check if performance measure exists in STE data

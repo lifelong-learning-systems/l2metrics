@@ -81,6 +81,7 @@ class Normalizer():
 
             # Load STE data
             ste_data = load_ste_data(task)
+            ste_data = ste_data[ste_data['block_type'] == 'train']
 
             if ste_data is not None:
                 if self.perf_measure in ste_data.columns:

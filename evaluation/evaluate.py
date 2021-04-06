@@ -201,8 +201,8 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
 
     # Calculate metrics
     report.calculate()
-    ll_metrics_df = report.lifetime_metrics_df.copy()
-    ll_metrics_dict = {}
+    ll_metrics_df = report.ll_metrics_df
+    ll_metrics_dict = report.ll_metrics_dict
 
     # Append SG name to dataframe
     # TODO: Figure out solution that isn't as hard-coded
@@ -213,54 +213,8 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
     ll_metrics_df['agent_config'] = log_dir.parts[-4]
     ll_metrics_dict['agent_config'] = log_dir.parts[-4]
 
-    # Append scenario name to dataframe
-    ll_metrics_df['run_id'] = log_dir.name
-    ll_metrics_dict['run_id'] = log_dir.name
-
-    # Append scenario complexity, difficulty, and type
-    with open(log_dir / 'scenario_info.json', 'r') as json_file:
-        scenario_info = json.load(json_file)
-        if 'complexity' in scenario_info:
-            ll_metrics_df['complexity'] = scenario_info['complexity']
-            ll_metrics_dict['complexity'] = scenario_info['complexity']
-        if 'difficulty' in scenario_info:
-            ll_metrics_df['difficulty'] = scenario_info['difficulty']
-            ll_metrics_dict['difficulty'] = scenario_info['difficulty']
-        if 'scenario_type' in scenario_info:
-            ll_metrics_df['scenario_type'] = scenario_info['scenario_type']
-            ll_metrics_dict['scenario_type'] = scenario_info['scenario_type']
-
-    # Append application-specific metric to dataframe
-    ll_metrics_df['metrics_column'] = perf_measure
-    ll_metrics_dict['metrics_column'] = perf_measure
-
-    # Append performance data stats
-    log_summary = report.log_summary()
-    ll_metrics_df['min'] = np.nanmin(report._log_data[perf_measure])
-    ll_metrics_df['max'] = np.nanmax(report._log_data[perf_measure])
-    ll_metrics_df['num_lx'] = log_summary['LX'].sum()
-    ll_metrics_df['num_ex'] = log_summary['EX'].sum()
-
-    ll_metrics_dict['min'] = np.nanmin(report._log_data[perf_measure])
-    ll_metrics_dict['max'] = np.nanmax(report._log_data[perf_measure])
-    ll_metrics_dict['num_lx'] = int(log_summary['LX'].sum())
-    ll_metrics_dict['num_ex'] = int(log_summary['EX'].sum())
-
-    # Append lifetime and task metrics to dictionary
-    ll_metrics_dict.update(report.lifetime_metrics_df.loc[0].T.to_dict())
-    ll_metrics_dict['task_metrics'] = report.task_metrics_df.T.to_dict()
-
-    for task in report._unique_tasks:
-        ll_metrics_dict['task_metrics'][task]['min'] = np.nanmin(
-            report._log_data[report._log_data['task_name'] == task][perf_measure])
-        ll_metrics_dict['task_metrics'][task]['max'] = np.nanmax(
-            report._log_data[report._log_data['task_name'] == task][perf_measure])
-        ll_metrics_dict['task_metrics'][task]['num_lx'] = int(
-            log_summary.loc[task, 'LX'])
-        ll_metrics_dict['task_metrics'][task]['num_ex'] = int(
-            log_summary.loc[task, 'EX'])
-
     if do_plot:
+        report.save_data(filename=str(Path(output_dir) / log_dir.name))
         report.plot(save=save_plots, show_raw_data=show_raw_data, output_dir=output_dir)
         report.plot_ste_data(save=save_plots, output_dir=output_dir)
         plt.close('all')
@@ -418,10 +372,6 @@ def evaluate() -> None:
     # Flag for showing raw performance data under smoothed data
     parser.add_argument('-r', '--show-raw-data', action='store_true',
                         help='Show raw data points under smoothed data for plotting')
-
-    # Flag for enabling normalization
-    parser.add_argument('--normalize', action='store_true',
-                        help='Normalize performance data for metrics')
 
     # Flag for removing outliers
     parser.add_argument('--remove-outliers', action='store_true',

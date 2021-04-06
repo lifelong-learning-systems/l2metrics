@@ -81,10 +81,10 @@ def save_ste_data(log_dir: str) -> None:
     ste_data = l2l.read_log_data(log_dir)
 
     # Get metric fields
-    metric_fields = l2l.read_logger_info(log_dir)
+    logger_info = l2l.read_logger_info(log_dir)
 
     # Validate data format
-    l2l.validate_log(ste_data, metric_fields)
+    l2l.validate_log(ste_data, logger_info['metrics_columns'])
 
     # Fill in regime number and sort
     ste_data = l2l.fill_regime_num(ste_data)
@@ -236,7 +236,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
     ax.grid()
 
     if do_save_fig:
-        if not plot_filename and not input_title:
+        if not plot_filename:
             plot_filename = 'plot'
         print(f'Saving figure with name: {plot_filename.replace(" ", "_")}')
         fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + '.png'))

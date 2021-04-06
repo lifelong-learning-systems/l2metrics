@@ -16,8 +16,9 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
-import os
+import json
 from collections import defaultdict
+from pathlib import Path
 from typing import List, Union
 
 import l2logger.util as l2l
@@ -46,6 +47,7 @@ class MetricsReport():
     def __init__(self, **kwargs) -> None:
         # Defines log_dir and initializes the metrics list
         self._metrics = []
+        self.ll_metrics_dict = {}
 
         if 'log_dir' in kwargs:
             self.log_dir = kwargs['log_dir']
@@ -105,12 +107,12 @@ class MetricsReport():
         self.task_metrics.extend(['ste_rel_perf', 'sample_efficiency'])
 
         # Get metric fields
-        metric_fields = l2l.read_logger_info(self.log_dir)
+        self.logger_info = l2l.read_logger_info(self.log_dir)
 
         # Do a check to make sure the performance measure has been logged
-        if self.perf_measure not in metric_fields:
+        if self.perf_measure not in self.logger_info['metrics_columns']:
             raise Exception(f'Performance measure not found in metrics columns: {self.perf_measure}\n'
-                            f'Valid measures are: {metric_fields}')
+                            f"Valid measures are: {self.logger_info['metrics_columns']}")
 
         # Gets all data from the relevant log files
         self._log_data = l2l.read_log_data(self.log_dir)
@@ -120,10 +122,10 @@ class MetricsReport():
             raise Exception(f'Performance measure ({self.perf_measure}) not found in the log data')
 
         # Validate scenario info
-        l2l.validate_scenario_info(self.log_dir)
+        self.scenario_info = l2l.read_scenario_info(self.log_dir)
 
         # Validate data format
-        l2l.validate_log(self._log_data, metric_fields)
+        l2l.validate_log(self._log_data, self.logger_info['metrics_columns'])
 
         # Filter data by completed experiences
         self._log_data = self._log_data[self._log_data['exp_status'] == 'complete']
@@ -197,6 +199,19 @@ class MetricsReport():
             self._log_data[self.perf_measure]))
         self._log_data[self.perf_measure] = self._log_data[self.perf_measure] + noise
 
+    def log_summary(self) -> pd.DataFrame:
+        # Get summary of log data
+        task_experiences = {'task_name': [], 'LX': [], 'EX': []}
+
+        for task in self._unique_tasks:
+            task_experiences['task_name'].append(task)
+            task_experiences['LX'].append(self._log_data[(self._log_data['task_name'] == task) & (
+                self._log_data['block_type'] == 'train')].shape[0])
+            task_experiences['EX'].append(self._log_data[(self._log_data['task_name'] == task) & (
+                self._log_data['block_type'] == 'test')].shape[0])
+
+        return pd.DataFrame(task_experiences).set_index('task_name')
+
     def calculate(self) -> None:
         for metric in self._metrics:
             self._metrics_df = metric.calculate(self._log_data, self.block_info, self._metrics_df)
@@ -204,6 +219,46 @@ class MetricsReport():
         self.calculate_regime_metrics()
         self.calculate_task_metrics()
         self.calculate_lifetime_metrics()
+
+        # Get performance data stats (#LX, #EX for each task)
+        log_summary = self.log_summary()
+        data_min = np.nanmin(self._log_data[self.perf_measure])
+        data_max = np.nanmax(self._log_data[self.perf_measure])
+        num_lx = int(log_summary['LX'].sum())
+        num_ex = int(log_summary['EX'].sum())
+
+        # Append scenario information to metrics dataframe
+        self.ll_metrics_df = self.lifetime_metrics_df.copy()
+        self.ll_metrics_df['run_id'] = Path(self.log_dir).name
+        self.ll_metrics_df['complexity'] = self.scenario_info['complexity']
+        self.ll_metrics_df['difficulty'] = self.scenario_info['difficulty']
+        self.ll_metrics_df['scenario_type'] = self.scenario_info['scenario_type']
+        self.ll_metrics_df['metrics_column'] = self.perf_measure
+        self.ll_metrics_df['min'] = data_min
+        self.ll_metrics_df['max'] = data_max
+        self.ll_metrics_df['num_lx'] = num_lx
+        self.ll_metrics_df['num_ex'] = num_ex
+
+        # Build JSON
+        self.ll_metrics_dict['run_id'] = Path(self.log_dir).name
+        self.ll_metrics_dict['complexity'] = self.scenario_info['complexity']
+        self.ll_metrics_dict['difficulty'] = self.scenario_info['difficulty']
+        self.ll_metrics_dict['scenario_type'] = self.scenario_info['scenario_type']
+        self.ll_metrics_dict['metrics_column'] = self.perf_measure
+        self.ll_metrics_dict['min'] = data_min
+        self.ll_metrics_dict['max'] = data_max
+        self.ll_metrics_dict['num_lx'] = num_lx
+        self.ll_metrics_dict['num_ex'] = num_ex
+        self.ll_metrics_dict.update(self.lifetime_metrics_df.loc[0].T.to_dict())
+        self.ll_metrics_dict['task_metrics'] = self.task_metrics_df.T.to_dict()
+
+        for task in self._unique_tasks:
+            self.ll_metrics_dict['task_metrics'][task]['min'] = np.nanmin(
+                self._log_data[self._log_data['task_name'] == task][self.perf_measure])
+            self.ll_metrics_dict['task_metrics'][task]['max'] = np.nanmax(
+                self._log_data[self._log_data['task_name'] == task][self.perf_measure])
+            self.ll_metrics_dict['task_metrics'][task]['num_lx'] = int(log_summary.loc[task, 'LX'])
+            self.ll_metrics_dict['task_metrics'][task]['num_ex'] = int(log_summary.loc[task, 'EX'])
 
     def calculate_regime_metrics(self) -> None:
         # Create dataframe for regime-level metrics
@@ -310,46 +365,61 @@ class MetricsReport():
                     elif self.aggregation_method == 'mean':
                         self.lifetime_metrics_df[metric] = [np.mean(metric_vals)]
 
-    def report(self, save: bool = False, output: str = None) -> None:
-        # TODO: Handle reporting custom metrics
+    def report(self) -> None:
+        """Print summary report of lifetime metrics and return metric objects.
+        """
 
+        # TODO: Handle reporting custom metrics
         # Print lifetime metrics
         print('\nLifetime Metrics:')
         print(tabulate(self.lifetime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql',
                        floatfmt=".2f", showindex=False))
 
-        if save:
-            # Generate filename
-            if output is None:
-                _, filename = os.path.split(self.log_dir.strip('/\\'))
-            else:
-                filename = output.replace(" ", "_")
+    def save_metrics(self, filename: str = None):
+        """Save metrics out as JSON file.
 
-            # Save metrics to file
-            with open(filename + '_metrics.tsv', 'w', newline='\n') as metrics_file:
-                self.lifetime_metrics_df.to_csv(metrics_file, sep='\t', index=False)
-                metrics_file.write('\n')
-                self.task_metrics_df.to_csv(metrics_file, sep='\t')
-                metrics_file.write('\n')
-                self.regime_metrics_df.to_csv(metrics_file, sep='\t')
+        Args:
+            filename (str, optional): Base filename for metrics file. Defaults to log directory name.
+        """
 
-    def log_summary(self) -> pd.DataFrame:
-        # Get summary of log data
-        task_experiences = {'task_name': [], 'LX': [], 'EX': []}
+        # Generate filename
+        if filename is None:
+            filename = Path(self.log_dir).name
+        else:
+            filename = filename.replace(" ", "_")
 
-        for task in self._unique_tasks:
-            task_experiences['task_name'].append(task)
-            task_experiences['LX'].append(self._log_data[(self._log_data['task_name'] == task) & (
-                self._log_data['block_type'] == 'train')].shape[0])
-            task_experiences['EX'].append(self._log_data[(self._log_data['task_name'] == task) & (
-                self._log_data['block_type'] == 'test')].shape[0])
+        # Save metrics to file
+        with open(filename + '_metrics.json', 'w', newline='\n') as metrics_file:
+            json.dump(self.ll_metrics_dict, metrics_file)
 
-        return pd.DataFrame(task_experiences).set_index('task_name')
+    def save_data(self, filename: str = None) -> None:
+        """Save out raw and processed data.
+
+        Args:
+            filename (str, optional): Base filename for data files. Defaults to log directory name.
+        """
+
+        cols_to_save = ('exp_num', 'regime_num', 'block_num', 'block_type',
+                        'task_name', 'task_params', 'timestamp', 'performance')
+
+        # Generate filename
+        if filename is None:
+            filename = Path(self.log_dir).name
+        else:
+            filename = filename.replace(" ", "_")
+
+        # Save raw data
+        self._raw_data.reset_index(drop=True).loc[:, cols_to_save].to_feather(
+            filename + '_raw_data.feather')
+
+        # Save processed data
+        self._log_data.reset_index(drop=True).loc[:, cols_to_save].to_feather(
+            filename + '_processed_data.feather')
 
     def plot(self, save: bool = False, show_raw_data: bool = False, output_dir: str = '',
              input_title: str = None) -> None:
         if input_title is None:
-            input_title = os.path.split(self.log_dir.strip('/\\'))[-1]
+            input_title = Path(self.log_dir).name
 
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
                          do_smoothing=self.do_smoothing, show_raw_data=show_raw_data,
@@ -360,8 +430,8 @@ class MetricsReport():
                       save: bool = False, output_dir: str = '') -> None:
         if input_title is None:
             input_title = 'Performance Relative to STE\n' + \
-                os.path.split(self.log_dir.strip('/\\'))[-1]
-        plot_filename = 'ste_' + os.path.split(self.log_dir.strip('/\\'))[-1]
+                Path(self.log_dir).name
+        plot_filename = Path(self.log_dir).name + '_ste'
 
         plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
                       perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,

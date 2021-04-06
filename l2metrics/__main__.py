@@ -131,8 +131,13 @@ def run() -> None:
         # Calculate metrics in order of their addition to the metrics list.
         report.calculate()
 
-        # Print table of metrics and save values to file
-        report.report(save=args.do_save, output=args.output)
+        # Print table of metrics
+        report.report()
+
+        # Save metrics to file
+        if args.do_save:
+            report.save_metrics(filename=args.output)
+            report.save_data(filename=args.output)
 
         # Plot metrics
         if args.do_plot:

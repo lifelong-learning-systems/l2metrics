@@ -91,10 +91,10 @@ def save_ste_data(log_dir: str) -> None:
     ste_data = ste_data.sort_values(by=['regime_num', 'exp_num'])
 
     # Get training task name
-    task_name = np.char.lower(list(ste_data[ste_data['block_type'] == 'train'].task_name.unique()))
+    task_name = list(ste_data[ste_data['block_type'] == 'train'].task_name.unique())
 
     # Check for number of tasks in scenario
-    if task_name.size != 1:
+    if len(task_name) != 1:
         raise Exception('Scenario trains more than one task')
 
     # Create task info directory if it doesn't exist
@@ -129,12 +129,12 @@ def filter_outliers(data: pd.DataFrame, perf_measure: str, quantiles: Tuple[floa
 
         # Load STE data
         ste_data = load_ste_data(task)
-        ste_data = ste_data[ste_data['block_type'] == 'train']
 
         lower_bound = 0
         upper_bound = 100
 
         if ste_data is not None:
+            ste_data = ste_data[ste_data['block_type'] == 'train']
             x_ste = ste_data[perf_measure].values
             x_comb = np.append(x, x_ste)
             lower_bound, upper_bound = np.quantile(x_comb, quantiles)

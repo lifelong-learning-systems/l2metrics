@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Set
 
 import numpy as np
 import pandas as pd
@@ -12,14 +13,14 @@ class Normalizer():
 
     valid_methods = ['task', 'run']
 
-    def __init__(self, perf_measure: str, data: pd.DataFrame = None, data_range: defaultdict = None,
+    def __init__(self, perf_measure: str, data: pd.DataFrame, data_range: defaultdict = None,
                  method: str = 'task', scale: int = 100) -> None:
         """Constructor for Normalizer.
 
         Args:
             perf_measure (str): Name of column to use for metrics calculations.
             data (pd.DataFrame, optional): Reference data for calculating data range. Assumed
-                DataFrame with task name as index and one column of performance data. Defaults to None.
+                DataFrame with task name as index and one column of performance data.
             data_range (defaultdict, optional): Dictionary object for data range. Defaults to None.
             method (str, optional): Normalization method. Valid values are 'task' and 'run'.
                 Defaults to 'task'.
@@ -32,12 +33,15 @@ class Normalizer():
 
         self.perf_measure = perf_measure
 
+        # Get unique task names in data
+        self.unique_tasks = set(data.index.unique())
+
         if data_range is not None:
             # Validate and set data range for normalizer
-            if self._validate_data_range(data_range=data_range):
+            if self._validate_data_range(data_range=data_range, task_names=self.unique_tasks):
                 self.data_range = data_range
-                self.run_min = min([val for _, val in self.data_range['min'].items()])
-                self.run_max = max([val for _, val in self.data_range['max'].items()])
+                self.run_min = min([val['min'] for val in self.data_range.values()])
+                self.run_max = max([val['max'] for val in self.data_range.values()])
         elif data is not None:
             self.calculate_data_range(data)
         else:
@@ -62,9 +66,6 @@ class Normalizer():
             Exception: If data contains more than just performance values and task name.
         """
 
-        # Get unique task names in data
-        self.unique_tasks = set(data.index.unique())
-
         data_column = data.columns.values
 
         if len(data_column) > 1:
@@ -85,36 +86,37 @@ class Normalizer():
 
             if ste_data is not None:
                 if self.perf_measure in ste_data.columns:
-                    self.data_range['min'][task] = min(task_min, np.nanmin(ste_data[self.perf_measure]))
-                    self.data_range['max'][task] = max(task_max, np.nanmax(ste_data[self.perf_measure]))
+                    self.data_range[task]['min'] = min(task_min, np.nanmin(ste_data[self.perf_measure]))
+                    self.data_range[task]['max'] = max(task_max, np.nanmax(ste_data[self.perf_measure]))
             else:
-                self.data_range['min'][task] = task_min
-                self.data_range['max'][task] = task_max
+                self.data_range[task]['min'] = task_min
+                self.data_range[task]['max'] = task_max
 
-        self.run_min = min(self.data_range['min'].values())
-        self.run_max = max(self.data_range['max'].values())
+        self.run_min = min([val['min'] for val in self.data_range.values()])
+        self.run_max = max([val['max'] for val in self.data_range.values()])
 
-    def _validate_data_range(self, data_range: defaultdict) -> bool:
+    def _validate_data_range(self, data_range: defaultdict, task_names: Set[str]) -> bool:
         """Validates data range object.
 
         Args:
             data_range (defaultdict): Dictionary object for data range.
+            task_names (Set[str]): Set of task names in the data.
 
         Raises:
             Exception: If data range is not a dictionary object.
+            Exception: If data range is not defined for all tasks.
             Exception: If the keys min and max are missing.
-            Exception: If either min or max objects are empty.
 
         Returns:
-            bool: [description]
+            bool: True if validation succeeds.
         """
 
         if not isinstance(data_range, (dict, defaultdict)):
             raise Exception(f'Invalid data range type - Must be a dictionary')
-        elif not data_range.keys() >= {'min', 'max'}:
+        elif not set(data_range.keys()).issuperset(task_names):
+            raise Exception(f'Data range not defined for all tasks')
+        elif False in [key.keys() >= {'min', 'max'} for key in data_range.values()]:
             raise Exception(f'Missing required fields: min and max')
-        elif not (data_range['min'] and data_range['max']):
-            raise Exception(f'Missing values in data range')
         else:
             return True
 
@@ -170,12 +172,15 @@ class Normalizer():
 
         if self.method == 'task':
             for task in data['task_name'].unique():
-                try:
+                if task in self.data_range.keys():
+                    task_min = self.data_range[task]['min']
+                    task_max = self.data_range[task]['max']
+
                     data.loc[data.task_name == task, self.perf_measure] = \
-                        (data[data['task_name'] == task][self.perf_measure].values - self.data_range['min'][task]) / \
-                        (self.data_range['max'][task] - self.data_range['min'][task]) * self.scale
-                except Exception as e:
-                    print(e)
+                        (data[data['task_name'] == task][self.perf_measure].values - task_min) / \
+                        (task_max - task_min) * self.scale
+                else:
+                    raise Exception(f"Missing data range for task '{task}'")
             return data
         elif self.method == 'run':
             data.loc[:, self.perf_measure] = (data[self.perf_measure].values - self.run_min) / \

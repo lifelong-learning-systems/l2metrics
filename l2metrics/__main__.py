@@ -112,13 +112,14 @@ def run() -> None:
     if args.store_ste_data:
         util.save_ste_data(args.log_dir)
     else:
-        # Load data range data for normalization
+        # Load data range data for normalization and standardize names to lowercase
         if args.data_range_file:
             with open(args.data_range_file) as config_json:
                 data_range = json.load(config_json)
+                data_range = {key.lower(): val for key, val in data_range.items()}
         else:
             data_range = None
-        
+
         kwargs['data_range'] = data_range
 
         # Initialize metrics report

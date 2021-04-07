@@ -147,8 +147,7 @@ def run() -> None:
 
         # Save configuration settings used to run calculate metrics
         if args.save_config:
-            with open(Path(args.log_dir).name + '_settings.json', 'w') as output_config:
-                json.dump(kwargs, output_config)
+            report.save_config(filename=args.output)
 
 
 if __name__ == '__main__':

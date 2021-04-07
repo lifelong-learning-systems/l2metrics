@@ -416,6 +416,28 @@ class MetricsReport():
         self._log_data.reset_index(drop=True).loc[:, cols_to_save].to_feather(
             filename + '_processed_data.feather')
 
+    def save_config(self, filename: str = None) -> None:
+        # Generate filename
+        if filename is None:
+            filename = Path(self.log_dir).name
+        else:
+            filename = filename.replace(" ", "_")
+
+        # Build configuration JSON
+        config_json = {}
+        config_json['log_dir'] = str(self.log_dir)
+        config_json['perf_measure'] = self.perf_measure
+        config_json['aggregation_method'] = self.aggregation_method
+        config_json['maintenance_method'] = self.maintenance_method
+        config_json['transfer_method'] = self.transfer_method
+        config_json['do_smoothing'] = self.do_smoothing
+        config_json['normalization_method'] = self.normalization_method
+        config_json['data_range'] = self.data_range
+        config_json['remove_outliers'] = self.remove_outliers
+
+        with open(filename + '_config.json', 'w') as output_config:
+            json.dump(config_json, output_config)
+
     def plot(self, save: bool = False, show_raw_data: bool = False, output_dir: str = '',
              input_title: str = None) -> None:
         if input_title is None:

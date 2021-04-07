@@ -114,7 +114,7 @@ class Normalizer():
         if not isinstance(data_range, (dict, defaultdict)):
             raise Exception(f'Invalid data range type - Must be a dictionary')
         elif not set(data_range.keys()).issuperset(task_names):
-            raise Exception(f'Data range not defined for all tasks')
+            raise Exception(f'Data range not defined for all tasks: {task_names}')
         elif False in [key.keys() >= {'min', 'max'} for key in data_range.values()]:
             raise Exception(f'Missing required fields: min and max')
         else:

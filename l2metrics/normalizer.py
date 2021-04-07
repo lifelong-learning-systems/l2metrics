@@ -82,9 +82,9 @@ class Normalizer():
 
             # Load STE data
             ste_data = load_ste_data(task)
-            ste_data = ste_data[ste_data['block_type'] == 'train']
 
             if ste_data is not None:
+                ste_data = ste_data[ste_data['block_type'] == 'train']
                 if self.perf_measure in ste_data.columns:
                     self.data_range[task]['min'] = min(task_min, np.nanmin(ste_data[self.perf_measure]))
                     self.data_range[task]['max'] = max(task_max, np.nanmax(ste_data[self.perf_measure]))

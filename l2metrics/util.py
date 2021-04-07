@@ -67,11 +67,11 @@ def load_ste_data(task_name: str) -> Union[pd.DataFrame, None]:
         return None
 
 
-def save_ste_data(log_dir: str) -> None:
+def save_ste_data(log_dir: Path) -> None:
     """Saves the STE data in the given log directory as a pickled DataFrame.
 
     Args:
-        log_dir (str): The log directory of the STE data.
+        log_dir (Path): The log directory of the STE data.
 
     Raises:
         Exception: If scenario contains more than one task.
@@ -98,14 +98,15 @@ def save_ste_data(log_dir: str) -> None:
         raise Exception('Scenario trains more than one task')
 
     # Create task info directory if it doesn't exist
-    if not os.path.exists(l2l.get_l2root_base_dirs('taskinfo')):
-        os.makedirs(l2l.get_l2root_base_dirs('taskinfo'))
+    task_info_dir = l2l.get_l2root_base_dirs('taskinfo')
+    if not task_info_dir.exists():
+        task_info_dir.mkdir(parents=True, exist_ok=True)
 
     # Get base directory to store ste data
-    filename = l2l.get_l2root_base_dirs('taskinfo', task_name[0] + '.feather')
+    filename = task_info_dir/ task_name[0] + '.feather'
 
     # Store ste data in task info directory
-    ste_data.to_feather(filename)
+    ste_data.to_feather(str(filename))
 
     print(f'Stored STE data for {task_name[0]}')
 
@@ -225,7 +226,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
     by_label = OrderedDict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys())
 
-    if os.path.dirname(input_title) != "":
+    if Path(input_title).parent != Path('.'):
         _, plot_filename = os.path.split(input_title)
         input_title = plot_filename
     else:

@@ -110,7 +110,7 @@ def run() -> None:
             kwargs.update(json.load(config_file))
 
     if args.store_ste_data:
-        util.save_ste_data(args.log_dir)
+        util.save_ste_data(Path(args.log_dir))
     else:
         # Load data range data for normalization and standardize names to lowercase
         if args.data_range_file:

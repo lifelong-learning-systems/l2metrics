@@ -157,7 +157,7 @@ def save_ste_data(log_dir: Path) -> None:
         print('Storing STE data...')
         for ste_dir in ste_log_dir.iterdir():
             if ste_dir.is_dir():
-                util.save_ste_data(str(ste_dir))
+                util.save_ste_data(ste_dir)
         print('Done storing STE data!\n')
     else:
         # STE log path not found - possibly because compressed archive has not been

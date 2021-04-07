@@ -50,7 +50,7 @@ class MetricsReport():
         self.ll_metrics_dict = {}
 
         if 'log_dir' in kwargs:
-            self.log_dir = kwargs['log_dir']
+            self.log_dir = Path(kwargs['log_dir'])
         else:
             raise RuntimeError("log_dir is required")
 

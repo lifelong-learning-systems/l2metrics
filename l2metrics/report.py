@@ -432,7 +432,7 @@ class MetricsReport():
         config_json['transfer_method'] = self.transfer_method
         config_json['do_smoothing'] = self.do_smoothing
         config_json['normalization_method'] = self.normalization_method
-        config_json['data_range'] = self.data_range
+        config_json['data_range'] = self.normalizer.data_range if self.normalizer else None
         config_json['remove_outliers'] = self.remove_outliers
 
         with open(filename + '_config.json', 'w') as output_config:

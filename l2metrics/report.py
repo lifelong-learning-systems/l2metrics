@@ -19,13 +19,14 @@
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import l2logger.util as l2l
 import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
+from ._localutil import smooth
 from .block_saturation import BlockSaturation
 from .core import Metric
 from .normalizer import Normalizer
@@ -36,7 +37,7 @@ from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
 from .transfer import Transfer
-from .util import filter_outliers, plot_performance, plot_ste_data
+from .util import load_ste_data, plot_performance, plot_ste_data
 
 
 class MetricsReport():
@@ -58,6 +59,11 @@ class MetricsReport():
             self.perf_measure = kwargs['perf_measure']
         else:
             self.perf_measure = 'reward'
+
+        if 'ste_averaging_method' in kwargs:
+            self.ste_averaging_method = kwargs['ste_averaging_method']
+        else:
+            self.ste_averaging_method = 'time'
 
         if 'aggregation_method' in kwargs:
             self.aggregation_method = kwargs['aggregation_method']
@@ -135,28 +141,8 @@ class MetricsReport():
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
 
-        # Save raw data in another variable
-        self._raw_data = self._log_data.copy()
-
-        # Remove outliers
-        if self.remove_outliers:
-            self._log_data = filter_outliers(
-                self._log_data, perf_measure=self.perf_measure, quantiles=(0.1, 0.9))
-
-        # Check for non-zero log data length
-        if len(self._log_data) == 0:
-            raise Exception('No valid log data to compute metrics')
-
-        if self.normalization_method:
-            # Instantiate normalizer
-            self.normalizer = Normalizer(perf_measure=self.perf_measure,
-                                         data=self._log_data[['task_name', self.perf_measure]].set_index('task_name'),
-                                         data_range=self.data_range, method=self.normalization_method)
-
-            # Normalize data
-            self._log_data = self.normalizer.normalize(self._log_data)
-        else:
-            self.normalizer = None
+        # Save raw data as separate column
+        self._log_data[self.perf_measure + '_raw'] = self._log_data[self.perf_measure].values
 
         # Get block summary
         self.block_info = l2l.parse_blocks(self._log_data)
@@ -164,6 +150,23 @@ class MetricsReport():
         # Store unique task names by order of training
         self._unique_tasks = list(self.block_info.sort_values(
             ['block_type', 'block_num'], ascending=[False, True])['task_name'].unique())
+
+        # Load all STE data for tasks in log data
+        self.load_ste_data()
+
+        # Remove outliers
+        if self.remove_outliers:
+            self.filter_outliers(quantiles=(0.1, 0.9))
+
+        # Normalize LL and STE data
+        if self.normalization_method:
+            self.normalize_data()
+        else:
+            self.normalizer = None
+        
+        # Smooth LL and STE data
+        if self.do_smoothing:
+            self.smooth_data()
 
         # Adds default metrics
         self._add_default_metrics()
@@ -185,19 +188,86 @@ class MetricsReport():
     def _add_default_metrics(self) -> None:
         # Default metrics no matter the syllabus type
         self.add(BlockSaturation(self.perf_measure))
-        self.add(TerminalPerformance(self.perf_measure, self.do_smoothing))
-        self.add(RecoveryTime(self.perf_measure, self.do_smoothing))
+        self.add(TerminalPerformance(self.perf_measure))
+        self.add(RecoveryTime(self.perf_measure))
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure, self.maintenance_method))
         self.add(Transfer(self.perf_measure, self.transfer_method))
-        self.add(STERelativePerf(self.perf_measure, self.do_smoothing, self.normalizer))
-        self.add(SampleEfficiency(self.perf_measure, self.normalizer))
+        self.add(STERelativePerf(self.perf_measure, self.ste_data, self.ste_averaging_method))
+        self.add(SampleEfficiency(self.perf_measure, self.ste_data, self.ste_averaging_method))
 
     def add_noise(self, mean: float, std: float) -> None:
         # Add Gaussian noise to log data
         noise = np.random.normal(mean, std, len(
             self._log_data[self.perf_measure]))
         self._log_data[self.perf_measure] = self._log_data[self.perf_measure] + noise
+
+    def load_ste_data(self) -> None:
+        self.ste_data = {}
+
+        for task in self._unique_tasks:
+            self.ste_data[task] = load_ste_data(task)
+
+    def filter_outliers(self, quantiles: Tuple[float, float] = (0.1, 0.9)) -> None:
+        # Filter outliers per-task
+        for task in self._unique_tasks:
+            # Get task data from dataframe
+            x = self._log_data[self._log_data['task_name'] == task][self.perf_measure].values
+
+            # Initialize bounds
+            lower_bound = 0
+            upper_bound = 100
+
+            if self.ste_data.get(task) is not None:
+                x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
+                                        [self.perf_measure].values for ste_data_df in self.ste_data.get(task)])
+                x_comb = np.append(x, x_ste)
+                lower_bound, upper_bound = np.quantile(x_comb, quantiles)
+            else:
+                lower_bound, upper_bound = np.quantile(x, quantiles)
+
+            self._log_data.loc[self._log_data['task_name'] == task, self.perf_measure] = x.clip(lower_bound, upper_bound)
+
+        # Save filtered data as separate column
+        self._log_data[self.perf_measure + '_filtered'] = self._log_data[self.perf_measure].values
+
+    def normalize_data(self) -> None:
+        # Instantiate normalizer
+        self.normalizer = Normalizer(perf_measure=self.perf_measure,
+                                     data=self._log_data[['task_name', self.perf_measure]].set_index('task_name'),
+                                     ste_data=self.ste_data, data_range=self.data_range, method=self.normalization_method)
+
+        # Normalize LL data
+        self._log_data = self.normalizer.normalize(self._log_data)
+
+        # Save normalized data as separate column
+        self._log_data[self.perf_measure + '_normalized'] = self._log_data[self.perf_measure].values
+
+        # Normalize STE data
+        for task, ste_data in self.ste_data.items():
+            if ste_data is not None:
+                for idx, ste_data_df in enumerate(ste_data):
+                    self.ste_data[task][idx] = self.normalizer.normalize(ste_data_df)
+
+    def smooth_data(self) -> None:
+        # Smooth LL data
+        for regime_num in self.block_info['regime_num'].unique():
+            x = self._log_data[self._log_data['regime_num'] == regime_num][self.perf_measure].values
+            self._log_data.loc[self._log_data['regime_num'] == regime_num,
+                               self.perf_measure] = smooth(x)
+
+        # Save normalized data as separate column
+        self._log_data[self.perf_measure + '_smoothed'] = self._log_data[self.perf_measure].values
+
+        # Smooth STE data
+        for task, ste_data in self.ste_data.items():
+            if ste_data is not None:
+                for idx, ste_data_df in enumerate(ste_data):
+                    for regime_num in ste_data_df['regime_num'].unique():
+                        x = ste_data_df[ste_data_df['regime_num']
+                                        == regime_num][self.perf_measure].values
+                        self.ste_data[task][idx].loc[ste_data_df['regime_num']
+                                                 == regime_num, self.perf_measure] = smooth(x)
 
     def log_summary(self) -> pd.DataFrame:
         # Get summary of log data
@@ -399,22 +469,14 @@ class MetricsReport():
             filename (str, optional): Base filename for data files. Defaults to log directory name.
         """
 
-        cols_to_save = ('exp_num', 'regime_num', 'block_num', 'block_type',
-                        'task_name', 'task_params', 'timestamp', 'performance')
-
         # Generate filename
         if filename is None:
             filename = Path(self.log_dir).name
         else:
             filename = filename.replace(" ", "_")
 
-        # Save raw data
-        self._raw_data.reset_index(drop=True).loc[:, cols_to_save].to_feather(
-            filename + '_raw_data.feather')
-
-        # Save processed data
-        self._log_data.reset_index(drop=True).loc[:, cols_to_save].to_feather(
-            filename + '_processed_data.feather')
+        # Save data
+        self._log_data.reset_index(drop=True).to_feather(filename + '_data.feather')
 
     def save_config(self, filename: str = None) -> None:
         # Generate filename
@@ -427,6 +489,7 @@ class MetricsReport():
         config_json = {}
         config_json['log_dir'] = str(self.log_dir)
         config_json['perf_measure'] = self.perf_measure
+        config_json['ste_averaging_method'] = self.ste_averaging_method
         config_json['aggregation_method'] = self.aggregation_method
         config_json['maintenance_method'] = self.maintenance_method
         config_json['transfer_method'] = self.transfer_method
@@ -444,18 +507,16 @@ class MetricsReport():
             input_title = Path(self.log_dir).name
 
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
-                         do_smoothing=self.do_smoothing, show_raw_data=show_raw_data,
-                         y_axis_col=self.perf_measure, input_title=input_title,
-                         output_dir=output_dir, do_save_fig=save)
+                         show_raw_data=show_raw_data, y_axis_col=self.perf_measure,
+                         input_title=input_title, output_dir=output_dir, do_save_fig=save)
 
-    def plot_ste_data(self, window_len: int = None, input_title: str = None,
+    def plot_ste_data(self, input_title: str = None,
                       save: bool = False, output_dir: str = '') -> None:
         if input_title is None:
             input_title = 'Performance Relative to STE\n' + \
                 Path(self.log_dir).name
         plot_filename = Path(self.log_dir).name + '_ste'
 
-        plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
-                      perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,
-                      window_len=window_len, normalizer=self.normalizer, input_title=input_title,
+        plot_ste_data(self._log_data, self.ste_data, self.block_info, self._unique_tasks,
+                      perf_measure=self.perf_measure, input_title=input_title,
                       output_dir=output_dir, do_save=save, plot_filename=plot_filename)

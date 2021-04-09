@@ -21,10 +21,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from ._localutil import fill_metrics_df, smooth
+from ._localutil import fill_metrics_df
 from .core import Metric
-from .normalizer import Normalizer
-from .util import get_ste_data_names, load_ste_data
 
 
 class STERelativePerf(Metric):
@@ -33,23 +31,27 @@ class STERelativePerf(Metric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the performance of each task relative to it's corresponding single-task expert"
 
-    def __init__(self, perf_measure: str, do_smoothing: bool = True, normalizer: Normalizer = None) -> None:
+    def __init__(self, perf_measure: str, ste_data: dict, ste_averaging_method: str = 'time') -> None:
+
         super().__init__()
         self.perf_measure = perf_measure
-        self.do_smoothing = do_smoothing
-        self.normalizer = normalizer
+        self.ste_data = ste_data
+        if ste_averaging_method not in ['time', 'metrics']:
+            raise Exception(f'Invalid STE averaging method: {ste_averaging_method}')
+        else:
+            self.ste_averaging_method = ste_averaging_method
 
     def validate(self, block_info: pd.DataFrame) -> None:
         # Check if there is STE data for each task in the scenario
-        unique_tasks = block_info.loc[:, 'task_name'].unique()
-        ste_names = get_ste_data_names()
+        self.unique_tasks = block_info.loc[:, 'task_name'].unique()
+        ste_names = tuple(self.ste_data.keys())
 
         # Raise exception if none of the tasks have STE data
-        if ~np.any(np.isin(unique_tasks, ste_names)):
+        if ~np.any(np.isin(self.unique_tasks, ste_names)):
             raise Exception('No STE data available for any task')
 
         # Make sure STE baselines are available for all tasks, else send warning
-        if ~np.all(np.isin(unique_tasks, ste_names)):
+        if ~np.all(np.isin(self.unique_tasks, ste_names)):
             warnings.warn('STE data not available for all tasks')
 
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
@@ -60,46 +62,48 @@ class STERelativePerf(Metric):
             # Initialize metric dictionaries
             ste_rel_perf = {}
 
-            # Iterate through unique tasks and STE
-            unique_tasks = block_info.loc[:, 'task_name'].unique()
-
-            for task in unique_tasks:
+            for task in self.unique_tasks:
                 # Get block info for task during training
                 task_blocks = block_info[(block_info['task_name'] == task) & (
                     block_info['block_type'] == 'train')]
 
-                # Get data concatenated data for task
+                # Get concatenated data for task
                 task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
 
                 if len(task_data):
-                    # Load STE data
-                    ste_data = load_ste_data(task)
-                    ste_data = ste_data[ste_data['block_type'] == 'train']
+                    # Get STE data
+                    ste_data = self.ste_data.get(task)
 
                     if ste_data is not None:
-                        # Check if performance measure exists in STE data
-                        if self.perf_measure in ste_data.columns:
+                        if self.ste_averaging_method == 'time':
+                            # Average all the STE data together after truncating to same length
+                            x_ste = [ste_data_df[ste_data_df['block_type'] == 'train']
+                                     [self.perf_measure].values for ste_data_df in ste_data]
+                            min_ste_exp = min(map(len, x_ste))
+                            x_ste = np.array([x[:min_ste_exp] for x in x_ste]).mean(0)
+
                             # Compute relative performance
-                            min_exp = np.min([task_data.shape[0], ste_data.shape[0]])
-
-                            if self.normalizer is not None:
-                                ste_data = self.normalizer.normalize(ste_data)
-
-                            if self.do_smoothing:
-                                task_perf = np.nansum(smooth(task_data.head(
-                                    min_exp)[self.perf_measure].values, window='flat'))
-                                ste_perf = np.nansum(smooth(ste_data.head(
-                                    min_exp)[self.perf_measure].values, window='flat'))
-                            else:
-                                task_perf = np.nansum(task_data.head(
-                                    min_exp)[self.perf_measure].values)
-                                ste_perf = np.nansum(ste_data.head(
-                                    min_exp)[self.perf_measure].values)
-
+                            min_exp = min(task_data.shape[0], len(x_ste))
+                            task_perf = np.nansum(task_data.head(
+                                min_exp)[self.perf_measure].values)
+                            ste_perf = np.nansum(x_ste)
                             rel_perf = task_perf / ste_perf
                             ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
-                        else:
-                            print(f"Cannot compute {self.name} for task {task} - Performance measure not in STE data")
+                        elif self.ste_averaging_method == 'metrics':
+                            rel_perf_vals = []
+
+                            for ste_data_df in ste_data:
+                                ste_data_df = ste_data_df[ste_data_df['block_type'] == 'train']
+
+                                # Compute relative performance
+                                min_exp = np.min([task_data.shape[0], ste_data_df.shape[0]])
+                                task_perf = np.nansum(task_data.head(
+                                    min_exp)[self.perf_measure].values)
+                                ste_perf = np.nansum(ste_data_df.head(
+                                    min_exp)[self.perf_measure].values)
+                                rel_perf_vals.append(task_perf / ste_perf)
+
+                            ste_rel_perf[task_data['regime_num'].iloc[-1]] = np.mean(rel_perf_vals)
                     else:
                         print(f"Cannot compute {self.name} for task {task} - No STE data available")
 

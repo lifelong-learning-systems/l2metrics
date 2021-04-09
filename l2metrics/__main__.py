@@ -30,15 +30,20 @@ def run() -> None:
     parser = argparse.ArgumentParser(description='Run L2Metrics from the command line')
 
     # Log directories can be absolute paths, relative paths, or paths found in $L2DATA/logs
-    parser.add_argument('-l', '--log-dir', required=True,
+    parser.add_argument('-l', '--log-dir', default=None, type=str,
                         help='Log directory of scenario')
 
-    # Flag for storing log data as STE data
-    parser.add_argument('-s', '--store-ste-data', action='store_true',
-                        help='Flag for storing log data as STE')
+    # Mode for storing log data as STE data
+    parser.add_argument('-s', '--ste-store-mode', default=None, choices=['w', 'a'],
+                        help='Mode for storing log data as STE, overwrite (w) or append (a)')
+
+    # Method for handling multiple STE runs
+    parser.add_argument('--ste-averaging-method', default='time', choices=['time', 'metrics'],
+                        help='Method for handling STE runs, time-series averaging (time) or'
+                        'LL metric averaging (metric)')
 
     # Choose application measure to use as performance column
-    parser.add_argument('-p', '--perf-measure', default='reward',
+    parser.add_argument('-p', '--perf-measure', default='reward', type=str,
                         help='Name of column to use for metrics calculations')
 
     # Method for aggregating within-lifetime metrics
@@ -58,7 +63,7 @@ def run() -> None:
                         help='Method for normalizing data')
 
     # Data range file for normalization
-    parser.add_argument('-d', '--data-range-file', type=str,
+    parser.add_argument('-d', '--data-range-file', default=None, type=str,
                         help='JSON file containing task performance ranges for normalization')
 
     # Mean and standard deviation for adding noise to log data
@@ -66,7 +71,7 @@ def run() -> None:
                         help='Mean and standard deviation for Gaussian noise in log data')
 
     # Output filename
-    parser.add_argument('-o', '--output', default=None,
+    parser.add_argument('-o', '--output', default=None, type=str,
                         help='Specify output filename for plot and results')
 
     # Flag for enabling/disabling smoothing
@@ -109,8 +114,8 @@ def run() -> None:
         with open(args.load_config, 'r') as config_file:
             kwargs.update(json.load(config_file))
 
-    if args.store_ste_data:
-        util.save_ste_data(Path(args.log_dir))
+    if args.ste_store_mode:
+        util.store_ste_data(log_dir=Path(args.log_dir), mode=args.ste_store_mode)
     else:
         # Load data range data for normalization and standardize names to lowercase
         if args.data_range_file:

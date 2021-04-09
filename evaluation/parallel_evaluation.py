@@ -43,46 +43,40 @@ def process_evaluation(args):
     sg_name, config = args
 
     # Build file and directory strings
-    eval_dir = Path('../../sg_' + sg_name + '_eval/m9_eval/')
-    output_dir = Path('results/' + config + '/' + sg_name + '_' + config)
-    output = sg_name + '_metrics_' + config
-
-    ste_dir = ''
-    maintenance_method = 'both'
-    transfer_method = 'both'
-    normalization_method = 'task'
-    show_raw_data = False
-    do_save_ste = False
-    do_plot = True
-    save_plots = True
-    do_save = True
+    kwargs = {}
+    kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval/m9_eval/')
+    kwargs['output_dir'] = Path('results/' + config + '/' + sg_name + '_' + config)
+    kwargs['output'] = sg_name + '_metrics_' + config
+    kwargs['ste_dir'] = 'agent_config'
+    kwargs['ste_averaging_method'] = 'metrics'
+    kwargs['perf_measure'] = perf_measure[sg_name]
+    kwargs['aggregation_method'] = 'median'
+    kwargs['maintenance_method'] = 'both'
+    kwargs['transfer_method'] = 'both'
+    kwargs['normalization_method'] = 'task'
+    # kwargs['data_range_file'] = 'data_range.json'
+    kwargs['show_raw_data'] = True
+    kwargs['do_store_ste'] = True
+    kwargs['do_plot'] = True
+    kwargs['do_save_plots'] = True
+    kwargs['do_save'] = True
+    kwargs['save_config'] = True
 
     # Create output directory if it doesn't exist
-    output_dir.mkdir(parents=True, exist_ok=True)
+    kwargs['output_dir'].mkdir(parents=True, exist_ok=True)
 
     # Generate other input arguments based on configuration
-    do_smoothing = config in ['smoothed', 'normalized', 'normalized_no_outliers']
-    remove_outliers = config in ['normalized_no_outliers']
+    kwargs['do_smoothing'] = config in ['smoothed', 'normalized', 'normalized_no_outliers']
+    kwargs['remove_outliers'] = config in ['normalized_no_outliers']
 
-    ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(eval_dir=eval_dir, ste_dir=ste_dir,
-                                                           output_dir=output_dir,
-                                                           perf_measure=perf_measure[sg_name],
-                                                           maintenance_method=maintenance_method,
-                                                           transfer_method=transfer_method,
-                                                           normalization_method=normalization_method,
-                                                           do_smoothing=do_smoothing,
-                                                           show_raw_data=show_raw_data,
-                                                           remove_outliers=remove_outliers,
-                                                           do_plot=do_plot,
-                                                           save_plots=save_plots,
-                                                           do_save_ste=do_save_ste)
+    ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(**kwargs)
 
     # Save the lifelong learning metrics DataFrame
-    if do_save:
-        with open(output_dir.parent / (output + '.tsv'), 'w', newline='\n') as metrics_file:
+    if kwargs['do_save']:
+        with open(kwargs['output_dir'].parent / (kwargs['output'] + '.tsv'), 'w', newline='\n') as metrics_file:
             ll_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
                 ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
-        with open(output_dir.parent / (output + '.json'), 'w', newline='\n') as metrics_file:
+        with open(kwargs['output_dir'].parent / (kwargs['output'] + '.json'), 'w', newline='\n') as metrics_file:
             json.dump(ll_metrics_dicts, metrics_file)
 
 

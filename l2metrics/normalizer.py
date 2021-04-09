@@ -4,8 +4,6 @@ from typing import Set
 import numpy as np
 import pandas as pd
 
-from .util import load_ste_data
-
 
 class Normalizer():
     """Utility class for normalizing data.
@@ -13,14 +11,15 @@ class Normalizer():
 
     valid_methods = ['task', 'run']
 
-    def __init__(self, perf_measure: str, data: pd.DataFrame, data_range: defaultdict = None,
-                 method: str = 'task', scale: int = 100) -> None:
+    def __init__(self, perf_measure: str, data: pd.DataFrame, ste_data: dict = None,
+                 data_range: defaultdict = None, method: str = 'task', scale: int = 100) -> None:
         """Constructor for Normalizer.
 
         Args:
             perf_measure (str): Name of column to use for metrics calculations.
             data (pd.DataFrame, optional): Reference data for calculating data range. Assumed
                 DataFrame with task name as index and one column of performance data.
+            ste_data (dict, optional): The STE data for computing quantiles. Defaults to None.
             data_range (defaultdict, optional): Dictionary object for data range. Defaults to None.
             method (str, optional): Normalization method. Valid values are 'task' and 'run'.
                 Defaults to 'task'.
@@ -43,7 +42,7 @@ class Normalizer():
                 self.run_min = min([val['min'] for val in self.data_range.values()])
                 self.run_max = max([val['max'] for val in self.data_range.values()])
         elif data is not None:
-            self.calculate_data_range(data)
+            self.calculate_data_range(data, ste_data)
         else:
             raise Exception(f'Must provide data or data range to initialize Normalizer')
 
@@ -53,7 +52,7 @@ class Normalizer():
         if self._validate_scale(scale):
             self.scale = scale
 
-    def calculate_data_range(self, data: pd.DataFrame) -> None:
+    def calculate_data_range(self, data: pd.DataFrame, ste_data: dict = None) -> None:
         """Calculates data range per task for given data.
 
         A task data range is the minimum and maximum value of the task performance.
@@ -61,6 +60,7 @@ class Normalizer():
         Args:
             data (pd.DataFrame): Reference data for calculating data range. Assumed
                 DataFrame with task name as index and one column of performance data.
+            ste_data (dict, optional): The STE data for computing quantiles. Defaults to None.
 
         Raises:
             Exception: If data contains more than just performance values and task name.
@@ -80,14 +80,11 @@ class Normalizer():
             task_min = np.nanmin(data.loc[task])
             task_max = np.nanmax(data.loc[task])
 
-            # Load STE data
-            ste_data = load_ste_data(task)
-
-            if ste_data is not None:
-                ste_data = ste_data[ste_data['block_type'] == 'train']
-                if self.perf_measure in ste_data.columns:
-                    self.data_range[task]['min'] = min(task_min, np.nanmin(ste_data[self.perf_measure]))
-                    self.data_range[task]['max'] = max(task_max, np.nanmax(ste_data[self.perf_measure]))
+            if ste_data.get(task) is not None:
+                x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
+                                        [self.perf_measure].values for ste_data_df in ste_data.get(task)])
+                self.data_range[task]['min'] = min(task_min, np.nanmin(x_ste))
+                self.data_range[task]['max'] = max(task_max, np.nanmax(x_ste))
             else:
                 self.data_range[task]['min'] = task_min
                 self.data_range[task]['max'] = task_max

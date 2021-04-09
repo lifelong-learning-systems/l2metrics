@@ -28,10 +28,9 @@ class TerminalPerformance(Metric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the terminal performance within each block"
 
-    def __init__(self, perf_measure: str, do_smoothing: bool = True) -> None:
+    def __init__(self, perf_measure: str) -> None:
         super().__init__()
         self.perf_measure = perf_measure
-        self.do_smoothing = do_smoothing
 
     def validate(self, block_info) -> None:
         pass
@@ -48,7 +47,7 @@ class TerminalPerformance(Metric):
 
             # Make within block calculations
             term_perf_values[idx], eps_to_terminal_perf[idx], _ = get_terminal_perf(
-                block_data, col_to_use=self.perf_measure, do_smoothing=self.do_smoothing)
+                block_data, col_to_use=self.perf_measure)
 
         metrics_df = fill_metrics_df(term_perf_values, 'term_perf', metrics_df)
         return fill_metrics_df(eps_to_terminal_perf, 'eps_to_term_perf', metrics_df)

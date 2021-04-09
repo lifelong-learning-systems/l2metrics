@@ -16,7 +16,7 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
-from typing import Tuple
+from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -86,13 +86,13 @@ def smooth(x: np.ndarray, window_len: int = None, window: str = 'flat') -> np.nd
     return y[start_ind:end_ind]
 
 
-def get_block_saturation_perf(data: pd.DataFrame, col_to_use: str, prev_sat_val: float = None,
-                              window_len: int = None) -> Tuple[float, int, int]:
+def get_block_saturation_perf(data: Union[pd.DataFrame, List], col_to_use: str = None,
+                              prev_sat_val: float = None, window_len: int = None) -> Tuple[float, int, int]:
     """Calculates the saturation value, episodes to saturation, and episodes to recovery.
 
     Args:
-        data (pd.DataFrame): The input data.
-        col_to_use (str): The column name of the metric to use for calculations.
+        data (Union[pd.DataFrame, List]): The input data.
+        col_to_use (str): The column name of the metric to use for calculations. Defaults to None.
         prev_sat_val (float, optional): Previous saturation value for calculating recovery time.
             Defaults to None.
         window_len (int, optional): The window length for smoothing the data. Defaults to None.
@@ -102,11 +102,14 @@ def get_block_saturation_perf(data: pd.DataFrame, col_to_use: str, prev_sat_val:
     """
 
     # Aggregate multiple reward values for the same episode
-    mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
-    mean_data = np.ravel(mean_reward_per_episode.values)
+    if isinstance(data, pd.DataFrame):
+        mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
+        mean_data = np.ravel(mean_reward_per_episode.values)
+    else:
+        mean_data = np.array(data)
 
     # Take the moving average of the mean of the per episode reward
-    smoothed_data = smooth(mean_data, window_len=window_len, window='flat')
+    smoothed_data = smooth(mean_data, window_len=window_len)
     smoothed_data = smoothed_data[~np.isnan(smoothed_data)]
 
     if len(smoothed_data):
@@ -130,8 +133,7 @@ def get_block_saturation_perf(data: pd.DataFrame, col_to_use: str, prev_sat_val:
 
 
 def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = None,
-                      do_smoothing: bool = True, window_len: int = None,
-                      term_window_ratio: float = 0.1) -> Tuple[float, int, int]:
+                      window_len: int = None, term_window_ratio: float = 0.1) -> Tuple[float, int, int]:
     """Calculates the terminal performance, episodes to terminal performance, and episodes to recovery.
 
     Args:
@@ -139,7 +141,6 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
         col_to_use (str): The column name of the metric to use for calculations.
         prev_val (float, optional): Previous saturation value for calculating recovery time.
             Defaults to None.
-        do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to True.
         window_len (int, optional): The window length for smoothing the data. Defaults to None.
         term_window_ratio (float, optional): [description]. Defaults to 0.1.
 
@@ -154,10 +155,6 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
     mean_data = mean_data[~np.isnan(mean_data)]
 
     if len(mean_data):
-        # Take the moving average of the mean of the per episode reward
-        if do_smoothing:
-            mean_data = smooth(mean_data, window_len=window_len, window='flat')
-
         # Average all data points in test block for terminal performance
         if data.iloc[0]['block_type'] == 'test':
             term_window_ratio = 1

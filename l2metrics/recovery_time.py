@@ -32,10 +32,9 @@ class RecoveryTime(Metric):
     description = "Calculates whether the system recovers after a change of task or parameters and \
         calculate how long it takes if recovery is achieved"
 
-    def __init__(self, perf_measure: str, do_smoothing: bool = True) -> None:
+    def __init__(self, perf_measure: str) -> None:
         super().__init__()
         self.perf_measure = perf_measure
-        self.do_smoothing = do_smoothing
 
     def validate(self, block_info: pd.DataFrame) -> Tuple[dict, dict]:
         # Get unique tasks
@@ -83,7 +82,6 @@ class RecoveryTime(Metric):
 
                     _, _, eps_to_rec = get_terminal_perf(block_data,
                                                          col_to_use=self.perf_measure,
-                                                         do_smoothing=self.do_smoothing,
                                                          prev_val=prev_val)
                     recovery_time[assess_ind] = eps_to_rec
 

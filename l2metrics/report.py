@@ -80,25 +80,25 @@ class MetricsReport():
         else:
             self.transfer_method = 'contrast'
 
-        if 'do_smoothing' in kwargs:
-            self.do_smoothing = kwargs['do_smoothing']
-        else:
-            self.do_smoothing = True
-
         if 'normalization_method' in kwargs:
             self.normalization_method = kwargs['normalization_method']
         else:
             self.normalization_method = 'task'
 
-        if 'data_range' in kwargs:
-            self.data_range = kwargs['data_range']
+        if 'smoothing_method' in kwargs:
+            self.smoothing_method = kwargs['smoothing_method']
         else:
-            self.data_range = None
+            self.smoothing_method = 'flat'
 
         if 'remove_outliers' in kwargs:
             self.remove_outliers = kwargs['remove_outliers']
         else:
             self.remove_outliers = False
+
+        if 'data_range' in kwargs:
+            self.data_range = kwargs['data_range']
+        else:
+            self.data_range = None
 
         # Initialize list of LL metrics
         self.task_metrics = ['perf_recovery']
@@ -165,7 +165,7 @@ class MetricsReport():
             self.normalizer = None
         
         # Smooth LL and STE data
-        if self.do_smoothing:
+        if self.smoothing_method != 'none':
             self.smooth_data()
 
         # Adds default metrics
@@ -252,12 +252,14 @@ class MetricsReport():
     def smooth_data(self) -> None:
         # Smooth LL data
         for regime_num in self.block_info['regime_num'].unique():
-            x = self._log_data[self._log_data['regime_num'] == regime_num][self.perf_measure].values
+            x = self._log_data[self._log_data['regime_num']
+                               == regime_num][self.perf_measure].values
             self._log_data.loc[self._log_data['regime_num'] == regime_num,
-                               self.perf_measure] = smooth(x)
+                               self.perf_measure] = smooth(x, window=self.smoothing_method)
 
         # Save normalized data as separate column
-        self._log_data[self.perf_measure + '_smoothed'] = self._log_data[self.perf_measure].values
+        self._log_data[self.perf_measure +
+                       '_smoothed'] = self._log_data[self.perf_measure].values
 
         # Smooth STE data
         for task, ste_data in self.ste_data.items():
@@ -267,7 +269,7 @@ class MetricsReport():
                         x = ste_data_df[ste_data_df['regime_num']
                                         == regime_num][self.perf_measure].values
                         self.ste_data[task][idx].loc[ste_data_df['regime_num']
-                                                 == regime_num, self.perf_measure] = smooth(x)
+                                                     == regime_num, self.perf_measure] = smooth(x,  window=self.smoothing_method)
 
     def log_summary(self) -> pd.DataFrame:
         # Get summary of log data
@@ -493,10 +495,10 @@ class MetricsReport():
         config_json['aggregation_method'] = self.aggregation_method
         config_json['maintenance_method'] = self.maintenance_method
         config_json['transfer_method'] = self.transfer_method
-        config_json['do_smoothing'] = self.do_smoothing
         config_json['normalization_method'] = self.normalization_method
-        config_json['data_range'] = self.normalizer.data_range if self.normalizer else None
+        config_json['smoothing_method'] = self.smoothing_method
         config_json['remove_outliers'] = self.remove_outliers
+        config_json['data_range'] = self.normalizer.data_range if self.normalizer else None
 
         with open(filename + '_config.json', 'w') as output_config:
             json.dump(config_json, output_config)

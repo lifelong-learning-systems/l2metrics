@@ -47,7 +47,7 @@ def smooth(x: np.ndarray, window_len: int = None, window: str = 'flat') -> np.nd
         x (np.ndarray): The input signal.
         window_len (int, optional): The dimension of the smoothing window. Defaults to None.
         window (str, optional): The type of window from 'flat', 'hanning', 'hamming', 'bartlett',
-            'blackman'. Flat window will produce a moving average smoothing. Defaults to 'hanning'.
+            'blackman'. Flat window will produce a moving average smoothing. Defaults to 'flat'.
 
     Raises:
         ValueError: If input signal has more than one dimension.

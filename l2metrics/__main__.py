@@ -59,8 +59,16 @@ def run() -> None:
                         help='Method for computing forward and backward transfer')
 
     # Method for normalization
-    parser.add_argument('-n', '--normalization-method', default='task', choices=['', 'task', 'run'],
+    parser.add_argument('-n', '--normalization-method', default='task', choices=['none', 'task', 'run'],
                         help='Method for normalizing data')
+
+    # Method for smoothing
+    parser.add_argument('-w', '--smoothing-method', default='flat', choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
+                        help='Method for smoothing data')
+
+    # Flag for removing outliers
+    parser.add_argument('--remove-outliers', action='store_true',
+                        help='Remove outliers in data for metrics')
 
     # Data range file for normalization
     parser.add_argument('-d', '--data-range-file', default=None, type=str,
@@ -74,19 +82,9 @@ def run() -> None:
     parser.add_argument('-o', '--output', default=None, type=str,
                         help='Specify output filename for plot and results')
 
-    # Flag for enabling/disabling smoothing
-    parser.add_argument('--do-smoothing', dest='do_smoothing', default=True, action='store_true',
-                        help='Smooth data for metrics and plotting')
-    parser.add_argument('--no-smoothing', dest='do_smoothing', action='store_false',
-                        help='Do not smooth data for metrics and plotting')
-
     # Flag for showing raw performance data under smoothed data
     parser.add_argument('-r', '--show-raw-data', action='store_true',
                         help='Show raw data points under smoothed data for plotting')
-
-    # Flag for removing outliers
-    parser.add_argument('--remove-outliers', action='store_true',
-                        help='Remove outliers in data for metrics')
 
     # Flag for enabling/disabling plotting
     parser.add_argument('--do-plot', dest='do_plot', default=True, action='store_true',

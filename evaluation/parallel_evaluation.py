@@ -66,7 +66,8 @@ def process_evaluation(args):
     kwargs['output_dir'].mkdir(parents=True, exist_ok=True)
 
     # Generate other input arguments based on configuration
-    kwargs['do_smoothing'] = config in ['smoothed', 'normalized', 'normalized_no_outliers']
+    kwargs['smoothing_method'] = 'flat' if config in [
+        'smoothed', 'normalized', 'normalized_no_outliers'] else 'none'
     kwargs['remove_outliers'] = config in ['normalized_no_outliers']
 
     ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(**kwargs)

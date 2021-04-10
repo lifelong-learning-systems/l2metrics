@@ -177,10 +177,9 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
         transfer_method (str, optional): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both'. Defaults to 'both'.
         normalization_method (str, optional): Method for normalizing data.
-            Valid values are '', 'task', and 'run'. Defaults to 'task'.
+            Valid values are 'none', 'task', and 'run'. Defaults to 'task'.
+
         output_dir (str, optional): Output directory of results. Defaults to ''.
-        do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
-            Defaults to True.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
             Defaults to False.
         remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
@@ -270,10 +269,11 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
         transfer_method (str): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both.'
         normalization_method (str, optional): Method for normalizing data.
-            Valid values are '', 'task', and 'run'. Defaults to 'task'.
+            Valid values are 'none', 'task', and 'run'. Defaults to 'task'.
+        smoothing_method (str, optional): Method for smoothing data.
+            Valid values are 'none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'.
+            Defaults to 'flat'.
         output_dir (str, optional): Output directory of results. Defaults to ''.
-        do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
-            Defaults to True.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
             Defaults to False.
         remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
@@ -393,6 +393,14 @@ def evaluate() -> None:
     parser.add_argument('-n', '--normalization-method', default='task', choices=['task', 'run'],
                         help='Method for normalizing data')
 
+    # Method for smoothing
+    parser.add_argument('-w', '--smoothing-method', default='flat', choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
+                        help='Method for smoothing data')
+
+    # Flag for removing outliers
+    parser.add_argument('--remove-outliers', action='store_true',
+                        help='Remove outliers in data for metrics')
+
     # Data range file for normalization
     parser.add_argument('-d', '--data-range-file', default=None, type=str,
                         help='JSON file containing task performance ranges for normalization')
@@ -409,19 +417,9 @@ def evaluate() -> None:
     parser.add_argument('-u', '--do-unzip', action='store_true',
                         help='Unzip all data found in evaluation directory')
 
-    # Flag for enabling/disabling smoothing
-    parser.add_argument('--do-smoothing', dest='do_smoothing', default=True, action='store_true',
-                        help='Smooth data for metrics and plotting')
-    parser.add_argument('--no-smoothing', dest='do_smoothing', action='store_false',
-                        help='Do not smooth data for metrics and plotting')
-
     # Flag for showing raw performance data under smoothed data
     parser.add_argument('-r', '--show-raw-data', action='store_true',
                         help='Show raw data points under smoothed data for plotting')
-
-    # Flag for removing outliers
-    parser.add_argument('--remove-outliers', action='store_true',
-                        help='Remove outliers in data for metrics')
 
     # Flag for disabling STE save
     parser.add_argument('--do-store-ste', dest='do_store_ste', default=True, action='store_true',

@@ -123,7 +123,7 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
 
 
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
-                     window_len: int = None, show_raw_data: bool = False, x_axis_col: str = 'exp_num',
+                     show_raw_data: bool = False, x_axis_col: str = 'exp_num',
                      y_axis_col: str = 'reward', input_title: str = "",
                      input_xlabel: str = 'Episodes', input_ylabel: str = 'Performance',
                      show_block_boundary: bool = False, shade_test_blocks: bool = True,
@@ -134,7 +134,6 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         dataframe (pd.DataFrame): The performance data to plot.
         block_info (pd.DataFrame): The block info of the DataFrame.
         unique_tasks (list): List of unique tasks in scenario.
-        window_len (int, optional): The window length for smoothing the data. Defaults to None.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
             Defaults to False.
         x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.

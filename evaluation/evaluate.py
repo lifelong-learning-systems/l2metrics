@@ -185,7 +185,7 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
         remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
         do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
-        save_config (bool, optional): Flag for saving L2Metrics settings to JSON file. Defaults to
+        do_save_config (bool, optional): Flag for saving L2Metrics settings to JSON file. Defaults to
             False.
 
     Returns:
@@ -217,10 +217,10 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
     else:
         show_raw_data = False
 
-    if 'save_config' in kwargs:
-        save_config = kwargs['save_config']
+    if 'do_save_config' in kwargs:
+        do_save_config = kwargs['do_save_config']
     else:
-        save_config = False
+        do_save_config = False
 
     # Initialize metrics report
     report = MetricsReport(**kwargs)
@@ -245,7 +245,7 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
         report.plot_ste_data(save=do_save_plots, output_dir=output_dir)
         plt.close('all')
     
-    if save_config:
+    if do_save_config:
         report.save_config(filename=str(Path(output_dir) / log_dir.name))
 
     return ll_metrics_df, ll_metrics_dict

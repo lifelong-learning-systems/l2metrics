@@ -39,7 +39,7 @@ def run() -> None:
 
     # Method for handling multiple STE runs
     parser.add_argument('--ste-averaging-method', default='time', choices=['time', 'metrics'],
-                        help='Method for handling STE runs, time-series averaging (time) or'
+                        help='Method for handling STE runs, time-series averaging (time) or '
                         'LL metric averaging (metric)')
 
     # Choose application measure to use as performance column
@@ -101,8 +101,10 @@ def run() -> None:
     # Configuration file settings
     parser.add_argument('--load-config', type=str,
                         help='Load L2Metrics settings from JSON file')
-    parser.add_argument('--save-config', action='store_true',
+    parser.add_argument('--do-save-config', dest='do_save_config', default=True, action='store_true',
                         help='Save L2Metrics settings to JSON file')
+    parser.add_argument('--no-save-config', dest='do_save_config', action='store_false',
+                        help='Do not save L2Metrics settings to JSON file')
 
     # Parse arguments
     args = parser.parse_args()
@@ -149,7 +151,7 @@ def run() -> None:
             report.plot_ste_data(save=args.do_save)
 
         # Save configuration settings used to run calculate metrics
-        if args.save_config:
+        if args.do_save_config:
             report.save_config(filename=args.output)
 
 

@@ -60,7 +60,7 @@ def process_evaluation(args):
     kwargs['do_plot'] = True
     kwargs['do_save_plots'] = True
     kwargs['do_save'] = True
-    kwargs['save_config'] = True
+    kwargs['do_save_config'] = True
 
     # Create output directory if it doesn't exist
     kwargs['output_dir'].mkdir(parents=True, exist_ok=True)

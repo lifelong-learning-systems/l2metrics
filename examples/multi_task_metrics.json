@@ -1,0 +1,145 @@
+{
+  "run_id": "multi_task",
+  "complexity": "2-intermediate",
+  "difficulty": "1-easy",
+  "scenario_type": "",
+  "metrics_column": "performance",
+  "min": 0.0,
+  "max": 100.0,
+  "num_lx": 900,
+  "num_ex": 600,
+  "perf_recovery": -0.0,
+  "perf_maintenance_mrlep": -2.7406556523466037,
+  "forward_transfer_contrast": 1.0,
+  "backward_transfer_contrast": -0.023582051313156806,
+  "ste_rel_perf": 1.1070776268045328,
+  "sample_efficiency": 0.7089466774315403,
+  "task_metrics": {
+    "task1": {
+      "perf_recovery": -0.0,
+      "perf_maintenance_mrlep": -6.728682929466127,
+      "forward_transfer_contrast": {
+        "task2": [
+          1.0
+        ],
+        "task3": [
+          1.0
+        ]
+      },
+      "backward_transfer_contrast": {
+        "task2": [
+          0.04175269077265244,
+          0.004371376744705095
+        ],
+        "task3": [
+          0.006684384645089024,
+          0.00020170770733715507
+        ]
+      },
+      "ste_rel_perf": 0.9363516892411653,
+      "sample_efficiency": 0.7011041700593936,
+      "recovery_times": [
+        33.0,
+        33.0
+      ],
+      "maintenance_val_mrlep": [
+        [
+          -8.740095182258642,
+          -21.48839017160566
+        ],
+        [
+          -2.283794877182828,
+          -5.936255397060222
+        ],
+        [
+          -0.5288476068589887,
+          -1.3947143418304222
+        ]
+      ],
+      "min": 0.0,
+      "max": 100.0,
+      "num_lx": 300,
+      "num_ex": 200
+    },
+    "task2": {
+      "perf_recovery": -0.0,
+      "perf_maintenance_mrlep": -2.7406556523466037,
+      "forward_transfer_contrast": {
+        "task3": [
+          0.575927266352543
+        ]
+      },
+      "backward_transfer_contrast": {
+        "task1": [
+          -0.05384848727140264,
+          -0.011888319777439977,
+          -0.002651248566593099
+        ],
+        "task3": [
+          0.012411992056905621,
+          0.0003747118502101589
+        ]
+      },
+      "ste_rel_perf": 1.1070776268045328,
+      "sample_efficiency": 0.7089466774315403,
+      "recovery_times": [
+        0.0,
+        0.0
+      ],
+      "maintenance_val_mrlep": [
+        [
+          -9.595326527345676,
+          -2.5349579404779803
+        ],
+        [
+          -1.1546399079559109,
+          -0.2948710429717778
+        ],
+        [
+          -0.123482842981673
+        ]
+      ],
+      "min": 0.0,
+      "max": 100.0,
+      "num_lx": 300,
+      "num_ex": 200
+    },
+    "task3": {
+      "perf_recovery": -0.0,
+      "perf_maintenance_mrlep": 1.2719315880970719,
+      "forward_transfer_contrast": {},
+      "backward_transfer_contrast": {
+        "task1": [
+          -0.09052860387367988,
+          -0.019619181191481476,
+          -0.004371376744704666
+        ],
+        "task2": [
+          -0.05590552144640556,
+          -0.005861819851878239,
+          -0.0006177956507250312
+        ]
+      },
+      "ste_rel_perf": 1.20730165572914,
+      "sample_efficiency": 0.7101209677170252,
+      "recovery_times": [
+        0.0,
+        0.0
+      ],
+      "maintenance_val_mrlep": [
+        [
+          1.2670419460173576,
+          3.665259475058207
+        ],
+        [
+          0.0402783772459685,
+          0.11514655406675445
+        ]
+      ],
+      "min": 0.0,
+      "max": 100.0,
+      "num_lx": 300,
+      "num_ex": 200
+    }
+  }
+}

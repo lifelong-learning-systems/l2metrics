@@ -1,0 +1,25 @@
+{
+  "log_dir": "examples\\multi_task",
+  "perf_measure": "performance",
+  "ste_averaging_method": "time",
+  "aggregation_method": "median",
+  "maintenance_method": "mrlep",
+  "transfer_method": "contrast",
+  "normalization_method": "task",
+  "smoothing_method": "flat",
+  "remove_outliers": false,
+  "data_range": {
+    "task1": {
+      "min": 2.5,
+      "max": 99.20632314540028
+    },
+    "task3": {
+      "min": 2.5,
+      "max": 99.99463054023266
+    },
+    "task2": {
+      "min": 2.5,
+      "max": 99.8922081657999
+    }
+  }
+}

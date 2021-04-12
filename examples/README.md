@@ -5,42 +5,56 @@ This directory contains a Python script with an example for creating custom metr
 - `calc_metrics.py`:
 
 ```
-usage: calc_metrics.py [-h] -l LOG_DIR [-s] [-p PERF_MEASURE]
-                   [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
-                   [-n {task,run}] [-f DATA_RANGE_FILE] [--noise MEAN STD]
-                   [-o OUTPUT] [--no-smoothing] [-r] [--normalize]
-                   [--remove-outliers] [--no-plot] [--no-save]
+usage: calc_metrics.py [-h] [-l LOG_DIR] [-s {w,a}]
+                   [--ste-averaging-method {time,metrics}] [-p PERF_MEASURE]
+                   [-a {mean,median}] [-m {mrtlp,mrlep,both}]
+                   [-t {contrast,ratio,both}] [-n {none,task,run}]
+                   [-w {none,flat,hanning,hamming,bartlett,blackman}]
+                   [--remove-outliers] [-d DATA_RANGE_FILE] [--noise MEAN STD]
+                   [-o OUTPUT] [-r] [--do-plot] [--no-plot] [--do-save]
+                   [--no-save] [--load-config LOAD_CONFIG] [--do-save-config]
 
 Run L2Metrics from the command line
 
-required arguments:
-  -l LOG_DIR, --log-dir LOG_DIR
-                        Log directory of scenario
-
 optional arguments:
   -h, --help            show this help message and exit
-  -s, --store-ste-data  Flag for storing log data as STE
+  -l LOG_DIR, --log-dir LOG_DIR
+                        Log directory of scenario
+  -s {w,a}, --ste-store-mode {w,a}
+                        Mode for storing log data as STE, overwrite (w) or
+                        append (a)
+  --ste-averaging-method {time,metrics}
+                        Method for handling STE runs, time-series averaging
+                        (time) or LL metric averaging (metric)
   -p PERF_MEASURE, --perf-measure PERF_MEASURE
                         Name of column to use for metrics calculations
+  -a {mean,median}, --aggregation-method {mean,median}
+                        Method for aggregating within-lifetime metrics
   -m {mrtlp,mrlep,both}, --maintenance-method {mrtlp,mrlep,both}
                         Method for computing performance maintenance
   -t {contrast,ratio,both}, --transfer-method {contrast,ratio,both}
                         Method for computing forward and backward transfer
-  -n {task,run}, --normalization-method {task,run}
+  -n {none,task,run}, --normalization-method {none,task,run}
                         Method for normalizing data
-  -f DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
+  -w {none,flat,hanning,hamming,bartlett,blackman}, --smoothing-method {none,flat,hanning,hamming,bartlett,blackman}
+                        Method for smoothing data
+  --remove-outliers     Remove outliers in data for metrics
+  -d DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
                         JSON file containing task performance ranges for
                         normalization
   --noise MEAN STD      Mean and standard deviation for Gaussian noise in log
                         data
   -o OUTPUT, --output OUTPUT
                         Specify output filename for plot and results
-  --no-smoothing        Do not smooth data for metrics and plotting
   -r, --show-raw-data   Show raw data points under smoothed data for plotting
-  --normalize           Normalize data for metrics
-  --remove-outliers     Remove outliers in data for metrics
+  --do-plot             Plot performance
   --no-plot             Do not plot performance
+  --do-save             Save metrics outputs
   --no-save             Do not save metrics outputs
+  --load-config LOAD_CONFIG
+                        Load L2Metrics settings from JSON file
+  --do-save-config      Save L2Metrics settings to JSON file
+  --no-save-config      Do not save L2Metrics settings to JSON file
 ```
 
 ## Writing a Custom Metric

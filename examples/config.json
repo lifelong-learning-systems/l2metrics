@@ -1,0 +1,19 @@
+{
+    "log_dir": "multi_task",
+    "ste_store_mode": null,
+    "ste_averaging_method": "metrics",
+    "perf_measure": "performance",
+    "aggregation_method": "median",
+    "maintenance_method": "both",
+    "transfer_method": "both",
+    "normalization_method": "task",
+    "smoothing_method": "flat",
+    "remove_outliers": true,
+    "data_range_file": null,
+    "noise": [0, 0],
+    "output": null,
+    "show_raw_data": true,
+    "do_plot": true,
+    "do_save": true,
+    "do_save_config": true
+  }

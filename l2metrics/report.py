@@ -90,6 +90,11 @@ class MetricsReport():
         else:
             self.smoothing_method = 'flat'
 
+        if 'window_length' in kwargs:
+            self.window_length = kwargs['window_length']
+        else:
+            self.window_length = None
+
         if 'remove_outliers' in kwargs:
             self.remove_outliers = kwargs['remove_outliers']
         else:
@@ -258,7 +263,8 @@ class MetricsReport():
             x = self._log_data[self._log_data['regime_num']
                                == regime_num][self.perf_measure].values
             self._log_data.loc[self._log_data['regime_num'] == regime_num,
-                               self.perf_measure] = smooth(x, window=self.smoothing_method)
+                               self.perf_measure] = smooth(x, window_len=self.window_length,
+                                                           window=self.smoothing_method)
 
         # Save normalized data as separate column
         self._log_data[self.perf_measure +
@@ -269,10 +275,9 @@ class MetricsReport():
             if ste_data is not None:
                 for idx, ste_data_df in enumerate(ste_data):
                     for regime_num in ste_data_df['regime_num'].unique():
-                        x = ste_data_df[ste_data_df['regime_num']
-                                        == regime_num][self.perf_measure].values
-                        self.ste_data[task][idx].loc[ste_data_df['regime_num']
-                                                     == regime_num, self.perf_measure] = smooth(x,  window=self.smoothing_method)
+                        x = ste_data_df[ste_data_df['regime_num'] == regime_num][self.perf_measure].values
+                        self.ste_data[task][idx].loc[ste_data_df['regime_num'] == regime_num, self.perf_measure] = smooth(
+                            x, window_len=self.window_length, window=self.smoothing_method)
 
     def log_summary(self) -> pd.DataFrame:
         # Get summary of log data
@@ -500,6 +505,7 @@ class MetricsReport():
         config_json['transfer_method'] = self.transfer_method
         config_json['normalization_method'] = self.normalization_method
         config_json['smoothing_method'] = self.smoothing_method
+        config_json['window_length'] = self.window_length
         config_json['remove_outliers'] = self.remove_outliers
         config_json['data_range'] = self.normalizer.data_range if self.normalizer else None
 

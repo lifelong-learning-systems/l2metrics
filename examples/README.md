@@ -5,15 +5,14 @@ This directory contains a Python script with an example for creating custom metr
 - `calc_metrics.py`:
 
 ```
-usage: calc_metrics.py [-h] [-l LOG_DIR] [-s {w,a}]
-                   [--ste-averaging-method {time,metrics}] [-p PERF_MEASURE]
-                   [-a {mean,median}] [-m {mrtlp,mrlep,both}]
-                   [-t {contrast,ratio,both}] [-n {none,task,run}]
-                   [-w {none,flat,hanning,hamming,bartlett,blackman}]
-                   [--remove-outliers] [-d DATA_RANGE_FILE] [--noise MEAN STD]
-                   [-o OUTPUT] [-r] [--show-eval-lines] [--no-show-eval-lines]
-                   [--do-plot] [--no-plot] [--do-save] [--no-save]
-                   [--load-config LOAD_CONFIG] [--do-save-config]
+usage: calc_metrics.py [-h] [-l LOG_DIR] [-s {w,a}] [-v {time,metrics}]
+                   [-p PERF_MEASURE] [-a {mean,median}]
+                   [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
+                   [-n {none,task,run}]
+                   [-g {none,flat,hanning,hamming,bartlett,blackman}]
+                   [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
+                   [-o OUTPUT] [-r] [-e] [--no-show-eval-lines] [-P]
+                   [--no-plot] [-S] [--no-save] [-c LOAD_CONFIG] [-C]
                    [--no-save-config]
 
 Run L2Metrics from the command line
@@ -25,7 +24,7 @@ optional arguments:
   -s {w,a}, --ste-store-mode {w,a}
                         Mode for storing log data as STE, overwrite (w) or
                         append (a)
-  --ste-averaging-method {time,metrics}
+  -v {time,metrics}, --ste-averaging-method {time,metrics}
                         Method for handling STE runs, time-series averaging
                         (time) or LL metric averaging (metric)
   -p PERF_MEASURE, --perf-measure PERF_MEASURE
@@ -38,26 +37,31 @@ optional arguments:
                         Method for computing forward and backward transfer
   -n {none,task,run}, --normalization-method {none,task,run}
                         Method for normalizing data
-  -w {none,flat,hanning,hamming,bartlett,blackman}, --smoothing-method {none,flat,hanning,hamming,bartlett,blackman}
-                        Method for smoothing data
-  --remove-outliers     Remove outliers in data for metrics
+  -g {none,flat,hanning,hamming,bartlett,blackman}, --smoothing-method {none,flat,hanning,hamming,bartlett,blackman}
+                        Method for smoothing data, window type
+  -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
+                        Window length for smoothing data
+  -x, --remove-outliers
+                        Remove outliers in data for metrics
   -d DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
                         JSON file containing task performance ranges for
                         normalization
-  --noise MEAN STD      Mean and standard deviation for Gaussian noise in log
+  -N MEAN STD, --noise MEAN STD
+                        Mean and standard deviation for Gaussian noise in log
                         data
   -o OUTPUT, --output OUTPUT
                         Specify output filename for plot and results
   -r, --show-raw-data   Show raw data points under smoothed data for plotting
-  --show-eval-lines     Show lines between evaluation blocks
+  -e, --show-eval-lines
+                        Show lines between evaluation blocks
   --no-show-eval-lines  Do not show lines between evaluation blocks
-  --do-plot             Plot performance
+  -P, --do-plot         Plot performance
   --no-plot             Do not plot performance
-  --do-save             Save metrics outputs
+  -S, --do-save         Save metrics outputs
   --no-save             Do not save metrics outputs
-  --load-config LOAD_CONFIG
+  -c LOAD_CONFIG, --load-config LOAD_CONFIG
                         Load L2Metrics settings from JSON file
-  --do-save-config      Save L2Metrics settings to JSON file
+  -C, --do-save-config  Save L2Metrics settings to JSON file
   --no-save-config      Do not save L2Metrics settings to JSON file
 ```
 

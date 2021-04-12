@@ -281,6 +281,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
         smoothing_method (str, optional): Method for smoothing data.
             Valid values are 'none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'.
             Defaults to 'flat'.
+        window_lenth (int, optional): Window length for smoothing data. Defaults to 'None'.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
             Defaults to False.
@@ -406,6 +407,10 @@ def evaluate() -> None:
     # Method for smoothing
     parser.add_argument('-w', '--smoothing-method', default='flat', choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
                         help='Method for smoothing data')
+
+    # Window length for smoothing
+    parser.add_argument('-w', '--window-length', default=None, type=int,
+                        help='Window length for smoothing data')
 
     # Flag for removing outliers
     parser.add_argument('--remove-outliers', action='store_true',

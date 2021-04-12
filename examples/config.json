@@ -8,6 +8,7 @@
     "transfer_method": "both",
     "normalization_method": "task",
     "smoothing_method": "flat",
+    "window_length": null,
     "remove_outliers": true,
     "data_range_file": null,
     "noise": [0, 0],

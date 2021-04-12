@@ -21,6 +21,7 @@ All notable changes to this repository are documented here. We are using [Semant
 - Implemented different options for averaging STE runs (time or metrics)
 - Modified command-line arguments for normalization and smoothing methods
 - Implemented option to show lines between evaluation blocks
+- Implemented command-line argument for smoothing window length
 
 ## 2.6.0 - 2021-03-01
 

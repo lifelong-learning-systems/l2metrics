@@ -53,6 +53,7 @@ def process_evaluation(args):
     kwargs['aggregation_method'] = 'median'
     kwargs['maintenance_method'] = 'both'
     kwargs['transfer_method'] = 'both'
+    kwargs['window_length'] = None
     # kwargs['data_range_file'] = 'data_range.json'
     kwargs['show_raw_data'] = True
     kwargs['show_eval_lines'] = True

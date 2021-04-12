@@ -38,7 +38,7 @@ def run() -> None:
                         help='Mode for storing log data as STE, overwrite (w) or append (a)')
 
     # Method for handling multiple STE runs
-    parser.add_argument('--ste-averaging-method', default='time', choices=['time', 'metrics'],
+    parser.add_argument('-v', '--ste-averaging-method', default='time', choices=['time', 'metrics'],
                         help='Method for handling STE runs, time-series averaging (time) or '
                         'LL metric averaging (metric)')
 
@@ -63,11 +63,15 @@ def run() -> None:
                         help='Method for normalizing data')
 
     # Method for smoothing
-    parser.add_argument('-w', '--smoothing-method', default='flat', choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
-                        help='Method for smoothing data')
+    parser.add_argument('-g', '--smoothing-method', default='flat', choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
+                        help='Method for smoothing data, window type')
+
+    # Window length for smoothing
+    parser.add_argument('-w', '--window-length', default=None, type=int,
+                        help='Window length for smoothing data')
 
     # Flag for removing outliers
-    parser.add_argument('--remove-outliers', action='store_true',
+    parser.add_argument('-x', '--remove-outliers', action='store_true',
                         help='Remove outliers in data for metrics')
 
     # Data range file for normalization
@@ -75,7 +79,7 @@ def run() -> None:
                         help='JSON file containing task performance ranges for normalization')
 
     # Mean and standard deviation for adding noise to log data
-    parser.add_argument('--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
+    parser.add_argument('-N', '--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
                         help='Mean and standard deviation for Gaussian noise in log data')
 
     # Output filename
@@ -87,27 +91,27 @@ def run() -> None:
                         help='Show raw data points under smoothed data for plotting')
 
     # Flag for showing evaluation block lines
-    parser.add_argument('--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
+    parser.add_argument('-e', '--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
                         help='Show lines between evaluation blocks')
     parser.add_argument('--no-show-eval-lines', dest='show_eval_lines', action='store_false',
                         help='Do not show lines between evaluation blocks')
 
     # Flag for enabling/disabling plotting
-    parser.add_argument('--do-plot', dest='do_plot', default=True, action='store_true',
+    parser.add_argument('-P', '--do-plot', dest='do_plot', default=True, action='store_true',
                         help='Plot performance')
     parser.add_argument('--no-plot', dest='do_plot', action='store_false',
                         help='Do not plot performance')
 
     # Flag for enabling/disabling save
-    parser.add_argument('--do-save', dest='do_save', default=True, action='store_true',
+    parser.add_argument('-S', '--do-save', dest='do_save', default=True, action='store_true',
                         help='Save metrics outputs')
     parser.add_argument('--no-save', dest='do_save', action='store_false',
                         help='Do not save metrics outputs')
 
     # Configuration file settings
-    parser.add_argument('--load-config', type=str,
+    parser.add_argument('-c', '--load-config', type=str,
                         help='Load L2Metrics settings from JSON file')
-    parser.add_argument('--do-save-config', dest='do_save_config', default=True, action='store_true',
+    parser.add_argument('-C', '--do-save-config', dest='do_save_config', default=True, action='store_true',
                         help='Save L2Metrics settings to JSON file')
     parser.add_argument('--no-save-config', dest='do_save_config', action='store_false',
                         help='Do not save L2Metrics settings to JSON file')

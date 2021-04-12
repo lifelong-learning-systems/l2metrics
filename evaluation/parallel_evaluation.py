@@ -40,23 +40,22 @@ perf_measure = {
 
 
 def process_evaluation(args):
-    sg_name, config = args
+    eval_dir, sg_name, configuration = args
 
     # Build file and directory strings
     kwargs = {}
-    kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval/m9_eval/')
-    kwargs['output_dir'] = Path('results/' + config + '/' + sg_name + '_' + config)
-    kwargs['output'] = sg_name + '_metrics_' + config
+    kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval/' + eval_dir + '/')
+    kwargs['output_dir'] = Path('results/' + configuration + '/' + sg_name + '_' + configuration)
+    kwargs['output'] = sg_name + '_metrics_' + configuration
     kwargs['ste_dir'] = 'agent_config'
     kwargs['ste_averaging_method'] = 'metrics'
     kwargs['perf_measure'] = perf_measure[sg_name]
     kwargs['aggregation_method'] = 'median'
     kwargs['maintenance_method'] = 'both'
     kwargs['transfer_method'] = 'both'
-    kwargs['normalization_method'] = 'task'
     # kwargs['data_range_file'] = 'data_range.json'
     kwargs['show_raw_data'] = True
-    kwargs['do_store_ste'] = True
+    kwargs['do_store_ste'] = False
     kwargs['do_plot'] = True
     kwargs['do_save_plots'] = True
     kwargs['do_save'] = True
@@ -66,9 +65,11 @@ def process_evaluation(args):
     kwargs['output_dir'].mkdir(parents=True, exist_ok=True)
 
     # Generate other input arguments based on configuration
-    kwargs['smoothing_method'] = 'flat' if config in [
+    kwargs['normalization_method'] = 'task' if configuration in [
+        'normalized', 'normalized_no_outliers'] else 'none'
+    kwargs['smoothing_method'] = 'flat' if configuration in [
         'smoothed', 'normalized', 'normalized_no_outliers'] else 'none'
-    kwargs['remove_outliers'] = config in ['normalized_no_outliers']
+    kwargs['remove_outliers'] = configuration in ['normalized_no_outliers']
 
     ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(**kwargs)
 
@@ -83,11 +84,12 @@ def process_evaluation(args):
 
 def run():
     # Configure metrics report
+    eval_dirs = ['m9_eval']
     sg_names = ['argonne', 'hrl', 'sri', 'teledyne', 'upenn']
     configurations = ['raw', 'smoothed', 'normalized', 'normalized_no_outliers']
 
     # Parallel processing
-    sg_configs = list(product(sg_names, configurations))
+    sg_configs = list(product(eval_dirs, sg_names, configurations))
 
     with Pool(psutil.cpu_count(logical=False)) as p:
         list(tqdm(p.imap(process_evaluation, sg_configs), total=len(sg_configs)))

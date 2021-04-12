@@ -86,6 +86,12 @@ def run() -> None:
     parser.add_argument('-r', '--show-raw-data', action='store_true',
                         help='Show raw data points under smoothed data for plotting')
 
+    # Flag for showing evaluation block lines
+    parser.add_argument('--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
+                        help='Show lines between evaluation blocks')
+    parser.add_argument('--no-show-eval-lines', dest='show_eval_lines', action='store_false',
+                        help='Do not show lines between evaluation blocks')
+
     # Flag for enabling/disabling plotting
     parser.add_argument('--do-plot', dest='do_plot', default=True, action='store_true',
                         help='Plot performance')
@@ -147,7 +153,8 @@ def run() -> None:
 
         # Plot metrics
         if args.do_plot:
-            report.plot(save=args.do_save, show_raw_data=args.show_raw_data)
+            report.plot(save=args.do_save, show_raw_data=args.show_raw_data,
+                        show_eval_lines=args.show_eval_lines)
             report.plot_ste_data(save=args.do_save)
 
         # Save configuration settings used to run calculate metrics

@@ -122,8 +122,10 @@ usage: python -m l2metrics [-h] [-l LOG_DIR] [-s {w,a}]
                    [-t {contrast,ratio,both}] [-n {none,task,run}]
                    [-w {none,flat,hanning,hamming,bartlett,blackman}]
                    [--remove-outliers] [-d DATA_RANGE_FILE] [--noise MEAN STD]
-                   [-o OUTPUT] [-r] [--do-plot] [--no-plot] [--do-save]
-                   [--no-save] [--load-config LOAD_CONFIG] [--do-save-config]
+                   [-o OUTPUT] [-r] [--show-eval-lines] [--no-show-eval-lines]
+                   [--do-plot] [--no-plot] [--do-save] [--no-save]
+                   [--load-config LOAD_CONFIG] [--do-save-config]
+                   [--no-save-config]
 
 Run L2Metrics from the command line
 
@@ -158,6 +160,8 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Specify output filename for plot and results
   -r, --show-raw-data   Show raw data points under smoothed data for plotting
+  --show-eval-lines     Show lines between evaluation blocks
+  --no-show-eval-lines  Do not show lines between evaluation blocks
   --do-plot             Plot performance
   --no-plot             Do not plot performance
   --do-save             Save metrics outputs
@@ -180,6 +184,7 @@ By default, the L2Metrics package will calculate metrics with the following opti
 - Outlier removal is disabled. When enabled, the outliers (detected using 0.1, 0.9 quantiles) will be clamped to the quantile bounds.
 - Gaussian noise is disabled.
 - Plotting is enabled.
+- Draw lines between evaluation blocks is enabled.
 - Saving of results and log data is enabled.
 - Saving of configuration settings is enabled.
 

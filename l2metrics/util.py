@@ -123,9 +123,9 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
 
 
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
-                     show_raw_data: bool = False, x_axis_col: str = 'exp_num',
-                     y_axis_col: str = 'reward', input_title: str = "",
+                     x_axis_col: str = 'exp_num', y_axis_col: str = 'reward', input_title: str = "",
                      input_xlabel: str = 'Episodes', input_ylabel: str = 'Performance',
+                     show_raw_data: bool = False, show_eval_lines: bool = True,
                      show_block_boundary: bool = False, shade_test_blocks: bool = True,
                      output_dir: str = '', do_save_fig: bool = False, plot_filename: str = None) -> None:
     """Plots the performance curves for the given DataFrame.
@@ -134,13 +134,15 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         dataframe (pd.DataFrame): The performance data to plot.
         block_info (pd.DataFrame): The block info of the DataFrame.
         unique_tasks (list): List of unique tasks in scenario.
-        show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
-            Defaults to False.
         x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
         y_axis_col (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         input_title (str, optional): The plot title. Defaults to "".
         input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
+        show_raw_data (bool, optional): Flag for enabling raw data in background of plot.
+            Defaults to False.
+        show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
+            changing slope of evaluation performance. Defaults to True.
         show_block_boundary (bool, optional): Flag for enabling block boundaries. Defaults to True.
         shade_test_blocks (bool, optional): Flag for enabling block shading. Defaults to True.
         output_dir (str, optional): Output directory of results. Defaults to ''.
@@ -161,6 +163,11 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
 
     # Loop through tasks and plot their performance curves
     for color, task in zip(task_colors, unique_tasks):
+        if show_eval_lines:
+            eval_x_data = []
+            eval_y_data = []
+            eval_line, = ax.plot(eval_x_data, eval_y_data, color=color, linestyle='--', alpha=0.2)
+
         for _, row in block_info[block_info['task_name'] == task].iterrows():
             regime_num = row['regime_num']
             block_type = row['block_type']
@@ -177,6 +184,12 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
 
             if block_type == 'test':
                 y = np.nanmean(y) * np.ones(len(x))
+                if show_eval_lines:
+                    x = list(range(x[0], x[0] + len(y)))
+                    eval_x_data.extend(x)
+                    eval_y_data.extend(y)
+                    eval_line.set_data(eval_x_data, eval_y_data)
+                    plt.draw()  
 
             # Match smoothed x and y length if data had NaNs
             if len(x) != len(y):

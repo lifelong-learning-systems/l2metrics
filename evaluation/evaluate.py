@@ -182,6 +182,8 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
         output_dir (str, optional): Output directory of results. Defaults to ''.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
             Defaults to False.
+        show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
+            changing slope of evaluation performance. Defaults to True.
         remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
         do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
@@ -217,6 +219,11 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
     else:
         show_raw_data = False
 
+    if 'show_eval_lines' in kwargs:
+        show_eval_lines = kwargs['show_eval_lines']
+    else:
+        show_eval_lines = True
+
     if 'do_save_config' in kwargs:
         do_save_config = kwargs['do_save_config']
     else:
@@ -241,7 +248,8 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
 
     if do_plot:
         report.save_data(filename=str(Path(output_dir) / log_dir.name))
-        report.plot(save=do_save_plots, show_raw_data=show_raw_data, output_dir=output_dir)
+        report.plot(save=do_save_plots, show_raw_data=show_raw_data, show_eval_lines=show_eval_lines,
+                    output_dir=output_dir)
         report.plot_ste_data(save=do_save_plots, output_dir=output_dir)
         plt.close('all')
     
@@ -276,6 +284,8 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
         output_dir (str, optional): Output directory of results. Defaults to ''.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
             Defaults to False.
+        show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
+            changing slope of evaluation performance. Defaults to True.
         remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
         do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
@@ -421,6 +431,12 @@ def evaluate() -> None:
     parser.add_argument('-r', '--show-raw-data', action='store_true',
                         help='Show raw data points under smoothed data for plotting')
 
+    # Flag for showing evaluation block lines
+    parser.add_argument('--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
+                        help='Show lines between evaluation blocks')
+    parser.add_argument('--no-show-eval-lines', dest='show_eval_lines', action='store_false',
+                        help='Do not show lines between evaluation blocks')
+
     # Flag for disabling STE save
     parser.add_argument('--do-store-ste', dest='do_store_ste', default=True, action='store_true',
                         help='Do not store STE data')
@@ -446,8 +462,10 @@ def evaluate() -> None:
                         help='Do not save metrics outputs')
 
     # Configuration file settings
-    parser.add_argument('--save-config', action='store_true',
+    parser.add_argument('--do-save-config', dest='do_save_config', default=True, action='store_true',
                         help='Save L2Metrics settings to JSON file')
+    parser.add_argument('--no-save-config', dest='do_save_config', action='store_false',
+                        help='Do not save L2Metrics settings to JSON file')
 
     # Parse arguments
     args = parser.parse_args()

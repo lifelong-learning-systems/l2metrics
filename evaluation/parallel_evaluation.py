@@ -55,6 +55,7 @@ def process_evaluation(args):
     kwargs['transfer_method'] = 'both'
     # kwargs['data_range_file'] = 'data_range.json'
     kwargs['show_raw_data'] = True
+    kwargs['show_eval_lines'] = True
     kwargs['do_store_ste'] = False
     kwargs['do_plot'] = True
     kwargs['do_save_plots'] = True

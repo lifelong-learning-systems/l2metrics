@@ -506,14 +506,16 @@ class MetricsReport():
         with open(filename + '_config.json', 'w') as output_config:
             json.dump(config_json, output_config)
 
-    def plot(self, save: bool = False, show_raw_data: bool = False, output_dir: str = '',
-             input_title: str = None) -> None:
+    def plot(self, save: bool = False, show_raw_data: bool = False, show_eval_lines: bool = True,
+             output_dir: str = '', input_title: str = None) -> None:
+
         if input_title is None:
             input_title = Path(self.log_dir).name
 
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
-                         show_raw_data=show_raw_data, y_axis_col=self.perf_measure,
-                         input_title=input_title, output_dir=output_dir, do_save_fig=save)
+                         show_raw_data=show_raw_data, show_eval_lines=show_eval_lines,
+                         y_axis_col=self.perf_measure, input_title=input_title,
+                         output_dir=output_dir, do_save_fig=save)
 
     def plot_ste_data(self, input_title: str = None,
                       save: bool = False, output_dir: str = '') -> None:

@@ -11,8 +11,10 @@ usage: calc_metrics.py [-h] [-l LOG_DIR] [-s {w,a}]
                    [-t {contrast,ratio,both}] [-n {none,task,run}]
                    [-w {none,flat,hanning,hamming,bartlett,blackman}]
                    [--remove-outliers] [-d DATA_RANGE_FILE] [--noise MEAN STD]
-                   [-o OUTPUT] [-r] [--do-plot] [--no-plot] [--do-save]
-                   [--no-save] [--load-config LOAD_CONFIG] [--do-save-config]
+                   [-o OUTPUT] [-r] [--show-eval-lines] [--no-show-eval-lines]
+                   [--do-plot] [--no-plot] [--do-save] [--no-save]
+                   [--load-config LOAD_CONFIG] [--do-save-config]
+                   [--no-save-config]
 
 Run L2Metrics from the command line
 
@@ -47,6 +49,8 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Specify output filename for plot and results
   -r, --show-raw-data   Show raw data points under smoothed data for plotting
+  --show-eval-lines     Show lines between evaluation blocks
+  --no-show-eval-lines  Do not show lines between evaluation blocks
   --do-plot             Plot performance
   --no-plot             Do not plot performance
   --do-save             Save metrics outputs

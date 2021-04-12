@@ -13,6 +13,7 @@
     "noise": [0, 0],
     "output": null,
     "show_raw_data": true,
+    "show_eval_lines": true,
     "do_plot": true,
     "do_save": true,
     "do_save_config": true

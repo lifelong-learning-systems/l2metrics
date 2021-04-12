@@ -141,6 +141,9 @@ class MetricsReport():
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
 
+        # Drop all rows with NaN values
+        self._log_data = self._log_data[self._log_data[self.perf_measure].notna()]
+
         # Save raw data as separate column
         self._log_data[self.perf_measure + '_raw'] = self._log_data[self.perf_measure].values
 

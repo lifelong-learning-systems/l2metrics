@@ -184,14 +184,15 @@ By default, the L2Metrics package will calculate metrics with the following opti
 - Performance maintenance method is `mrlep`, which uses the most recent learning evaluation performance as opposed to the most recent terminal learning performance (`mrtlp`).
 - Forward and backward transfer use `contrast`.
 - Normalization method is `task`, which computes the per-task data ranges by looking at LL and STE log data, then normalizing to [0, 100].
-- Smoothing method is `flat`, which is smooths data with a rectangular sliding window.
-- Smoothing window length is `None`, which defaults to min(int(`block_length` * 0.2), 100).
+- Smoothing method is `flat`, which smooths data with a rectangular sliding window. Other available options include [hanning](https://numpy.org/doc/stable/reference/generated/numpy.hanning.html#numpy.hanning), [hamming](https://numpy.org/doc/stable/reference/generated/numpy.hamming.html#numpy.hamming), [bartlett](https://numpy.org/doc/stable/reference/generated/numpy.bartlett.html#numpy.bartlett), and [blackman](https://numpy.org/doc/stable/reference/generated/numpy.blackman.html).
+- Smoothing window length is `None`, which defaults to min(int(`block_length` \* 0.2), 100).
 - Outlier clamping is `disabled`. When enabled, the outliers (detected using 0.1, 0.9 quantiles) will be clamped to the quantile bounds.
-- Gaussian noise is disabled.
-- Plotting is enabled.
-- Draw lines between evaluation blocks is enabled.
-- Saving of results and log data is enabled.
-- Saving of configuration settings is enabled.
+- Gaussian noise is `disabled`.
+- Plotting is `enabled`.
+- Show raw data is `disabled` and is also currently unsupported.
+- Draw lines between evaluation blocks is `enabled`.
+- Saving of results and log data is `enabled`.
+- Saving of configuration settings is `enabled`.
 
 **Note**: Valid values for the performance measure input argument are determined by the `metrics_columns` dictionary in `logger_info.json`.
 
@@ -224,26 +225,84 @@ The default outputs of the above command are:
 - `multi_task_data.feather`: The log data DataFrame containing raw and pre-processed data.
 - `multi_task_config.json`: The configurations used to generate the metrics report.
 - `multi_task_metrics.json`: The lifetime and task-level metrics of the run.
-- `multi_task.png`: The sawtooth plot.
+- `multi_task.png`: The performance plot.
 - `multi_task_ste.png`: The performance relative to STE plot.
+
+### Log Data
+
+If saving is enabled, the framework will generate a [Feather file](https://arrow.apache.org/docs/python/feather.html) containing the raw and pre-processed log data from the scenario. This file can be easily read as a pandas.DataFrame in Python using the `read_feather()` function or as a Table using the `read_table()` function:
+
+```python
+import pandas as pd
+import pyarrow.feather as feather
+
+# Result is pandas.DataFrame
+read_df = pd.read_feather('/path/to/file')
+read_df = feather.read_feather('/path/to/file')
+
+# Result is pyarrow.Table
+read_arrow = feather.read_table('/path/to/file')
+```
+
+The `multi_task_data.feather` file contains the following columns:
+
+- `regime_num`: Regime number
+- `block_num`: Block number from scenario definition
+- `block_type`: Block type from scenario definition
+- `exp_num`: Experience number
+- `worker_id`: Worker ID
+- `task_name`: Task name
+- `task_params`: Task parameters
+- `exp_status`: Experience status (complete)
+- `timestamp`: Timestamp
+- `performance`: Application-specific measure of performance, processed and used for computing metrics
+- `performance_raw`: Raw application-specific measure of performance
+- `performance_normalized`: Normalized application-specific measure of performance
+- `performance_smoothed`: Smoothed and normalized application-specific measure of performance
+
+As alluded to above, the Metrics Framework stores all intermediate values of the performance measure during pre-processing, following the order of operations (clamp outliers -> normalize -> smooth). The original column (e.g., `performance`) is overwritten after each step in the data pre-processing and is used by the framework to compute metrics.
+
+### Configuration File
+
+If saving of L2Metrics configuration is enabled, the framework will generate a JSON file containing the primary parameters used to calculate L2Metrics:
+
+- `log_dir`
+- `perf_measure`
+- `ste_averaging_method`
+- `aggregation_method`
+- `maintenance_method`
+- `transfer_method`
+- `normalization_method`
+- `smoothing_method`
+- `window_length`
+- `clamp_outliers`
+- `data_range`
+
+### Metrics and Metrics File
+
+The metrics module will print the lifetime metrics to the console when it has successfully completed execution. The following table shows an example of a metrics report output:
+
+| perf_recovery | perf_maintenance_mrlep | forward_transfer_contrast | backward_transfer_contrast | ste_rel_perf | sample_efficiency |
+| ------------- | ---------------------- | ------------------------- | -------------------------- | ------------ | ----------------- |
+| 0.0           | -2.74                  | 1.00                      | -0.02                      | 1.11         | 0.71              |
+
+If saving is enabled, the framework will also generate a JSON file containing lifetime and task-level metrics for the scenario. Please refer to the [evaluation README](./evaluation/README.md#metrics-json-file) for more information on the format of this file.
+
+### Performance Plot
 
 The output figure of performance over episodes should look like this:
 
 ![diagram](examples/multi_task.png)
 
-The white areas represent blocks in which learning is occurring while the gray areas represent evaluation blocks. **Note**: The performance values shown in the evaluation blocks are an average over the whole block, resulting in a flat line for each task.
+The white areas represent blocks in which learning is occurring while the gray areas represent evaluation blocks. The dashed lines in the plot show the slopes between each task's evaluation blocks.
+
+**Note**: The performance values shown in the evaluation blocks are an average over the whole block, resulting in a flat line for each task.
+
+### Performance Relative to STE plot
 
 The framework should also produce a performance relative to STE plot shown below, where the task performance curves are generated by concatenating all the training data from the scenario:
 
 ![diagram](examples/multi_task_ste.png)
-
-Additionally, the script will print the metrics report to the console and save the values to a JSON file by default. The following table shows an example of a metrics report output:
-
-### Lifetime Metrics
-
-| perf_recovery | perf_maintenance_mrlep | forward_transfer_contrast | backward_transfer_contrast | ste_rel_perf | sample_efficiency |
-| ------------- | ---------------------- | ------------------------- | -------------------------- | ------------ | ----------------- |
-| 0.0           | -2.74                  | 1.00                      | -0.02                      | 1.11         | 0.71              |
 
 ### Custom Metrics
 

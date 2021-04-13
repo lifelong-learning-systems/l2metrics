@@ -380,7 +380,7 @@ def evaluate() -> None:
                         help='Agent configuration directory of STE data')
 
     # Method for handling multiple STE runs
-    parser.add_argument('--ste-averaging-method', default='time', choices=['time', 'metrics'],
+    parser.add_argument('-v', '--ste-averaging-method', default='time', choices=['time', 'metrics'],
                         help='Method for handling STE runs, time-series averaging (time) or'
                         'LL metric averaging (metric)')
 
@@ -397,7 +397,7 @@ def evaluate() -> None:
                         help='Method for computing performance maintenance')
 
     # Method for calculating forward and backward transfer
-    parser.add_argument('-t', '--transfer-method', default='ratio', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
     # Method for normalization
@@ -405,7 +405,7 @@ def evaluate() -> None:
                         help='Method for normalizing data')
 
     # Method for smoothing
-    parser.add_argument('-w', '--smoothing-method', default='flat', choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
+    parser.add_argument('-g', '--smoothing-method', default='flat', choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
                         help='Method for smoothing data')
 
     # Window length for smoothing
@@ -413,7 +413,7 @@ def evaluate() -> None:
                         help='Window length for smoothing data')
 
     # Flag for removing outliers
-    parser.add_argument('--clamp-outliers', action='store_true',
+    parser.add_argument('-x', '--clamp-outliers', action='store_true',
                         help='Remove outliers in data for metrics by clamping to quantiles')
 
     # Data range file for normalization
@@ -421,7 +421,7 @@ def evaluate() -> None:
                         help='JSON file containing task performance ranges for normalization')
 
     # Output directory
-    parser.add_argument('--output-dir', default='results', type=str,
+    parser.add_argument('-O', '--output-dir', default='results', type=str,
                         help='Directory for output files')
 
     # Output file location
@@ -437,37 +437,37 @@ def evaluate() -> None:
                         help='Show raw data points under smoothed data for plotting')
 
     # Flag for showing evaluation block lines
-    parser.add_argument('--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
+    parser.add_argument('-e', '--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
                         help='Show lines between evaluation blocks')
     parser.add_argument('--no-show-eval-lines', dest='show_eval_lines', action='store_false',
                         help='Do not show lines between evaluation blocks')
 
     # Flag for disabling STE save
-    parser.add_argument('--do-store-ste', dest='do_store_ste', default=True, action='store_true',
+    parser.add_argument('-T', '--do-store-ste', dest='do_store_ste', default=True, action='store_true',
                         help='Do not store STE data')
     parser.add_argument('--no-store-ste', dest='do_store_ste', action='store_false',
                         help='Do not store STE data')
 
     # Flag for enabling/disabling plotting
-    parser.add_argument('--do-plot', dest='do_plot', default=True, action='store_true',
+    parser.add_argument('-P', '--do-plot', dest='do_plot', default=True, action='store_true',
                         help='Plot performance')
     parser.add_argument('--no-plot', dest='do_plot', action='store_false',
                         help='Do not plot performance')
 
     # Flag for enabling plot save
-    parser.add_argument('--save-plots', dest='do_save_plots', default=True, action='store_true',
+    parser.add_argument('-L', '--save-plots', dest='do_save_plots', default=True, action='store_true',
                         help='Save scenario and STE plots')
     parser.add_argument('--no-save-plots', dest='do_save_plots', action='store_false',
                         help='Save scenario and STE plots')
 
     # Flag for enabling/disabling save
-    parser.add_argument('--do-save', dest='do_save', default=True, action='store_true',
+    parser.add_argument('-S', '--do-save', dest='do_save', default=True, action='store_true',
                         help='Save metrics outputs')
     parser.add_argument('--no-save', dest='do_save', action='store_false',
                         help='Do not save metrics outputs')
 
     # Configuration file settings
-    parser.add_argument('--do-save-config', dest='do_save_config', default=True, action='store_true',
+    parser.add_argument('-C', '--do-save-config', dest='do_save_config', default=True, action='store_true',
                         help='Save L2Metrics settings to JSON file')
     parser.add_argument('--no-save-config', dest='do_save_config', action='store_false',
                         help='Do not save L2Metrics settings to JSON file')

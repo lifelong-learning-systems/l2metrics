@@ -152,8 +152,8 @@ optional arguments:
                         Method for smoothing data, window type
   -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
                         Window length for smoothing data
-  -x, --remove-outliers
-                        Remove outliers in data for metrics
+  -x, --clamp-outliers
+                        Remove outliers in data for metrics by clamping to quantiles
   -d DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
                         JSON file containing task performance ranges for
                         normalization
@@ -186,7 +186,7 @@ By default, the L2Metrics package will calculate metrics with the following opti
 - Normalization method is `task`, which computes the per-task data ranges by looking at LL and STE log data, then normalizing to [0, 100].
 - Smoothing method is `flat`, which is smooths data with a rectangular sliding window.
 - Smoothing window length is `None`, which defaults to min(int(`block_length` * 0.2), 100).
-- Outlier removal is disabled. When enabled, the outliers (detected using 0.1, 0.9 quantiles) will be clamped to the quantile bounds.
+- Outlier clamping is `disabled`. When enabled, the outliers (detected using 0.1, 0.9 quantiles) will be clamped to the quantile bounds.
 - Gaussian noise is disabled.
 - Plotting is enabled.
 - Draw lines between evaluation blocks is enabled.

@@ -99,8 +99,8 @@ def run() -> None:
                         help='Method for smoothing data')
 
     # Flag for removing outliers
-    parser.add_argument('--remove-outliers', action='store_true',
-                        help='Remove outliers in data for metrics')
+    parser.add_argument('--clamp-outliers', action='store_true',
+                        help='Remove outliers in data for metrics by clamping to quantiles')
 
     # Data range file for normalization
     parser.add_argument('-d', '--data-range-file', default=None, type=str,

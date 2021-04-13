@@ -95,10 +95,10 @@ class MetricsReport():
         else:
             self.window_length = None
 
-        if 'remove_outliers' in kwargs:
-            self.remove_outliers = kwargs['remove_outliers']
+        if 'clamp_outliers' in kwargs:
+            self.clamp_outliers = kwargs['clamp_outliers']
         else:
-            self.remove_outliers = False
+            self.clamp_outliers = False
 
         if 'data_range' in kwargs:
             self.data_range = kwargs['data_range']
@@ -163,7 +163,7 @@ class MetricsReport():
         self.load_ste_data()
 
         # Remove outliers
-        if self.remove_outliers:
+        if self.clamp_outliers:
             self.filter_outliers(quantiles=(0.1, 0.9))
 
         # Normalize LL and STE data
@@ -506,7 +506,7 @@ class MetricsReport():
         config_json['normalization_method'] = self.normalization_method
         config_json['smoothing_method'] = self.smoothing_method
         config_json['window_length'] = self.window_length
-        config_json['remove_outliers'] = self.remove_outliers
+        config_json['clamp_outliers'] = self.clamp_outliers
         config_json['data_range'] = self.normalizer.data_range if self.normalizer else None
 
         with open(filename + '_config.json', 'w') as output_config:

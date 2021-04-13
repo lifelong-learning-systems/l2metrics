@@ -47,23 +47,23 @@ def run() -> None:
                         help='Name of column to use for metrics calculations')
 
     # Method for aggregating within-lifetime metrics
-    parser.add_argument('-a', '--aggregation-method', default='median', choices=['mean', 'median'],
+    parser.add_argument('-a', '--aggregation-method', default='median', type=str, choices=['mean', 'median'],
                         help='Method for aggregating within-lifetime metrics')
 
     # Method for calculating performance maintenance
-    parser.add_argument('-m', '--maintenance-method', default='mrlep', choices=['mrtlp', 'mrlep', 'both'],
+    parser.add_argument('-m', '--maintenance-method', default='mrlep', type=str, choices=['mrtlp', 'mrlep', 'both'],
                         help='Method for computing performance maintenance')
 
     # Method for calculating forward and backward transfer
-    parser.add_argument('-t', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='contrast', type=str, choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
     # Method for normalization
-    parser.add_argument('-n', '--normalization-method', default='task', choices=['none', 'task', 'run'],
+    parser.add_argument('-n', '--normalization-method', default='task', type=str, choices=['none', 'task', 'run'],
                         help='Method for normalizing data')
 
     # Method for smoothing
-    parser.add_argument('-g', '--smoothing-method', default='flat', choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
+    parser.add_argument('-g', '--smoothing-method', default='flat', type=str, choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
                         help='Method for smoothing data, window type')
 
     # Window length for smoothing
@@ -71,8 +71,8 @@ def run() -> None:
                         help='Window length for smoothing data')
 
     # Flag for removing outliers
-    parser.add_argument('-x', '--remove-outliers', action='store_true',
-                        help='Remove outliers in data for metrics')
+    parser.add_argument('-x', '--clamp-outliers', action='store_true',
+                        help='Remove outliers in data for metrics by clamping to quantiles')
 
     # Data range file for normalization
     parser.add_argument('-d', '--data-range-file', default=None, type=str,

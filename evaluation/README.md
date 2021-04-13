@@ -16,7 +16,7 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 usage: python -m evaluation.evaluate [-h] -l EVAL_DIR [-s STE_DIR] [-p PERF_MEASURE]
                    [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
                    [-n {task,run}] [--output-dir OUTPUT_DIR] [-o OUTPUT] [-u]
-                   [--no-smoothing] [-r] [--normalize] [--remove-outliers]
+                   [--no-smoothing] [-r] [--normalize] [--clamp-outliers]
                    [--no-save-ste] [--no-plot] [--save-plots] [--no-save]
 
 Run L2M evaluation from the command line
@@ -43,7 +43,7 @@ optional arguments:
   --no-smoothing        Do not smooth performance data for metrics
   -r, --show-raw-data   Show raw data points under smoothed data for plotting
   --normalize           Normalize performance data for metrics
-  --remove-outliers     Remove outliers in data for metrics
+  --clamp-outliers      Remove outliers in data for metrics by clamping to quantiles
   --no-save-ste         Do not store STE data
   --no-plot             Do not plot metrics report
   --save-plots          Save scenario and STE plots

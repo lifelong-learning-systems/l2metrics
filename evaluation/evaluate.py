@@ -184,7 +184,7 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
             Defaults to False.
         show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
             changing slope of evaluation performance. Defaults to True.
-        remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
+        clamp_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
         do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
         do_save_config (bool, optional): Flag for saving L2Metrics settings to JSON file. Defaults to
@@ -287,7 +287,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
             Defaults to False.
         show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
             changing slope of evaluation performance. Defaults to True.
-        remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
+        clamp_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
         do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
         do_store_ste (bool, optional): Flag for enabling save of STE data. Defaults to True.
@@ -413,8 +413,8 @@ def evaluate() -> None:
                         help='Window length for smoothing data')
 
     # Flag for removing outliers
-    parser.add_argument('--remove-outliers', action='store_true',
-                        help='Remove outliers in data for metrics')
+    parser.add_argument('--clamp-outliers', action='store_true',
+                        help='Remove outliers in data for metrics by clamping to quantiles')
 
     # Data range file for normalization
     parser.add_argument('-d', '--data-range-file', default=None, type=str,

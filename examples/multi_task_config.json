@@ -8,7 +8,7 @@
   "normalization_method": "task",
   "smoothing_method": "flat",
   "window_length": null,
-  "remove_outliers": false,
+  "clamp_outliers": false,
   "data_range": {
     "task1": {
       "min": 2.5,

@@ -41,8 +41,8 @@ optional arguments:
                         Method for smoothing data, window type
   -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
                         Window length for smoothing data
-  -x, --remove-outliers
-                        Remove outliers in data for metrics
+  -x, --clamp-outliers
+                        Remove outliers in data for metrics by clamping to quantiles
   -d DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
                         JSON file containing task performance ranges for
                         normalization

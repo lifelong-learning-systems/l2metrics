@@ -5,7 +5,7 @@ This directory contains a Python script with an example for creating custom metr
 - `calc_metrics.py`:
 
 ```
-usage: calc_metrics.py [-h] [-l LOG_DIR] [-s {w,a}] [-v {time,metrics}]
+usage: calc_metrics.py [-h] [-l LOG_DIR] [-R] [-s {w,a}] [-v {time,metrics}]
                    [-p PERF_MEASURE] [-a {median,mean}]
                    [-m {mrlep,mrtlp,both}] [-t {contrast,ratio,both}]
                    [-n {task,run,none}]
@@ -21,6 +21,8 @@ optional arguments:
   -h, --help            show this help message and exit
   -l LOG_DIR, --log-dir LOG_DIR
                         Log directory of scenario
+  -R, --recursive       Recursively compute metrics on logs found in specified
+                        directory
   -s {w,a}, --ste-store-mode {w,a}
                         Mode for storing log data as STE, overwrite (w) or
                         append (a)

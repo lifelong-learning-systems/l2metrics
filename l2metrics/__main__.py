@@ -21,8 +21,10 @@ import json
 import traceback
 from pathlib import Path
 
+import pandas as pd
 from l2metrics import util
 from l2metrics.report import MetricsReport
+from tqdm import tqdm
 
 
 def run() -> None:
@@ -32,6 +34,10 @@ def run() -> None:
     # Log directories can be absolute paths, relative paths, or paths found in $L2DATA/logs
     parser.add_argument('-l', '--log-dir', default=None, type=str,
                         help='Log directory of scenario')
+
+    # Flag for recursively calculating metrics on valid subdirectories within log directory 
+    parser.add_argument('-R', '--recursive', action='store_true',
+                        help='Recursively compute metrics on logs found in specified directory')
 
     # Mode for storing log data as STE data
     parser.add_argument('-s', '--ste-store-mode', default=None, choices=['w', 'a'],
@@ -137,33 +143,59 @@ def run() -> None:
 
         kwargs['data_range'] = data_range
 
-        # Initialize metrics report
-        report = MetricsReport(**kwargs)
+        if args.recursive:
+            ll_metrics_df = pd.DataFrame()
+            ll_metrics_dicts = []
 
-        # Add noise to log data if mean or standard deviation is specified
-        if args.noise[0] or args.noise[1]:
-            report.add_noise(mean=args.noise[0], std=args.noise[1])
+            # Compute and store the LL metrics for all runs found in the directory
+            for path in tqdm(list(Path(args.log_dir).rglob("*")), desc=Path(args.log_dir).name):
+                if path.is_dir():
+                    # Check if current path is log directory for single run
+                    if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
+                        kwargs['log_dir'] = path
+                        report = MetricsReport(**kwargs)
+                        report.calculate()
+                        metrics_df = report.ll_metrics_df
+                        metrics_dict = report.ll_metrics_dict
+                        ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
+                        ll_metrics_dicts.append(metrics_dict)
 
-        # Calculate metrics in order of their addition to the metrics list.
-        report.calculate()
+            # Save data
+            if args.do_save:
+                filename = args.output if args.output else 'll_metrics'
 
-        # Print table of metrics
-        report.report()
+                with open(filename + '.tsv', 'w', newline='\n') as metrics_file:
+                    ll_metrics_df.set_index(['run_id']).to_csv(metrics_file, sep='\t')
+                with open(filename + '.json', 'w', newline='\n') as metrics_file:
+                    json.dump(ll_metrics_dicts, metrics_file)
+        else:
+            # Initialize metrics report
+            report = MetricsReport(**kwargs)
 
-        # Save metrics to file
-        if args.do_save:
-            report.save_metrics(filename=args.output)
-            report.save_data(filename=args.output)
+            # Add noise to log data if mean or standard deviation is specified
+            if args.noise[0] or args.noise[1]:
+                report.add_noise(mean=args.noise[0], std=args.noise[1])
 
-        # Plot metrics
-        if args.do_plot:
-            report.plot(save=args.do_save, show_raw_data=args.show_raw_data,
-                        show_eval_lines=args.show_eval_lines)
-            report.plot_ste_data(save=args.do_save)
+            # Calculate metrics in order of their addition to the metrics list.
+            report.calculate()
 
-        # Save settings used to run calculate metrics
-        if args.do_save_settings:
-            report.save_settings(filename=args.output)
+            # Print table of metrics
+            report.report()
+
+            # Save metrics to file
+            if args.do_save:
+                report.save_metrics(filename=args.output)
+                report.save_data(filename=args.output)
+
+            # Plot metrics
+            if args.do_plot:
+                report.plot(save=args.do_save, show_raw_data=args.show_raw_data,
+                            show_eval_lines=args.show_eval_lines)
+                report.plot_ste_data(save=args.do_save)
+
+            # Save settings used to run calculate metrics
+            if args.do_save_settings:
+                report.save_settings(filename=args.output)
 
 
 if __name__ == '__main__':

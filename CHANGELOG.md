@@ -22,6 +22,8 @@ All notable changes to this repository are documented here. We are using [Semant
 - Modified command-line arguments for normalization and smoothing methods
 - Implemented option to show lines between evaluation blocks
 - Implemented command-line argument for smoothing window length
+- Updated example logs
+- Implemented recursive flag in l2metrics package
 
 ## 2.6.0 - 2021-03-01
 

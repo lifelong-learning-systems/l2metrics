@@ -117,7 +117,7 @@ Once these logs are generated, you'll need to store Single-Task Expert (STE) dat
 This section describes how to run L2Metrics from the command line.
 
 ```
-usage: python -m l2metrics [-h] [-l LOG_DIR] [-s {w,a}] [-v {time,metrics}]
+usage: python -m l2metrics [-h] [-l LOG_DIR] [-R] [-s {w,a}] [-v {time,metrics}]
                    [-p PERF_MEASURE] [-a {median,mean}]
                    [-m {mrlep,mrtlp,both}] [-t {contrast,ratio,both}]
                    [-n {task,run,none}]
@@ -133,6 +133,8 @@ optional arguments:
   -h, --help            show this help message and exit
   -l LOG_DIR, --log-dir LOG_DIR
                         Log directory of scenario
+  -R, --recursive       Recursively compute metrics on logs found in specified
+                        directory
   -s {w,a}, --ste-store-mode {w,a}
                         Mode for storing log data as STE, overwrite (w) or
                         append (a)
@@ -233,6 +235,12 @@ If you wish to generate a metrics report with modified settings (e.g., disabling
 
 ```bash
 python -m l2metrics -c settings.json
+```
+
+Lastly, if you wish to compute metrics on multiple lifetimes at once, assert the recursive flag on the command line. When the recursive flag is set, L2Metrics will scan the subdirectories for valid LL logs, calculate metrics, then save out a TSV and JSON file containing lifetime/task-level metrics for each discovered lifetime.
+
+```bash
+python -m l2metrics -l <path/to/directory/containing/multiple/runs> -R
 ```
 
 **Note**: If you do not wish to provide a fully qualified path to your log directory, you may copy it to your `$L2DATA/logs` directory. This is the default location for logs generated using the TEF.

@@ -31,7 +31,7 @@ import os
 import traceback
 import warnings
 from pathlib import Path
-from typing import Tuple
+from typing import List, Tuple
 from zipfile import ZipFile
 
 import matplotlib
@@ -133,12 +133,12 @@ def unzip_logs(eval_dir: Path) -> None:
     Args:
         eval_dir (Path): Path to directory containing log archives.
     """
-    for root, dirs, files in os.walk(eval_dir):
+    for root, _, files in os.walk(eval_dir):
         for filename in fnmatch.filter(files, '*.zip'):
             print(f'Unzipping file: {filename}')
             ZipFile(os.path.join(root, filename)).extractall(root)
 
-def save_ste_data(log_dir: Path) -> None:
+def store_ste_data(log_dir: Path) -> None:
     """Save all single-task expert data in provided log directory.
 
     Args:
@@ -157,7 +157,8 @@ def save_ste_data(log_dir: Path) -> None:
         print('Storing STE data...')
         for ste_dir in ste_log_dir.iterdir():
             if ste_dir.is_dir():
-                util.save_ste_data(str(ste_dir))
+                # Store STE data in append mode
+                util.store_ste_data(log_dir=ste_dir, mode='a')
         print('Done storing STE data!\n')
     else:
         # STE log path not found - possibly because compressed archive has not been
@@ -165,11 +166,7 @@ def save_ste_data(log_dir: Path) -> None:
         raise FileNotFoundError(f"STE logs not found in expected location!")
 
 
-def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_method: str,
-                             transfer_method: str = 'both', normalization_method: str = 'task',
-                             output_dir: str = '', do_smoothing: bool = True, show_raw_data: bool = False,
-                             do_normalize: bool = False, remove_outliers: bool = False,
-                             do_plot: bool = False, save_plots: bool = False) -> Tuple[pd.DataFrame, dict]:
+def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
     """Compute lifelong learning metrics for single LL logs found at input path.
 
     Args:
@@ -180,32 +177,38 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
         transfer_method (str, optional): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both'. Defaults to 'both'.
         normalization_method (str, optional): Method for normalizing data.
-            Valid values are 'task' and 'run'. Defaults to 'task'.
+            Valid values are 'none', 'task', and 'run'. Defaults to 'task'.
+
         output_dir (str, optional): Output directory of results. Defaults to ''.
-        do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
-            Defaults to True.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
             Defaults to False.
-        do_normalize (bool, optional): Flag for enabling normalization on performance data.
-            Defaults to False.
-        remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
+        show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
+            changing slope of evaluation performance. Defaults to True.
+        clamp_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
-        save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
+        do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
+        do_save_settings (bool, optional): Flag for saving L2Metrics settings to JSON file. Defaults to
+            False.
 
     Returns:
         Tuple[pd.DataFrame, dict]: DataFrame containing lifelong metrics from scenarios.
     """
 
+    log_dir = kwargs.get('log_dir', Path(''))
+    do_plot = kwargs.get('do_plot', False)
+    output_dir = kwargs.get('output_dir', '')
+    do_save_plots = kwargs.get('do_save_plots', False)
+    show_raw_data = kwargs.get('show_raw_data', False)
+    show_eval_lines = kwargs.get('show_eval_lines', True)
+    do_save_settings = kwargs.get('do_save_settings', False)
+
     # Initialize metrics report
-    report = MetricsReport(
-        log_dir=str(log_dir), perf_measure=perf_measure, maintenance_method=maintenance_method,
-        transfer_method=transfer_method, normalization_method=normalization_method,
-        do_smoothing=do_smoothing, do_normalize=do_normalize, remove_outliers=remove_outliers)
+    report = MetricsReport(**kwargs)
 
     # Calculate metrics
     report.calculate()
-    ll_metrics_df = report.lifetime_metrics_df.copy()
-    ll_metrics_dict = {}
+    ll_metrics_df = report.ll_metrics_df
+    ll_metrics_dict = report.ll_metrics_dict
 
     # Append SG name to dataframe
     # TODO: Figure out solution that isn't as hard-coded
@@ -216,68 +219,25 @@ def compute_scenario_metrics(log_dir: Path, perf_measure: str, maintenance_metho
     ll_metrics_df['agent_config'] = log_dir.parts[-4]
     ll_metrics_dict['agent_config'] = log_dir.parts[-4]
 
-    # Append scenario name to dataframe
-    ll_metrics_df['run_id'] = log_dir.name
-    ll_metrics_dict['run_id'] = log_dir.name
-
-    # Append scenario complexity and difficulty
-    with open(log_dir / 'scenario_info.json', 'r') as json_file:
-        scenario_info = json.load(json_file)
-        if 'complexity' in scenario_info:
-            ll_metrics_df['complexity'] = scenario_info['complexity']
-            ll_metrics_dict['complexity'] = scenario_info['complexity']
-        if 'difficulty' in scenario_info:
-            ll_metrics_df['difficulty'] = scenario_info['difficulty']
-            ll_metrics_dict['difficulty'] = scenario_info['difficulty']
-
-    # Append application-specific metric to dataframe
-    ll_metrics_df['metrics_column'] = perf_measure
-    ll_metrics_dict['metrics_column'] = perf_measure
-
-    # Append performance data stats
-    log_summary = report.log_summary()
-    ll_metrics_df['min'] = np.nanmin(report._log_data[perf_measure])
-    ll_metrics_df['max'] = np.nanmax(report._log_data[perf_measure])
-    ll_metrics_df['num_lx'] = log_summary['LX'].sum()
-    ll_metrics_df['num_ex'] = log_summary['EX'].sum()
-
-    ll_metrics_dict['min'] = np.nanmin(report._log_data[perf_measure])
-    ll_metrics_dict['max'] = np.nanmax(report._log_data[perf_measure])
-    ll_metrics_dict['num_lx'] = int(log_summary['LX'].sum())
-    ll_metrics_dict['num_ex'] = int(log_summary['EX'].sum())
-
-    # Append lifetime and task metrics to dictionary
-    ll_metrics_dict.update(report.lifetime_metrics_df.loc[0].T.to_dict())
-    ll_metrics_dict['task_metrics'] = report.task_metrics_df.T.to_dict()
-
-    for task in report._unique_tasks:
-        ll_metrics_dict['task_metrics'][task]['min'] = np.nanmin(
-            report._log_data[report._log_data['task_name'] == task][perf_measure])
-        ll_metrics_dict['task_metrics'][task]['max'] = np.nanmax(
-            report._log_data[report._log_data['task_name'] == task][perf_measure])
-        ll_metrics_dict['task_metrics'][task]['num_lx'] = int(
-            log_summary.loc[task, 'LX'])
-        ll_metrics_dict['task_metrics'][task]['num_ex'] = int(
-            log_summary.loc[task, 'EX'])
-
     if do_plot:
-        report.plot(save=save_plots, show_raw_data=show_raw_data, output_dir=output_dir)
-        report.plot_ste_data(save=save_plots, output_dir=output_dir)
+        report.save_data(filename=str(Path(output_dir) / log_dir.name))
+        report.plot(save=do_save_plots, show_raw_data=show_raw_data, show_eval_lines=show_eval_lines,
+                    output_dir=output_dir)
+        report.plot_ste_data(save=do_save_plots, output_dir=output_dir)
         plt.close('all')
+    
+    if do_save_settings:
+        report.save_settings(filename=str(Path(output_dir) / log_dir.name))
 
     return ll_metrics_df, ll_metrics_dict
 
 
-def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maintenance_method: str,
-                         transfer_method: str, normalization_method: str = 'task',
-                         output_dir: str = '', do_smoothing: bool = True, show_raw_data: bool = False,
-                         do_normalize: bool = False, remove_outliers: bool = False,
-                         do_plot: bool = False, save_plots: bool = False, do_save_ste: bool = True) -> pd.DataFrame:
+def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
     """Compute lifelong learning metrics for all LL logs in provided evaluation log directory.
 
     This function iterates through all the lifelong learning logs it finds in the provided
     directory, computes the LL metrics for those logs, then sorts the metrics by scenario
-    complexity and difficulty. Scenarios with missing complexity or difficulty information
+    type, complexity, and difficulty. Scenarios with missing scenario information
     might be ignored in the evaluation.
 
     Args:
@@ -290,18 +250,20 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
         transfer_method (str): Method for computing forward and backward transfer.
             Valid values are 'contrast', 'ratio', and 'both.'
         normalization_method (str, optional): Method for normalizing data.
-            Valid values are 'task' and 'run'. Defaults to 'task'.
+            Valid values are 'none', 'task', and 'run'. Defaults to 'task'.
+        smoothing_method (str, optional): Method for smoothing data.
+            Valid values are 'none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'.
+            Defaults to 'flat'.
+        window_length (int, optional): Window length for smoothing data. Defaults to 'None'.
         output_dir (str, optional): Output directory of results. Defaults to ''.
-        do_smoothing (bool, optional): Flag for enabling smoothing on performance data for metrics.
-            Defaults to True.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
             Defaults to False.
-        do_normalize (bool, optional): Flag for enabling normalization on performance data.
-            Defaults to False.
-        remove_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
+        show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
+            changing slope of evaluation performance. Defaults to True.
+        clamp_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
-        save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
-        do_save_ste (bool, optional): Flag for enabling save of STE data. Defaults to True.
+        do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
+        do_store_ste (bool, optional): Flag for enabling save of STE data. Defaults to True.
 
     Raises:
         FileNotFoundError: If log directory structure does not follow the expected
@@ -309,8 +271,12 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
 
     Returns:
         pd.DataFrame: DataFrame containing lifelong metrics from all parsed scenarios, sorted by
-            scenario complexity and difficulty.
+            scenario type, complexity, and difficulty.
     """
+
+    eval_dir = kwargs.get('eval_dir', Path(''))
+    ste_dir = kwargs.get('ste_dir', '')
+    do_store_ste = kwargs.get('do_store_ste', False)
     
     # Initialize LL metric dataframe
     ll_metrics_df = pd.DataFrame()
@@ -319,9 +285,9 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
     # Iterate through agent configuration directories
     for agent_config in tqdm(list(eval_dir.glob('agent_config*')), desc='Agents'):
         # Save STE data if enabled
-        if do_save_ste:
+        if do_store_ste:
             if ste_dir in ['', agent_config.name]:
-                save_ste_data(eval_dir / agent_config.name)
+                store_ste_data(eval_dir / agent_config.name)
 
         # Check for LL logs
         ll_log_dir = agent_config / 'll_logs'
@@ -334,73 +300,24 @@ def compute_eval_metrics(eval_dir: Path,  ste_dir: str, perf_measure: str, maint
                 if path.is_dir():
                     # Check if current path is log directory for single run
                     if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
-                        metrics_df, metrics_dict = compute_scenario_metrics(
-                            log_dir=path, perf_measure=perf_measure, maintenance_method=maintenance_method,
-                            transfer_method=transfer_method, normalization_method=normalization_method,
-                            output_dir=output_dir, do_smoothing=do_smoothing, show_raw_data=show_raw_data,
-                            do_normalize=do_normalize, remove_outliers=remove_outliers, do_plot=do_plot,
-                            save_plots=save_plots)
+                        metrics_df, metrics_dict = compute_scenario_metrics(log_dir=path, **kwargs)
                         ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                         ll_metrics_dicts.append(metrics_dict)
                     else:
                         # Iterate through subdirectories containing LL logs
                         for sub_path in tqdm(list(path.iterdir()), desc=path.name):
                             if sub_path.is_dir():
-                                metrics_df, metrics_dict = compute_scenario_metrics(
-                                    log_dir=sub_path, perf_measure=perf_measure,
-                                    maintenance_method=maintenance_method,
-                                    transfer_method=transfer_method,
-                                    normalization_method=normalization_method, output_dir=output_dir,
-                                    do_smoothing=do_smoothing, show_raw_data=show_raw_data,
-                                    do_normalize=do_normalize, remove_outliers=remove_outliers,
-                                    do_plot=do_plot, save_plots=save_plots)
+                                metrics_df, metrics_dict = compute_scenario_metrics(log_dir=sub_path, **kwargs)
                                 ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                                 ll_metrics_dicts.append(metrics_dict)
         else:
             raise FileNotFoundError(f"LL logs not found in expected location!")
 
-        # Sort data by complexity and difficulty
-        ll_metrics_df = ll_metrics_df.sort_values(by=['complexity', 'difficulty'])
+        # Sort data by scenario type, complexity, difficulty
+        if not ll_metrics_df.empty:
+            ll_metrics_df = ll_metrics_df.sort_values(by=['scenario_type', 'complexity', 'difficulty'])
 
     return ll_metrics_df, ll_metrics_dicts
-
-
-def plot_summary(ll_metrics_df: pd.DataFrame) -> None:
-    """Plot the aggregated lifelong metrics DataFrame as a violin plot.
-
-    The plot should show trends for each of the lifelong metrics based on scenario complexity and
-    difficulty.
-
-    Args:
-        ll_metrics_df (pd.DataFrame): DataFrame containing lifelong metrics from all parsed
-            scenarios, sorted by scenario complexity and difficulty.
-    """
-
-    fig = plt.figure(figsize=(12, 8))
-
-    ll_metrics = ['perf_recovery', 'perf_maintenance_mrtlp', 'perf_maintenance_mrlep',
-                  'forward_transfer_contrast', 'backward_transfer_contrast', 'forward_transfer_ratio',
-                  'backward_transfer_ratio', 'ste_rel_perf', 'sample_efficiency']
-
-    for index, metric in enumerate(ll_metrics, start=1):
-        try:
-            if metric in ll_metrics_df.columns:
-                # Create subplot for current metric
-                ax = fig.add_subplot(3, 3, index)
-
-                # Create grouped violin plot
-                sns.violinplot(x='complexity', y=metric, hue='difficulty',
-                               data=ll_metrics_df, palette='muted')
-
-                # Resize legend font
-                plt.setp(ax.get_legend().get_title(), fontsize='8')
-                plt.setp(ax.get_legend().get_texts(), fontsize='6')
-        except Exception as e:
-            print(e)
-            continue
-
-    fig.subplots_adjust(wspace=0.35, hspace=0.35)
-    plt.show()
 
 
 def evaluate() -> None:
@@ -417,31 +334,56 @@ def evaluate() -> None:
         description='Run L2M evaluation from the command line')
 
     # Evaluation directory be absolute or relative paths
-    parser.add_argument('-l', '--eval-dir', required=True, type=str,
+    parser.add_argument('-l', '--eval-dir', default='', type=str,
                         help='Evaluation directory containing logs')
 
     # Evaluation directory be absolute or relative paths
     parser.add_argument('-s', '--ste-dir', default='', type=str,
                         help='Agent configuration directory of STE data')
 
+    # Method for handling multiple STE runs
+    parser.add_argument('-v', '--ste-averaging-method', default='time', choices=['time', 'metrics'],
+                        help='Method for handling STE runs, time-series averaging (time) or'
+                        'LL metric averaging (metric)')
+
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf-measure', default='performance', type=str,
                         help='Name of column to use for metrics calculations')
+
+    # Method for aggregating within-lifetime metrics
+    parser.add_argument('-a', '--aggregation-method', default='median', choices=['mean', 'median'],
+                        help='Method for aggregating within-lifetime metrics')
 
     # Method for calculating performance maintenance
     parser.add_argument('-m', '--maintenance-method', default='mrlep', choices=['mrtlp', 'mrlep', 'both'],
                         help='Method for computing performance maintenance')
 
     # Method for calculating forward and backward transfer
-    parser.add_argument('-t', '--transfer-method', default='ratio', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
     # Method for normalization
     parser.add_argument('-n', '--normalization-method', default='task', choices=['task', 'run'],
                         help='Method for normalizing data')
 
+    # Method for smoothing
+    parser.add_argument('-g', '--smoothing-method', default='flat', choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
+                        help='Method for smoothing data')
+
+    # Window length for smoothing
+    parser.add_argument('-w', '--window-length', default=None, type=int,
+                        help='Window length for smoothing data')
+
+    # Flag for removing outliers
+    parser.add_argument('-x', '--clamp-outliers', action='store_true',
+                        help='Remove outliers in data for metrics by clamping to quantiles')
+
+    # Data range file for normalization
+    parser.add_argument('-d', '--data-range-file', default=None, type=str,
+                        help='JSON file containing task performance ranges for normalization')
+
     # Output directory
-    parser.add_argument('--output-dir', default='results', type=str,
+    parser.add_argument('-O', '--output-dir', default='results', type=str,
                         help='Directory for output files')
 
     # Output file location
@@ -449,96 +391,85 @@ def evaluate() -> None:
                         help='Output filename for results')
 
     # Flag for enabling unzipping of logs
-    parser.add_argument('-u', '--unzip', action='store_true',
+    parser.add_argument('-u', '--do-unzip', action='store_true',
                         help='Unzip all data found in evaluation directory')
-
-    # Flag for disabling smoothing
-    parser.add_argument('--no-smoothing', action='store_true',
-                        help='Do not smooth performance data for metrics')
 
     # Flag for showing raw performance data under smoothed data
     parser.add_argument('-r', '--show-raw-data', action='store_true',
                         help='Show raw data points under smoothed data for plotting')
 
-    # Flag for enabling normalization
-    parser.add_argument('--normalize', action='store_true',
-                        help='Normalize performance data for metrics')
-
-    # Flag for removing outliers
-    parser.add_argument('--remove-outliers', action='store_true',
-                        help='Remove outliers in data for metrics')
+    # Flag for showing evaluation block lines
+    parser.add_argument('-e', '--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
+                        help='Show lines between evaluation blocks')
+    parser.add_argument('--no-show-eval-lines', dest='show_eval_lines', action='store_false',
+                        help='Do not show lines between evaluation blocks')
 
     # Flag for disabling STE save
-    parser.add_argument('--no-save-ste', action='store_true',
+    parser.add_argument('-T', '--do-store-ste', dest='do_store_ste', default=True, action='store_true',
+                        help='Do not store STE data')
+    parser.add_argument('--no-store-ste', dest='do_store_ste', action='store_false',
                         help='Do not store STE data')
 
-    # Flag for disabling plotting
-    parser.add_argument('--no-plot', action='store_true',
-                        help='Do not plot metrics report')
+    # Flag for enabling/disabling plotting
+    parser.add_argument('-P', '--do-plot', dest='do_plot', default=True, action='store_true',
+                        help='Plot performance')
+    parser.add_argument('--no-plot', dest='do_plot', action='store_false',
+                        help='Do not plot performance')
 
     # Flag for enabling plot save
-    parser.add_argument('--save-plots', action='store_true',
+    parser.add_argument('-L', '--do-save-plots', dest='do_save_plots', default=True, action='store_true',
+                        help='Save scenario and STE plots')
+    parser.add_argument('--no-save-plots', dest='do_save_plots', action='store_false',
                         help='Save scenario and STE plots')
 
-    # Flag for disabling save
-    parser.add_argument('--no-save', action='store_true',
+    # Flag for enabling/disabling save
+    parser.add_argument('-S', '--do-save', dest='do_save', default=True, action='store_true',
+                        help='Save metrics outputs')
+    parser.add_argument('--no-save', dest='do_save', action='store_false',
                         help='Do not save metrics outputs')
+
+    # Settings file arguments
+    parser.add_argument('-c', '--load-settings', default='', type=str,
+                        help='Load evaluation settings from JSON file')
+    parser.add_argument('-C', '--do-save-settings', dest='do_save_settings', default=True, action='store_true',
+                        help='Save L2Metrics settings to JSON file')
+    parser.add_argument('--no-save-settings', dest='do_save_settings', action='store_false',
+                        help='Do not save L2Metrics settings to JSON file')
 
     # Parse arguments
     args = parser.parse_args()
-    eval_dir = Path(args.eval_dir)
-    output_dir = Path(args.output_dir)
-    output = args.output
-    do_smoothing = not args.no_smoothing
-    do_plot = not args.no_plot
-    do_save = not args.no_save
-    do_save_ste = not args.no_save_ste
+    kwargs = vars(args)
+
+    if args.load_settings:
+        with open(args.load_settings, 'r') as settings_file:
+            kwargs.update(json.load(settings_file))
+
+    kwargs['eval_dir'] = Path(args.eval_dir)
+    kwargs['output_dir'] = Path(args.output_dir)
 
     # Create output directory if it doesn't exist
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Load computational cost data
-    comp_cost_df = load_computational_costs(eval_dir)
-
-    # Load performance threshold data
-    perf_thresh_df = load_performance_thresholds(eval_dir)
-
-    # Load task similarity data
-    task_similarity_df = load_task_similarities(eval_dir)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
 
     # Unzip logs
-    if args.unzip:
-        unzip_logs(eval_dir)
+    if args.do_unzip:
+        unzip_logs(args.eval_dir)
 
     # Compute LL metric data
     matplotlib.use('Agg')
-    ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(eval_dir=eval_dir, ste_dir=args.ste_dir,
-                                                           output_dir=output_dir,
-                                                           perf_measure=args.perf_measure,
-                                                           maintenance_method=args.maintenance_method,
-                                                           transfer_method=args.transfer_method,
-                                                           normalization_method=args.normalization_method,
-                                                           do_smoothing=do_smoothing, show_raw_data=args.show_raw_data,
-                                                           do_normalize=args.normalize,
-                                                           remove_outliers=args.remove_outliers, do_plot=do_plot,
-                                                           save_plots=args.save_plots, do_save_ste=do_save_ste)
+    ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(**kwargs)
 
     # Display aggregated data
-    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['mean', 'std']))
-    display(ll_metrics_df.groupby(by=['complexity', 'difficulty']).agg(['median', scipy.stats.iqr]))
-
-    # Plot aggregated data
-    if do_plot:
-        matplotlib.use('TkAgg')
-        plot_summary(ll_metrics_df)
+    display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['mean', 'std']))
+    display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['median', scipy.stats.iqr]))
 
     # Save data
-    if do_save:
-        with open(output_dir.parent / (output + '.tsv'), 'w', newline='\n') as metrics_file:
+    if args.do_save:
+        with open(args.output_dir / (args.output + '.tsv'), 'w', newline='\n') as metrics_file:
             ll_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
                 ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
-        with open(output_dir.parent / (output + '.json'), 'w', newline='\n') as metrics_file:
+        with open(args.output_dir / (args.output + '.json'), 'w', newline='\n') as metrics_file:
             json.dump(ll_metrics_dicts, metrics_file)
+
 
 if __name__ == '__main__':
     try:

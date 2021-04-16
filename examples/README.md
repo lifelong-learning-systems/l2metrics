@@ -5,42 +5,67 @@ This directory contains a Python script with an example for creating custom metr
 - `calc_metrics.py`:
 
 ```
-usage: calc_metrics.py [-h] -l LOG_DIR [-s] [-p PERF_MEASURE]
-                   [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
-                   [-n {task,run}] [-f DATA_RANGE_FILE] [--noise MEAN STD]
-                   [-o OUTPUT] [--no-smoothing] [-r] [--normalize]
-                   [--remove-outliers] [--no-plot] [--no-save]
+usage: calc_metrics.py [-h] [-l LOG_DIR] [-R] [-s {w,a}] [-v {time,metrics}]
+                   [-p PERF_MEASURE] [-a {median,mean}]
+                   [-m {mrlep,mrtlp,both}] [-t {contrast,ratio,both}]
+                   [-n {task,run,none}]
+                   [-g {flat,hanning,hamming,bartlett,blackman,none}]
+                   [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
+                   [-o OUTPUT] [-r] [-e] [--no-show-eval-lines] [-P]
+                   [--no-plot] [-S] [--no-save] [-c LOAD_SETTINGS] [-C]
+                   [--no-save-settings]
 
 Run L2Metrics from the command line
 
-required arguments:
-  -l LOG_DIR, --log-dir LOG_DIR
-                        Log directory of scenario
-
 optional arguments:
   -h, --help            show this help message and exit
-  -s, --store-ste-data  Flag for storing log data as STE
+  -l LOG_DIR, --log-dir LOG_DIR
+                        Log directory of scenario
+  -R, --recursive       Recursively compute metrics on logs found in specified
+                        directory
+  -s {w,a}, --ste-store-mode {w,a}
+                        Mode for storing log data as STE, overwrite (w) or
+                        append (a)
+  -v {time,metrics}, --ste-averaging-method {time,metrics}
+                        Method for handling STE runs, time-series averaging
+                        (time) or LL metric averaging (metrics)
   -p PERF_MEASURE, --perf-measure PERF_MEASURE
                         Name of column to use for metrics calculations
-  -m {mrtlp,mrlep,both}, --maintenance-method {mrtlp,mrlep,both}
+  -a {median,mean}, --aggregation-method {median,mean}
+                        Method for aggregating within-lifetime metrics
+  -m {mrlep,mrtlp,both}, --maintenance-method {mrlep,mrtlp,both}
                         Method for computing performance maintenance
   -t {contrast,ratio,both}, --transfer-method {contrast,ratio,both}
                         Method for computing forward and backward transfer
-  -n {task,run}, --normalization-method {task,run}
+  -n {task,run,none}, --normalization-method {task,run,none}
                         Method for normalizing data
-  -f DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
+  -g {flat,hanning,hamming,bartlett,blackman,none}, --smoothing-method {flat,hanning,hamming,bartlett,blackman,none}
+                        Method for smoothing data, window type
+  -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
+                        Window length for smoothing data
+  -x, --clamp-outliers  Remove outliers in data for metrics by clamping to
+                        quantiles
+  -d DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
                         JSON file containing task performance ranges for
                         normalization
-  --noise MEAN STD      Mean and standard deviation for Gaussian noise in log
+  -N MEAN STD, --noise MEAN STD
+                        Mean and standard deviation for Gaussian noise in log
                         data
   -o OUTPUT, --output OUTPUT
                         Specify output filename for plot and results
-  --no-smoothing        Do not smooth data for metrics and plotting
   -r, --show-raw-data   Show raw data points under smoothed data for plotting
-  --normalize           Normalize data for metrics
-  --remove-outliers     Remove outliers in data for metrics
+  -e, --show-eval-lines
+                        Show lines between evaluation blocks
+  --no-show-eval-lines  Do not show lines between evaluation blocks
+  -P, --do-plot         Plot performance
   --no-plot             Do not plot performance
+  -S, --do-save         Save metrics outputs
   --no-save             Do not save metrics outputs
+  -c LOAD_SETTINGS, --load-settings LOAD_SETTINGS
+                        Load L2Metrics settings from JSON file
+  -C, --do-save-settings
+                        Save L2Metrics settings to JSON file
+  --no-save-settings    Do not save L2Metrics settings to JSON file
 ```
 
 ## Writing a Custom Metric

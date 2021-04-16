@@ -16,8 +16,9 @@
 # DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
-import os
+import json
 from collections import defaultdict
+from pathlib import Path
 from typing import List, Tuple, Union
 
 import l2logger.util as l2l
@@ -25,6 +26,7 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
+from ._localutil import smooth
 from .block_saturation import BlockSaturation
 from .core import Metric
 from .normalizer import Normalizer
@@ -35,7 +37,7 @@ from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
 from .transfer import Transfer
-from .util import plot_performance, plot_ste_data
+from .util import load_ste_data, plot_performance, plot_ste_data
 
 
 class MetricsReport():
@@ -46,51 +48,19 @@ class MetricsReport():
     def __init__(self, **kwargs) -> None:
         # Defines log_dir and initializes the metrics list
         self._metrics = []
+        self.ll_metrics_dict = {}
 
-        if 'log_dir' in kwargs:
-            self.log_dir = kwargs['log_dir']
-        else:
-            raise RuntimeError("log_dir is required")
-
-        if 'perf_measure' in kwargs:
-            self.perf_measure = kwargs['perf_measure']
-        else:
-            self.perf_measure = 'reward'
-
-        if 'maintenance_method' in kwargs:
-            self.maintenance_method = kwargs['maintenance_method']
-        else:
-            self.maintenance_method = 'mrlep'
-
-        if 'transfer_method' in kwargs:
-            self.transfer_method = kwargs['transfer_method']
-        else:
-            self.transfer_method = 'contrast'
-
-        if 'do_smoothing' in kwargs:
-            self.do_smoothing = kwargs['do_smoothing']
-        else:
-            self.do_smoothing = True
-
-        if 'do_normalize' in kwargs:
-            self.do_normalize = kwargs['do_normalize']
-        else:
-            self.do_normalize = False
-
-        if 'normalization_method' in kwargs:
-            self.normalization_method = kwargs['normalization_method']
-        else:
-            self.normalization_method = 'task'
-
-        if 'data_range' in kwargs:
-            self.data_range = kwargs['data_range']
-        else:
-            self.data_range = None
-
-        if 'remove_outliers' in kwargs:
-            self.remove_outliers = kwargs['remove_outliers']
-        else:
-            self.remove_outliers = False
+        self.log_dir = Path(kwargs.get('log_dir', ''))
+        self.perf_measure = kwargs.get('perf_measure', 'reward')
+        self.ste_averaging_method = kwargs.get('ste_averaging_method', 'time')
+        self.aggregation_method = kwargs.get('aggregation_method', 'median')
+        self.maintenance_method = kwargs.get('maintenance_method', 'mrlep')
+        self.transfer_method = kwargs.get('transfer_method', 'contrast')
+        self.normalization_method = kwargs.get('normalization_method', 'task')
+        self.smoothing_method = kwargs.get('smoothing_method', 'flat')
+        self.window_length = kwargs.get('window_length', None)
+        self.clamp_outliers = kwargs.get('clamp_outliers', False)
+        self.data_range = kwargs.get('data_range', None)
 
         # Initialize list of LL metrics
         self.task_metrics = ['perf_recovery']
@@ -105,12 +75,12 @@ class MetricsReport():
         self.task_metrics.extend(['ste_rel_perf', 'sample_efficiency'])
 
         # Get metric fields
-        metric_fields = l2l.read_logger_info(self.log_dir)
+        self.logger_info = l2l.read_logger_info(self.log_dir)
 
         # Do a check to make sure the performance measure has been logged
-        if self.perf_measure not in metric_fields:
+        if self.perf_measure not in self.logger_info['metrics_columns']:
             raise Exception(f'Performance measure not found in metrics columns: {self.perf_measure}\n'
-                            f'Valid measures are: {metric_fields}')
+                            f"Valid measures are: {self.logger_info['metrics_columns']}")
 
         # Gets all data from the relevant log files
         self._log_data = l2l.read_log_data(self.log_dir)
@@ -120,10 +90,10 @@ class MetricsReport():
             raise Exception(f'Performance measure ({self.perf_measure}) not found in the log data')
 
         # Validate scenario info
-        l2l.validate_scenario_info(self.log_dir)
+        self.scenario_info = l2l.read_scenario_info(self.log_dir)
 
         # Validate data format
-        l2l.validate_log(self._log_data, metric_fields)
+        l2l.validate_log(self._log_data, self.logger_info['metrics_columns'])
 
         # Filter data by completed experiences
         self._log_data = self._log_data[self._log_data['exp_status'] == 'complete']
@@ -133,34 +103,35 @@ class MetricsReport():
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
 
-        # Remove outliers
-        if self.remove_outliers:
-            self.filter_outliers(quantiles=(0.1, 0.9))
+        # Drop all rows with NaN values
+        self._log_data = self._log_data[self._log_data[self.perf_measure].notna()]
 
-        # Check for non-zero log data length
-        if len(self._log_data) == 0:
-            raise Exception('No valid log data to compute metrics')
-
-        if self.do_normalize:
-            # Instantiate normalizer
-            self.normalizer = Normalizer(perf_measure=self.perf_measure,
-                                         data=self._log_data[['task_name', self.perf_measure]].set_index('task_name'),
-                                         data_range=self.data_range, method=self.normalization_method)
-
-            # Save raw data in another variable
-            self._raw_data = self._log_data[self.perf_measure].copy()
-
-            # Normalize data
-            self._log_data = self.normalizer.normalize(self._log_data)
-        else:
-            self.normalizer = None
+        # Save raw data as separate column
+        self._log_data[self.perf_measure + '_raw'] = self._log_data[self.perf_measure].to_numpy()
 
         # Get block summary
-        _, self.block_info = l2l.parse_blocks(self._log_data)
+        self.block_info = l2l.parse_blocks(self._log_data)
 
         # Store unique task names by order of training
         self._unique_tasks = list(self.block_info.sort_values(
             ['block_type', 'block_num'], ascending=[False, True])['task_name'].unique())
+
+        # Load all STE data for tasks in log data
+        self.load_ste_data()
+
+        # Remove outliers
+        if self.clamp_outliers:
+            self.filter_outliers(quantiles=(0.1, 0.9))
+
+        # Normalize LL and STE data
+        if self.normalization_method:
+            self.normalize_data()
+        else:
+            self.normalizer = None
+        
+        # Smooth LL and STE data
+        if self.smoothing_method != 'none':
+            self.smooth_data()
 
         # Adds default metrics
         self._add_default_metrics()
@@ -182,26 +153,101 @@ class MetricsReport():
     def _add_default_metrics(self) -> None:
         # Default metrics no matter the syllabus type
         self.add(BlockSaturation(self.perf_measure))
-        self.add(TerminalPerformance(self.perf_measure, self.do_smoothing))
-        self.add(RecoveryTime(self.perf_measure, self.do_smoothing))
+        self.add(TerminalPerformance(self.perf_measure))
+        self.add(RecoveryTime(self.perf_measure))
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure, self.maintenance_method))
         self.add(Transfer(self.perf_measure, self.transfer_method))
-        self.add(STERelativePerf(self.perf_measure, self.do_smoothing, self.do_normalize,
-                                 self.normalizer))
-        self.add(SampleEfficiency(self.perf_measure, self.do_normalize,
-                                  self.normalizer))
-
-    def filter_outliers(self, quantiles: Tuple[float, float] = (0.1, 0.9)) -> None:
-        x = self._log_data[self.perf_measure]
-        self._log_data = self._log_data[x.between(
-            x.quantile(quantiles[0]), x.quantile(quantiles[1]))]
+        self.add(STERelativePerf(self.perf_measure, self.ste_data, self.ste_averaging_method))
+        self.add(SampleEfficiency(self.perf_measure, self.ste_data, self.ste_averaging_method))
 
     def add_noise(self, mean: float, std: float) -> None:
         # Add Gaussian noise to log data
         noise = np.random.normal(mean, std, len(
             self._log_data[self.perf_measure]))
         self._log_data[self.perf_measure] = self._log_data[self.perf_measure] + noise
+
+    def load_ste_data(self) -> None:
+        self.ste_data = {}
+
+        for task in self._unique_tasks:
+            self.ste_data[task] = load_ste_data(task)
+
+    def filter_outliers(self, quantiles: Tuple[float, float] = (0.1, 0.9)) -> None:
+        # Filter outliers per-task
+        for task in self._unique_tasks:
+            # Get task data from dataframe
+            x = self._log_data[self._log_data['task_name'] == task][self.perf_measure].to_numpy()
+
+            # Initialize bounds
+            lower_bound = 0
+            upper_bound = 100
+
+            if self.ste_data.get(task) is not None:
+                x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
+                                        [self.perf_measure].to_numpy() for ste_data_df in self.ste_data.get(task)])
+                x_comb = np.append(x, x_ste)
+                lower_bound, upper_bound = np.quantile(x_comb, quantiles)
+            else:
+                lower_bound, upper_bound = np.quantile(x, quantiles)
+
+            self._log_data.loc[self._log_data['task_name'] == task, self.perf_measure] = x.clip(lower_bound, upper_bound)
+
+        # Save filtered data as separate column
+        self._log_data[self.perf_measure + '_filtered'] = self._log_data[self.perf_measure].to_numpy()
+
+    def normalize_data(self) -> None:
+        # Instantiate normalizer
+        self.normalizer = Normalizer(perf_measure=self.perf_measure,
+                                     data=self._log_data[['task_name', self.perf_measure]].set_index('task_name'),
+                                     ste_data=self.ste_data, data_range=self.data_range, method=self.normalization_method)
+
+        # Normalize LL data
+        self._log_data = self.normalizer.normalize(self._log_data)
+
+        # Save normalized data as separate column
+        self._log_data[self.perf_measure + '_normalized'] = self._log_data[self.perf_measure].to_numpy()
+
+        # Normalize STE data
+        for task, ste_data in self.ste_data.items():
+            if ste_data is not None:
+                for idx, ste_data_df in enumerate(ste_data):
+                    self.ste_data[task][idx] = self.normalizer.normalize(ste_data_df)
+
+    def smooth_data(self) -> None:
+        # Smooth LL data
+        for regime_num in self.block_info['regime_num'].unique():
+            x = self._log_data[self._log_data['regime_num']
+                               == regime_num][self.perf_measure].to_numpy()
+            self._log_data.loc[self._log_data['regime_num'] == regime_num,
+                               self.perf_measure] = smooth(x, window_len=self.window_length,
+                                                           window=self.smoothing_method)
+
+        # Save normalized data as separate column
+        self._log_data[self.perf_measure +
+                       '_smoothed'] = self._log_data[self.perf_measure].to_numpy()
+
+        # Smooth STE data
+        for task, ste_data in self.ste_data.items():
+            if ste_data is not None:
+                for idx, ste_data_df in enumerate(ste_data):
+                    for regime_num in ste_data_df['regime_num'].unique():
+                        x = ste_data_df[ste_data_df['regime_num'] == regime_num][self.perf_measure].to_numpy()
+                        self.ste_data[task][idx].loc[ste_data_df['regime_num'] == regime_num, self.perf_measure] = smooth(
+                            x, window_len=self.window_length, window=self.smoothing_method)
+
+    def log_summary(self) -> pd.DataFrame:
+        # Get summary of log data
+        task_experiences = {'task_name': [], 'LX': [], 'EX': []}
+
+        for task in self._unique_tasks:
+            task_experiences['task_name'].append(task)
+            task_experiences['LX'].append(self._log_data[(self._log_data['task_name'] == task) & (
+                self._log_data['block_type'] == 'train')].shape[0])
+            task_experiences['EX'].append(self._log_data[(self._log_data['task_name'] == task) & (
+                self._log_data['block_type'] == 'test')].shape[0])
+
+        return pd.DataFrame(task_experiences).set_index('task_name')
 
     def calculate(self) -> None:
         for metric in self._metrics:
@@ -210,6 +256,37 @@ class MetricsReport():
         self.calculate_regime_metrics()
         self.calculate_task_metrics()
         self.calculate_lifetime_metrics()
+
+        # Get performance data stats (#LX, #EX for each task)
+        log_summary = self.log_summary()
+        data_min = np.nanmin(self._log_data[self.perf_measure])
+        data_max = np.nanmax(self._log_data[self.perf_measure])
+        num_lx = int(log_summary['LX'].sum())
+        num_ex = int(log_summary['EX'].sum())
+
+        # Append scenario information to metrics dataframe
+        self.ll_metrics_df = self.lifetime_metrics_df.copy()
+        self.ll_metrics_df['run_id'] = Path(self.log_dir).name
+        self.ll_metrics_df['complexity'] = self.scenario_info['complexity']
+        self.ll_metrics_df['difficulty'] = self.scenario_info['difficulty']
+        self.ll_metrics_df['scenario_type'] = self.scenario_info['scenario_type']
+        self.ll_metrics_df['metrics_column'] = self.perf_measure
+        self.ll_metrics_df['min'] = data_min
+        self.ll_metrics_df['max'] = data_max
+        self.ll_metrics_df['num_lx'] = num_lx
+        self.ll_metrics_df['num_ex'] = num_ex
+
+        # Build JSON
+        self.ll_metrics_dict = json.loads(self.ll_metrics_df.loc[0].T.to_json())
+        self.ll_metrics_dict['task_metrics'] = self.task_metrics_df.T.to_dict()
+
+        for task in self._unique_tasks:
+            self.ll_metrics_dict['task_metrics'][task]['min'] = np.nanmin(
+                self._log_data[self._log_data['task_name'] == task][self.perf_measure])
+            self.ll_metrics_dict['task_metrics'][task]['max'] = np.nanmax(
+                self._log_data[self._log_data['task_name'] == task][self.perf_measure])
+            self.ll_metrics_dict['task_metrics'][task]['num_lx'] = int(log_summary.loc[task, 'LX'])
+            self.ll_metrics_dict['task_metrics'][task]['num_ex'] = int(log_summary.loc[task, 'EX'])
 
     def calculate_regime_metrics(self) -> None:
         # Create dataframe for regime-level metrics
@@ -271,15 +348,15 @@ class MetricsReport():
             for metric in self.task_metrics:
                 if metric in tm.keys():
                     if metric == 'perf_recovery':
-                        pr = tm[metric].dropna().values
+                        pr = tm[metric].dropna().to_numpy()
                         self.task_metrics_df.at[task, metric] = np.NaN if len(pr) == 0 else pr[0]
                         self.task_metrics_df.at[task, 'recovery_times'] = list(
-                            tm['recovery_time'].dropna().values)
+                            tm['recovery_time'].dropna().to_numpy())
                     elif metric in ['perf_maintenance_mrtlp', 'perf_maintenance_mrlep']:
-                        pm = tm[metric].dropna().values
+                        pm = tm[metric].dropna().to_numpy()
                         self.task_metrics_df.at[task, metric] = pm[0] if len(pm) else np.NaN
                         maintenance_val_name = 'maintenance_val_' + metric.split('_')[-1]
-                        maintenance_values = list(tm[maintenance_val_name].values)
+                        maintenance_values = list(tm[maintenance_val_name].to_numpy())
                         self.task_metrics_df.at[task, maintenance_val_name] = [
                             maintenance_values[s] for s in np.ma.clump_unmasked(np.ma.masked_invalid(maintenance_values))]
                     elif metric in ['forward_transfer_contrast', 'forward_transfer_ratio',
@@ -287,7 +364,7 @@ class MetricsReport():
                         self.task_metrics_df.at[task, metric] = getattr(self, metric)[task]
                     else:
                         # Drop NaN values
-                        metric_values = tm[metric].dropna().values
+                        metric_values = tm[metric].dropna().to_numpy()
 
                         if len(metric_values) == 0:
                             self.task_metrics_df.at[task, metric] = np.NaN
@@ -307,67 +384,100 @@ class MetricsReport():
                     # Get the first calculated transfer values for each task pair
                     metric_vals = [v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()]
                 else:
-                    metric_vals = self.task_metrics_df[metric].dropna().values
+                    metric_vals = self.task_metrics_df[metric].dropna().to_numpy()
 
                 if len(metric_vals):
-                    # Aggregate metric values with median operator
-                    self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
+                    # Aggregate metric values
+                    if self.aggregation_method == 'median':
+                        self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
+                    elif self.aggregation_method == 'mean':
+                        self.lifetime_metrics_df[metric] = [np.mean(metric_vals)]
 
-    def report(self, save: bool = False, output: str = None) -> None:
+    def report(self) -> None:
+        """Print summary report of lifetime metrics and return metric objects.
+        """
+
         # TODO: Handle reporting custom metrics
-
         # Print lifetime metrics
         print('\nLifetime Metrics:')
         print(tabulate(self.lifetime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql',
                        floatfmt=".2f", showindex=False))
 
-        if save:
-            # Generate filename
-            if output is None:
-                _, filename = os.path.split(self.log_dir.strip('/\\'))
-            else:
-                filename = output.replace(" ", "_")
+    def save_metrics(self, filename: str = None):
+        """Save metrics out as JSON file.
 
-            # Save metrics to file
-            with open(filename + '_metrics.tsv', 'w', newline='\n') as metrics_file:
-                self.lifetime_metrics_df.to_csv(metrics_file, sep='\t', index=False)
-                metrics_file.write('\n')
-                self.task_metrics_df.to_csv(metrics_file, sep='\t')
-                metrics_file.write('\n')
-                self.regime_metrics_df.to_csv(metrics_file, sep='\t')
+        Args:
+            filename (str, optional): Base filename for metrics file. Defaults to log directory name.
+        """
 
-    def log_summary(self) -> pd.DataFrame:
-        # Get summary of log data
-        task_experiences = {'task_name': [], 'LX': [], 'EX': []}
+        # Generate filename
+        if filename is None:
+            filename = Path(self.log_dir).name
+        else:
+            filename = filename.replace(" ", "_")
 
-        for task in self._unique_tasks:
-            task_experiences['task_name'].append(task)
-            task_experiences['LX'].append(self._log_data[(self._log_data['task_name'] == task) & (
-                self._log_data['block_type'] == 'train')].shape[0])
-            task_experiences['EX'].append(self._log_data[(self._log_data['task_name'] == task) & (
-                self._log_data['block_type'] == 'test')].shape[0])
+        # Save metrics to file
+        with open(filename + '_metrics.json', 'w', newline='\n') as metrics_file:
+            json.dump(self.ll_metrics_dict, metrics_file)
 
-        return pd.DataFrame(task_experiences).set_index('task_name')
+    def save_data(self, filename: str = None) -> None:
+        """Save out raw and processed data.
 
-    def plot(self, save: bool = False, show_raw_data: bool = False, output_dir: str = '',
-             input_title: str = None) -> None:
+        Args:
+            filename (str, optional): Base filename for data files. Defaults to log directory name.
+        """
+
+        # Generate filename
+        if filename is None:
+            filename = Path(self.log_dir).name
+        else:
+            filename = filename.replace(" ", "_")
+
+        # Save data
+        self._log_data.reset_index(drop=True).to_feather(filename + '_data.feather')
+
+    def save_settings(self, filename: str = None) -> None:
+        # Generate filename
+        if filename is None:
+            filename = Path(self.log_dir).name
+        else:
+            filename = filename.replace(" ", "_")
+
+        # Build settings JSON
+        settings_json = {}
+        settings_json['log_dir'] = str(self.log_dir)
+        settings_json['perf_measure'] = self.perf_measure
+        settings_json['ste_averaging_method'] = self.ste_averaging_method
+        settings_json['aggregation_method'] = self.aggregation_method
+        settings_json['maintenance_method'] = self.maintenance_method
+        settings_json['transfer_method'] = self.transfer_method
+        settings_json['normalization_method'] = self.normalization_method
+        settings_json['smoothing_method'] = self.smoothing_method
+        settings_json['window_length'] = self.window_length
+        settings_json['clamp_outliers'] = self.clamp_outliers
+        settings_json['data_range'] = self.normalizer.data_range if self.normalizer else None
+
+        with open(filename + '_settings.json', 'w') as outfile:
+            json.dump(settings_json, outfile)
+
+    def plot(self, save: bool = False, show_raw_data: bool = False, show_eval_lines: bool = True,
+             output_dir: str = '', input_title: str = None) -> None:
+
         if input_title is None:
-            input_title = os.path.split(self.log_dir.strip('/\\'))[-1]
+            input_title = Path(self.log_dir).name
 
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
-                         do_smoothing=self.do_smoothing, show_raw_data=show_raw_data,
+                         show_raw_data=show_raw_data, show_eval_lines=show_eval_lines,
                          y_axis_col=self.perf_measure, input_title=input_title,
                          output_dir=output_dir, do_save_fig=save)
 
-    def plot_ste_data(self, window_len: int = None, input_title: str = None,
+    def plot_ste_data(self, input_title: str = None,
                       save: bool = False, output_dir: str = '') -> None:
         if input_title is None:
             input_title = 'Performance Relative to STE\n' + \
-                os.path.split(self.log_dir.strip('/\\'))[-1]
-        plot_filename = 'ste_' + os.path.split(self.log_dir.strip('/\\'))[-1]
+                Path(self.log_dir).name
+        plot_filename = Path(self.log_dir).name + '_ste'
 
-        plot_ste_data(self._log_data, self.block_info, self._unique_tasks,
-                      perf_measure=self.perf_measure, do_smoothing=self.do_smoothing,
-                      window_len=window_len, do_normalize=self.do_normalize,
-                      normalizer=self.normalizer, input_title=input_title,
+        plot_ste_data(self._log_data, self.ste_data, self.block_info, self._unique_tasks,
+                      perf_measure=self.perf_measure, input_title=input_title,
                       output_dir=output_dir, do_save=save, plot_filename=plot_filename)

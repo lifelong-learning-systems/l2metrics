@@ -17,16 +17,16 @@
 # BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
 
 import os
+import pickle
 from collections import OrderedDict
 from math import ceil
 from pathlib import Path
+from typing import List, Union
 
 import l2logger.util as l2l
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-from . import _localutil
 
 
 def get_ste_data_names() -> list:
@@ -36,7 +36,7 @@ def get_ste_data_names() -> list:
         list: The STE task names.
     """
 
-    ste_files = list(Path(l2l.get_l2root_base_dirs('taskinfo')).glob('*.pkl'))
+    ste_files = list(Path(l2l.get_l2root_base_dirs('taskinfo')).glob('*.pickle'))
 
     if ste_files:
         return np.char.lower([f.stem for f in ste_files])
@@ -44,77 +44,88 @@ def get_ste_data_names() -> list:
         return []
 
 
-def load_ste_data(task_name: str) -> pd.DataFrame:
+def load_ste_data(task_name: str) -> Union[List[pd.DataFrame], None]:
     """Loads the STE data corresponding to the given task name.
-
-    This function searches $L2DATA/taskinfo/ for the given task name and reads the file as a
-    DataFrame.
 
     Args:
         task_name (str): The name of the STE data file.
 
     Returns:
-        pd.DataFrame: The STE data if found, else None.
+        Union[List[pd.DataFrame], None]: The STE data if found, else None.
     """
 
     if task_name in get_ste_data_names():
-        data_file_name = l2l.get_l2root_base_dirs('taskinfo', task_name + '.pkl')
-        dataframe = pd.read_pickle(data_file_name)
-        return dataframe
+        ste_file_name = l2l.get_l2root_base_dirs('taskinfo', task_name + '.pickle')
+        with open(ste_file_name, 'rb') as ste_file:
+            ste_data = pickle.load(ste_file)
+            return ste_data
     else:
         return None
 
 
-def save_ste_data(log_dir: str) -> None:
-    """Saves the STE data in the given log directory as a pickled DataFrame.
+def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
+    """Stores the STE data in the given log directory as a serialized DataFrame.
 
     Args:
-        log_dir (str): The log directory of the STE data.
+        log_dir (Path): The log directory of the STE data.
+        mode (str, optional): The mode for saving STE data. Defaults to 'w'.
+            'w' - Write - Opens a file for writing, overwrites data if the file exists.
+            'a' - Append - Opens a file for writing, appends data if the file exists.
 
     Raises:
         Exception: If scenario contains more than one task.
     """
 
     # Load data from ste logs
-    ste_data = l2l.read_log_data(log_dir)
+    ste_data_df = l2l.read_log_data(log_dir)
 
     # Get metric fields
-    metric_fields = l2l.read_logger_info(log_dir)
+    logger_info = l2l.read_logger_info(log_dir)
 
     # Validate data format
-    l2l.validate_log(ste_data, metric_fields)
+    l2l.validate_log(ste_data_df, logger_info['metrics_columns'])
 
     # Fill in regime number and sort
-    ste_data = l2l.fill_regime_num(ste_data)
-    ste_data = ste_data.sort_values(by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
+    ste_data_df = l2l.fill_regime_num(ste_data_df)
+    ste_data_df = ste_data_df.sort_values(by=['regime_num', 'exp_num'])
 
-    # Filter out training only data
-    ste_data = ste_data[ste_data['block_type'] == 'train']
-
-    # Get task name
-    task_name = np.char.lower(list(ste_data.task_name.unique()))
+    # Get training task name
+    task_name = list(ste_data_df[ste_data_df['block_type'] == 'train'].task_name.unique())
 
     # Check for number of tasks in scenario
-    if task_name.size != 1:
-        raise Exception('Scenario contains more than one task')
+    if len(task_name) != 1:
+        raise Exception('Scenario trains more than one task')
+
+    # Add STE dataframe to list
+    ste_data = [ste_data_df]
 
     # Create task info directory if it doesn't exist
-    if not os.path.exists(l2l.get_l2root_base_dirs('taskinfo')):
-        os.makedirs(l2l.get_l2root_base_dirs('taskinfo'))
+    task_info_dir = l2l.get_l2root_base_dirs('taskinfo')
+    if not task_info_dir.exists():
+        task_info_dir.mkdir(parents=True, exist_ok=True)
 
     # Get base directory to store ste data
-    filename = l2l.get_l2root_base_dirs('taskinfo', task_name[0] + '.pkl')
+    filename = task_info_dir / (task_name[0] + '.pickle')
 
-    # Store ste data in task info directory
-    ste_data.to_pickle(filename)
+    # Store ste data in task info directory        
+    if mode == 'a':
+        # Load existing STE data and append
+        if filename.exists():
+            with open(filename, 'rb') as ste_file:
+                stored_ste_data = pickle.load(ste_file)
+                ste_data.extend(stored_ste_data)
+
+    # Write/Overwrite STE data to file
+    with open(filename, 'wb') as ste_file:
+        pickle.dump(ste_data, ste_file)
 
     print(f'Stored STE data for {task_name[0]}')
 
 
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
-                     do_smoothing: bool = False, window_len: int = None, show_raw_data: bool = False,
                      x_axis_col: str = 'exp_num', y_axis_col: str = 'reward', input_title: str = "",
                      input_xlabel: str = 'Episodes', input_ylabel: str = 'Performance',
+                     show_raw_data: bool = False, show_eval_lines: bool = True,
                      show_block_boundary: bool = False, shade_test_blocks: bool = True,
                      output_dir: str = '', do_save_fig: bool = False, plot_filename: str = None) -> None:
     """Plots the performance curves for the given DataFrame.
@@ -123,15 +134,15 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         dataframe (pd.DataFrame): The performance data to plot.
         block_info (pd.DataFrame): The block info of the DataFrame.
         unique_tasks (list): List of unique tasks in scenario.
-        do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to False.
-        window_len (int, optional): The window length for smoothing the data. Defaults to None.
-        show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
-            Defaults to False.
         x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
         y_axis_col (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         input_title (str, optional): The plot title. Defaults to "".
         input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
+        show_raw_data (bool, optional): Flag for enabling raw data in background of plot.
+            Defaults to False.
+        show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
+            changing slope of evaluation performance. Defaults to True.
         show_block_boundary (bool, optional): Flag for enabling block boundaries. Defaults to True.
         shade_test_blocks (bool, optional): Flag for enabling block shading. Defaults to True.
         output_dir (str, optional): Output directory of results. Defaults to ''.
@@ -148,47 +159,52 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
     if len(unique_tasks) < len(color_selection):
         task_colors = color_selection[:len(unique_tasks)]
     else:
-        task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
+        task_colors = [color_selection[i % len(color_selection)] for i in range(len(unique_tasks))]
 
     # Loop through tasks and plot their performance curves
     for color, task in zip(task_colors, unique_tasks):
+        if show_eval_lines:
+            eval_x_data = []
+            eval_y_data = []
+            eval_line, = ax.plot(eval_x_data, eval_y_data, color=color, linestyle='--', alpha=0.2)
+
         for _, row in block_info[block_info['task_name'] == task].iterrows():
             regime_num = row['regime_num']
             block_type = row['block_type']
 
             # Get data for current regime
-            x_raw = dataframe.loc[dataframe['regime_num'] == regime_num, x_axis_col].values
-            y_raw = dataframe.loc[dataframe['regime_num'] == regime_num, y_axis_col].values
+            x = dataframe.loc[dataframe['regime_num'] == regime_num, x_axis_col].to_numpy()
+            y = dataframe.loc[dataframe['regime_num'] == regime_num, y_axis_col].to_numpy()
 
             if show_block_boundary:
-                ax.axes.axvline(x_raw[0], linewidth=1, linestyle=':')
+                ax.axes.axvline(x[0], linewidth=1, linestyle=':')
 
             if shade_test_blocks and block_type == 'test':
-                ax.axvspan(x_raw[0], x_raw[-1] + 1, alpha=0.1, facecolor='black')
+                ax.axvspan(x[0], x[-1] + 1, alpha=0.1, facecolor='black')
 
-            if do_smoothing:
-                x_smoothed = x_raw
-                if block_type == 'train':
-                    y_smoothed = _localutil.smooth(y_raw, window_len=window_len, window='flat')
-                elif block_type == 'test':
-                    y_smoothed = np.nanmean(y_raw) * np.ones(len(x_raw))
-                
-                # Match smoothed x and y length if data had NaNs
-                if len(x_smoothed) != len(y_smoothed):
-                    x_smoothed = list(range(x_smoothed[0], x_smoothed[0] + len(y_smoothed)))
-                
-                ax.scatter(x_smoothed, y_smoothed, color=color, marker='*', s=8, label=task)
-                
-                if show_raw_data:
-                    ax.scatter(x_raw, y_raw, color=color, marker='*', s=8, alpha=0.05)
-            else:
-                ax.scatter(x_raw, y_raw, color=color, marker='*', s=8, label=task)
+            if block_type == 'test':
+                y = np.nanmean(y) * np.ones(len(x))
+                if show_eval_lines:
+                    x = list(range(x[0], x[0] + len(y)))
+                    eval_x_data.extend(x)
+                    eval_y_data.extend(y)
+                    eval_line.set_data(eval_x_data, eval_y_data)
+                    plt.draw()  
+
+            # Match smoothed x and y length if data had NaNs
+            if len(x) != len(y):
+                x = list(range(x[0], x[0] + len(y)))
+
+            ax.scatter(x, y, color=color, marker='*', s=8, label=task)
+
+            # if show_raw_data:
+            #     ax.scatter(x, y, color=color, marker='*', s=8, alpha=0.05)
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys())
 
-    if os.path.dirname(input_title) != "":
+    if Path(input_title).parent != Path('.'):
         _, plot_filename = os.path.split(input_title)
         input_title = plot_filename
     else:
@@ -199,7 +215,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
     ax.grid()
 
     if do_save_fig:
-        if not plot_filename and not input_title:
+        if not plot_filename:
             plot_filename = 'plot'
         print(f'Saving figure with name: {plot_filename.replace(" ", "_")}')
         fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + '.png'))
@@ -207,23 +223,18 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         plt.show()
 
 
-def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
-                  perf_measure: str = 'reward', do_smoothing: bool = False, window_len: int = None,
-                  do_normalize: bool = False, normalizer = None,
-                  input_title: str = '', input_xlabel: str = 'Episodes',
+def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFrame, unique_tasks: list,
+                  perf_measure: str = 'reward', input_title: str = '', input_xlabel: str = 'Episodes',
                   input_ylabel: str = 'Performance', output_dir: str = '', do_save: bool = False,
                   plot_filename: str = None) -> None:
     """Plots the relative performance of tasks compared to Single-Task Experts.
 
     Args:
         dataframe (pd.DataFrame): The performance data to plot.
+        ste_data (dict): STE data.
         block_info (pd.DataFrame): The block info of the DataFrame.
         unique_tasks (list): List of unique tasks in scenario.
         perf_measure (str, optional): The column name of the metric to plot. Defaults to 'reward'.
-        do_smoothing (bool, optional): Flag for enabling smoothing. Defaults to False.
-        window_len (int, optional): The window length for smoothing the data. Defaults to None.
-        do_normalize (bool, optional): Flag for enabling normalization. Defaults to False.
-        normalizer (Normalizer, optional): Normalizer instance for normalization. Defaults to None.
         input_title (str, optional): Plot title. Defaults to ''.
         input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
@@ -248,7 +259,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
     if len(unique_tasks) < len(color_selection):
         task_colors = color_selection[:len(unique_tasks)]
     else:
-        task_colors = [color_selection[i % len(color_selection)] for i in range(unique_tasks)]
+        task_colors = [color_selection[i % len(color_selection)] for i in range(len(unique_tasks))]
 
     for index, (task_color, task_name) in enumerate(zip(task_colors, unique_tasks)):
         # Get block info for task during training
@@ -256,26 +267,19 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
             block_info['block_type'] == 'train')]
 
         # Get data concatenated data for task
-        task_data = dataframe[dataframe['regime_num'].isin(
-            task_blocks['regime_num'])]
+        task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
 
         if len(task_data):
             # Load STE data
-            ste_data = load_ste_data(task_name)
-
-            if ste_data is not None:
+            if ste_data.get(task_name) is not None:
                 # Create subplot
                 ax = fig.add_subplot(rows, cols, index + 1)
 
-                if do_normalize and normalizer is not None:
-                    ste_data = normalizer.normalize(ste_data)
-
-                if do_smoothing:
-                    y1 = _localutil.smooth(ste_data[perf_measure].values, window_len=window_len, window='flat')
-                    y2 = _localutil.smooth(task_data[perf_measure].values, window_len=window_len, window='flat')
-                else:
-                    y1 = ste_data[perf_measure].values
-                    y2 = task_data[perf_measure].values
+                # Average all the STE data together after truncating to same length
+                y1 = [ste_data_df[ste_data_df['block_type'] == 'train']
+                            [perf_measure].to_numpy() for ste_data_df in ste_data.get(task_name)]
+                y1 = np.array([x[:min(map(len, y1))] for x in y1]).mean(0)
+                y2 = task_data[perf_measure].to_numpy()
                 
                 x1 = list(range(0, len(y1)))
                 x2 = list(range(0, len(y2)))
@@ -293,10 +297,7 @@ def plot_ste_data(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_task
 
     fig.subplots_adjust(wspace=0.3, hspace=0.4)
 
-    if do_normalize:
-        plt.setp(fig.axes, xlim=(0, x_limit), ylim=(0, normalizer.scale))
-    else:
-        plt.setp(fig.axes, xlim=(0, x_limit))
+    plt.setp(fig.axes, xlim=(0, x_limit))
 
     if do_save:
         if plot_filename is None:

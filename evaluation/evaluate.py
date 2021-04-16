@@ -429,7 +429,8 @@ def evaluate() -> None:
                         help='Do not save metrics outputs')
 
     # Settings file arguments
-    # TODO: Add argument to load evaluation settings
+    parser.add_argument('-c', '--load-settings', default='', type=str,
+                        help='Load evaluation settings from JSON file')
     parser.add_argument('-C', '--do-save-settings', dest='do_save_settings', default=True, action='store_true',
                         help='Save L2Metrics settings to JSON file')
     parser.add_argument('--no-save-settings', dest='do_save_settings', action='store_false',
@@ -438,6 +439,11 @@ def evaluate() -> None:
     # Parse arguments
     args = parser.parse_args()
     kwargs = vars(args)
+
+    if args.load_settings:
+        with open(args.load_settings, 'r') as settings_file:
+            kwargs.update(json.load(settings_file))
+
     kwargs['eval_dir'] = Path(args.eval_dir)
     kwargs['output_dir'] = Path(args.output_dir)
 

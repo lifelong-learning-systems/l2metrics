@@ -15,7 +15,7 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 ### Command-Line Execution
 
 ```
-usage: python -m evaluation.evaluate [-h] -l EVAL_DIR [-s STE_DIR] [-v {time,metrics}]
+usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-s STE_DIR] [-v {time,metrics}]
                    [-p PERF_MEASURE] [-a {mean,median}]
                    [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
                    [-n {task,run}]
@@ -23,8 +23,8 @@ usage: python -m evaluation.evaluate [-h] -l EVAL_DIR [-s STE_DIR] [-v {time,met
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE]
                    [-O OUTPUT_DIR] [-o OUTPUT] [-u] [-r] [-e]
                    [--no-show-eval-lines] [-T] [--no-store-ste] [-P]
-                   [--no-plot] [-L] [--no-save-plots] [-S] [--no-save] [-C]
-                   [--no-save-settings]
+                   [--no-plot] [-L] [--no-save-plots] [-S] [--no-save]
+                   [-c LOAD_SETTINGS] [-C] [--no-save-settings]
 
 Run L2M evaluation from the command line
 
@@ -69,12 +69,15 @@ optional arguments:
   --no-store-ste        Do not store STE data
   -P, --do-plot         Plot performance
   --no-plot             Do not plot performance
-  -L, --do-save-plots      Save scenario and STE plots
+  -L, --do-save-plots   Save scenario and STE plots
   --no-save-plots       Save scenario and STE plots
   -S, --do-save         Save metrics outputs
   --no-save             Do not save metrics outputs
-  -C, --do-save-settings  Save L2Metrics settings to JSON file
-  --no-save-settings      Do not save L2Metrics settings to JSON file
+  -c LOAD_SETTINGS, --load-settings LOAD_SETTINGS
+                        Load evaluation settings from JSON file
+  -C, --do-save-settings
+                        Save L2Metrics settings to JSON file
+  --no-save-settings    Do not save L2Metrics settings to JSON file
 ```
 
 **Note**: Valid values for the performance measure input argument are determined by the `metrics_columns` dictionary in `logger_info.json`.

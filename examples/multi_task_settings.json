@@ -1,0 +1,26 @@
+{
+  "log_dir": "multi_task",
+  "perf_measure": "performance",
+  "ste_averaging_method": "time",
+  "aggregation_method": "median",
+  "maintenance_method": "mrlep",
+  "transfer_method": "contrast",
+  "normalization_method": "task",
+  "smoothing_method": "flat",
+  "window_length": null,
+  "clamp_outliers": false,
+  "data_range": {
+    "task2_1": {
+      "min": 2.5,
+      "max": 99.924058441952
+    },
+    "task1_1": {
+      "min": 1.917608012692288,
+      "max": 99.73909708414915
+    },
+    "task3_1": {
+      "min": 2.5,
+      "max": 99.92008048384649
+    }
+  }
+}

@@ -19,9 +19,12 @@
 import argparse
 import json
 import traceback
+from pathlib import Path
 
+import pandas as pd
 from l2metrics import util
 from l2metrics.report import MetricsReport
+from tqdm import tqdm
 
 
 def run() -> None:
@@ -29,103 +32,170 @@ def run() -> None:
     parser = argparse.ArgumentParser(description='Run L2Metrics from the command line')
 
     # Log directories can be absolute paths, relative paths, or paths found in $L2DATA/logs
-    parser.add_argument('-l', '--log-dir', required=True,
+    parser.add_argument('-l', '--log-dir', default=None, type=str,
                         help='Log directory of scenario')
 
-    # Flag for storing log data as STE data
-    parser.add_argument('-s', '--store-ste-data', action='store_true',
-                        help='Flag for storing log data as STE')
+    # Flag for recursively calculating metrics on valid subdirectories within log directory 
+    parser.add_argument('-R', '--recursive', action='store_true',
+                        help='Recursively compute metrics on logs found in specified directory')
+
+    # Mode for storing log data as STE data
+    parser.add_argument('-s', '--ste-store-mode', default=None, choices=['w', 'a'],
+                        help='Mode for storing log data as STE, overwrite (w) or append (a)')
+
+    # Method for handling multiple STE runs
+    parser.add_argument('-v', '--ste-averaging-method', default='time', choices=['time', 'metrics'],
+                        help='Method for handling STE runs, time-series averaging (time) or '
+                        'LL metric averaging (metrics)')
 
     # Choose application measure to use as performance column
-    parser.add_argument('-p', '--perf-measure', default='reward',
+    parser.add_argument('-p', '--perf-measure', default='reward', type=str,
                         help='Name of column to use for metrics calculations')
 
+    # Method for aggregating within-lifetime metrics
+    parser.add_argument('-a', '--aggregation-method', default='median', type=str, choices=['median', 'mean'],
+                        help='Method for aggregating within-lifetime metrics')
+
     # Method for calculating performance maintenance
-    parser.add_argument('-m', '--maintenance-method', default='mrlep', choices=['mrtlp', 'mrlep', 'both'],
+    parser.add_argument('-m', '--maintenance-method', default='mrlep', type=str, choices=['mrlep', 'mrtlp', 'both'],
                         help='Method for computing performance maintenance')
 
     # Method for calculating forward and backward transfer
-    parser.add_argument('-t', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='contrast', type=str, choices=['contrast', 'ratio', 'both'],
                         help='Method for computing forward and backward transfer')
 
     # Method for normalization
-    parser.add_argument('-n', '--normalization-method', default='task', choices=['task', 'run'],
+    parser.add_argument('-n', '--normalization-method', default='task', type=str, choices=['task', 'run', 'none'],
                         help='Method for normalizing data')
 
+    # Method for smoothing
+    parser.add_argument('-g', '--smoothing-method', default='flat', type=str, choices=['flat', 'hanning', 'hamming', 'bartlett', 'blackman', 'none'],
+                        help='Method for smoothing data, window type')
+
+    # Window length for smoothing
+    parser.add_argument('-w', '--window-length', default=None, type=int,
+                        help='Window length for smoothing data')
+
+    # Flag for removing outliers
+    parser.add_argument('-x', '--clamp-outliers', action='store_true',
+                        help='Remove outliers in data for metrics by clamping to quantiles')
+
     # Data range file for normalization
-    parser.add_argument('-f', '--data-range-file', type=str,
+    parser.add_argument('-d', '--data-range-file', default=None, type=str,
                         help='JSON file containing task performance ranges for normalization')
 
     # Mean and standard deviation for adding noise to log data
-    parser.add_argument('--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
+    parser.add_argument('-N', '--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
                         help='Mean and standard deviation for Gaussian noise in log data')
 
     # Output filename
-    parser.add_argument('-o', '--output', default=None,
+    parser.add_argument('-o', '--output', default=None, type=str,
                         help='Specify output filename for plot and results')
-
-    # Flag for disabling smoothing
-    parser.add_argument('--no-smoothing', action='store_true',
-                        help='Do not smooth data for metrics and plotting')
 
     # Flag for showing raw performance data under smoothed data
     parser.add_argument('-r', '--show-raw-data', action='store_true',
                         help='Show raw data points under smoothed data for plotting')
 
-    # Flag for enabling normalization
-    parser.add_argument('--normalize', action='store_true',
-                        help='Normalize data for metrics')
+    # Flag for showing evaluation block lines
+    parser.add_argument('-e', '--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
+                        help='Show lines between evaluation blocks')
+    parser.add_argument('--no-show-eval-lines', dest='show_eval_lines', action='store_false',
+                        help='Do not show lines between evaluation blocks')
 
-    # Flag for removing outliers
-    parser.add_argument('--remove-outliers', action='store_true',
-                        help='Remove outliers in data for metrics')
-
-    # Flag for disabling plotting
-    parser.add_argument('--no-plot', action='store_true',
+    # Flag for enabling/disabling plotting
+    parser.add_argument('-P', '--do-plot', dest='do_plot', default=True, action='store_true',
+                        help='Plot performance')
+    parser.add_argument('--no-plot', dest='do_plot', action='store_false',
                         help='Do not plot performance')
 
-    # Flag for disabling save
-    parser.add_argument('--no-save', action='store_true',
+    # Flag for enabling/disabling save
+    parser.add_argument('-S', '--do-save', dest='do_save', default=True, action='store_true',
+                        help='Save metrics outputs')
+    parser.add_argument('--no-save', dest='do_save', action='store_false',
                         help='Do not save metrics outputs')
+
+    # Settings file arguments
+    parser.add_argument('-c', '--load-settings', default='', type=str,
+                        help='Load L2Metrics settings from JSON file')
+    parser.add_argument('-C', '--do-save-settings', dest='do_save_settings', default=True, action='store_true',
+                        help='Save L2Metrics settings to JSON file')
+    parser.add_argument('--no-save-settings', dest='do_save_settings', action='store_false',
+                        help='Do not save L2Metrics settings to JSON file')
 
     # Parse arguments
     args = parser.parse_args()
-    do_smoothing = not args.no_smoothing
-    do_plot = not args.no_plot
-    do_save = not args.no_save
+    kwargs = vars(args)
 
-    if args.store_ste_data:
-        util.save_ste_data(args.log_dir)
+    if args.load_settings:
+        with open(args.load_settings, 'r') as settings_file:
+            kwargs.update(json.load(settings_file))
+
+    if args.ste_store_mode:
+        util.store_ste_data(log_dir=Path(args.log_dir), mode=args.ste_store_mode)
     else:
-        # Load data range data for normalization
+        # Load data range data for normalization and standardize names to lowercase
         if args.data_range_file:
-            with open(args.data_range_file) as json_file:
-                data_range = json.load(json_file)
+            with open(args.data_range_file) as data_range_file:
+                data_range = json.load(data_range_file)
+                data_range = {key.lower(): val for key, val in data_range.items()}
         else:
             data_range = None
 
-        # Initialize metrics report
-        report = MetricsReport(log_dir=args.log_dir, perf_measure=args.perf_measure,
-                               maintenance_method=args.maintenance_method,
-                               transfer_method=args.transfer_method,
-                               normalization_method=args.normalization_method, data_range=data_range,
-                               do_smoothing=do_smoothing, do_normalize=args.normalize,
-                               remove_outliers=args.remove_outliers)
+        kwargs['data_range'] = data_range
 
-        # Add noise to log data if mean or standard deviation is specified
-        if args.noise[0] or args.noise[1]:
-            report.add_noise(mean=args.noise[0], std=args.noise[1])
+        if args.recursive:
+            ll_metrics_df = pd.DataFrame()
+            ll_metrics_dicts = []
 
-        # Calculate metrics in order of their addition to the metrics list.
-        report.calculate()
+            # Compute and store the LL metrics for all runs found in the directory
+            for path in tqdm(list(Path(args.log_dir).rglob("*")), desc=Path(args.log_dir).name):
+                if path.is_dir():
+                    # Check if current path is log directory for single run
+                    if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
+                        kwargs['log_dir'] = path
+                        report = MetricsReport(**kwargs)
+                        report.calculate()
+                        metrics_df = report.ll_metrics_df
+                        metrics_dict = report.ll_metrics_dict
+                        ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
+                        ll_metrics_dicts.append(metrics_dict)
 
-        # Print table of metrics and save values to file
-        report.report(save=do_save, output=args.output)
+            # Save data
+            if args.do_save:
+                filename = args.output if args.output else 'll_metrics'
 
-        # Plot metrics
-        if do_plot:
-            report.plot(save=do_save, show_raw_data=args.show_raw_data)
-            report.plot_ste_data(save=do_save)
+                with open(filename + '.tsv', 'w', newline='\n') as metrics_file:
+                    ll_metrics_df.set_index(['run_id']).to_csv(metrics_file, sep='\t')
+                with open(filename + '.json', 'w', newline='\n') as metrics_file:
+                    json.dump(ll_metrics_dicts, metrics_file)
+        else:
+            # Initialize metrics report
+            report = MetricsReport(**kwargs)
+
+            # Add noise to log data if mean or standard deviation is specified
+            if args.noise[0] or args.noise[1]:
+                report.add_noise(mean=args.noise[0], std=args.noise[1])
+
+            # Calculate metrics in order of their addition to the metrics list.
+            report.calculate()
+
+            # Print table of metrics
+            report.report()
+
+            # Save metrics to file
+            if args.do_save:
+                report.save_metrics(filename=args.output)
+                report.save_data(filename=args.output)
+
+            # Plot metrics
+            if args.do_plot:
+                report.plot(save=args.do_save, show_raw_data=args.show_raw_data,
+                            show_eval_lines=args.show_eval_lines)
+                report.plot_ste_data(save=args.do_save)
+
+            # Save settings used to run calculate metrics
+            if args.do_save_settings:
+                report.save_settings(filename=args.output)
 
 
 if __name__ == '__main__':

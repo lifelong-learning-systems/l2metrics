@@ -2,6 +2,29 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.7.0 - 2021-04-16
+
+- Minor performance optimizations
+- Implemented per-task outlier clamping
+- Implemented mean method for aggregating lifetime metrics
+- Implemented input settings file and save out of settings used to produce metrics
+- Handled scenario type in evaluation
+- Added validation script to look for required evaluation files
+- Simplified command-line arguments
+- Output data frames using feather instead of pickle
+- Allowed evaluation block data in STE logs
+- Stored intermediately processed data in report log data
+- Standardized task names when parsing data range file for normalization
+- Implemented feature to save settings as JSON file
+- Increased verbosity of error message in data range validation
+- Handled storing multiple STE runs with option to save in write or append mode
+- Implemented different options for averaging STE runs (time or metrics)
+- Modified command-line arguments for normalization and smoothing methods
+- Implemented option to show lines between evaluation blocks
+- Implemented command-line argument for smoothing window length
+- Updated example logs
+- Implemented recursive flag in l2metrics package
+
 ## 2.6.0 - 2021-03-01
 
 - Throw warnings instead of raising exception when checking for alternating blocks

@@ -82,10 +82,10 @@ class PerformanceMaintenance(Metric):
             for task in unique_tasks:
                 # Get training and test regimes
                 training_regs = block_info[(block_info['task_name'] == task) &
-                                              (block_info['block_type'] == 'train')]['regime_num'].values
+                                              (block_info['block_type'] == 'train')]['regime_num'].to_numpy()
 
                 test_regs = block_info[(block_info['task_name'] == task) &
-                                          (block_info['block_type'] == 'test')]['regime_num'].values
+                                          (block_info['block_type'] == 'test')]['regime_num'].to_numpy()
 
                 # Get reference test regimes
                 ref_test_regs = np.array([test_regs[np.argmax(
@@ -114,7 +114,7 @@ class PerformanceMaintenance(Metric):
                 # Iterate over task performance differences for performance maintenance
                 for task in unique_tasks:
                     # Get the task maintenance values
-                    m = metrics_df[metrics_df['task_name'] == task]['maintenance_val_mrtlp'].values
+                    m = metrics_df[metrics_df['task_name'] == task]['maintenance_val_mrtlp'].to_numpy()
 
                     # Remove NaNs
                     m = m[~np.isnan(m)]
@@ -132,7 +132,7 @@ class PerformanceMaintenance(Metric):
                 # Iterate over task performance differences for performance maintenance
                 for task in unique_tasks:
                     # Get the task maintenance values
-                    m = metrics_df[metrics_df['task_name'] == task]['maintenance_val_mrlep'].values
+                    m = metrics_df[metrics_df['task_name'] == task]['maintenance_val_mrlep'].to_numpy()
 
                     # Remove NaNs
                     m = m[~np.isnan(m)]

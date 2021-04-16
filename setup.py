@@ -24,7 +24,7 @@ HERE = pathlib.Path(__file__).parent
 
 setup(
     name='l2metrics',
-    version='2.6.0',
+    version='2.7.0',
     description='Metrics for Lifelong Learning',
     long_description=(HERE / 'README.md').read_text(),
     long_description_content_type='text/markdown',
@@ -41,12 +41,13 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'l2logger>=1.0.1',
+        'l2logger>=1.1.0',
         'ipykernel',
         'ipympl',
         'matplotlib',
         'numpy',
         'pandas',
+        'pyarrow',
         'python-dateutil',
         'pytz',
         'scipy',

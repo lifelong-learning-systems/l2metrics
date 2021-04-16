@@ -23,8 +23,6 @@ import pandas as pd
 
 from ._localutil import fill_metrics_df, get_block_saturation_perf
 from .core import Metric
-from .normalizer import Normalizer
-from .util import get_ste_data_names, load_ste_data
 
 
 class SampleEfficiency(Metric):
@@ -33,23 +31,27 @@ class SampleEfficiency(Metric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the sample efficiency relative to the single-task expert"
 
-    def __init__(self, perf_measure: str, do_normalize: bool = False, normalizer: Normalizer = None) -> None:
+    def __init__(self, perf_measure: str, ste_data: dict, ste_averaging_method: str = 'time') -> None:
+
         super().__init__()
         self.perf_measure = perf_measure
-        self.do_normalize = do_normalize
-        self.normalizer = normalizer
+        self.ste_data = ste_data
+        if ste_averaging_method not in ['time', 'metrics']:
+            raise Exception(f'Invalid STE averaging method: {ste_averaging_method}')
+        else:
+            self.ste_averaging_method = ste_averaging_method
 
-    def validate(self, block_info: pd.DataFrame) -> pd.DataFrame:
+    def validate(self, block_info: pd.DataFrame) -> None:
         # Check if there is STE data for each task in the scenario
-        unique_tasks = block_info.loc[:, 'task_name'].unique()
-        ste_names = get_ste_data_names()
+        self.unique_tasks = block_info.loc[:, 'task_name'].unique()
+        ste_names = tuple(self.ste_data.keys())
 
         # Raise exception if none of the tasks have STE data
-        if ~np.any(np.isin(unique_tasks, ste_names)):
+        if ~np.any(np.isin(self.unique_tasks, ste_names)):
             raise Exception('No STE data available for any task')
 
         # Make sure STE baselines are available for all tasks, else send warning
-        if ~np.all(np.isin(unique_tasks, ste_names)):
+        if ~np.all(np.isin(self.unique_tasks, ste_names)):
             warnings.warn('STE data not available for all tasks')
 
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
@@ -62,10 +64,7 @@ class SampleEfficiency(Metric):
             se_eps_to_sat = {}
             sample_efficiency = {}
 
-            # Iterate through unique tasks and STE
-            unique_tasks = block_info.loc[:, 'task_name'].unique()
-
-            for task in unique_tasks:
+            for task in self.unique_tasks:
                 # Get block info for task during training
                 task_blocks = block_info[(block_info['task_name'] == task) & (
                     block_info['block_type'] == 'train')]
@@ -74,25 +73,31 @@ class SampleEfficiency(Metric):
                 task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
 
                 if len(task_data):
-                    # Load STE data
-                    ste_data = load_ste_data(task)
+                    # Get STE data
+                    ste_data = self.ste_data.get(task)
 
                     if ste_data is not None:
-                        # Check if performance measure exists in STE data
-                        if self.perf_measure in ste_data.columns:
-                            if self.do_normalize and self.normalizer is not None:
-                                ste_data = self.normalizer.normalize(ste_data)
+                        # Get task saturation value and episodes to saturation
+                        task_saturation, task_eps_to_sat, _ = get_block_saturation_perf(
+                            task_data, col_to_use=self.perf_measure)
 
-                            # Get task saturation value and episodes to saturation
-                            task_saturation, task_eps_to_sat, _ = get_block_saturation_perf(
-                                task_data, col_to_use=self.perf_measure)
+                        # Check for valid performance
+                        if task_eps_to_sat == 0:
+                                print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
+                                continue
+
+                        if self.ste_averaging_method == 'time':
+                            # Average all the STE data together after truncating to same length
+                            x_ste = [ste_data_df[ste_data_df['block_type'] == 'train']
+                                     [self.perf_measure].to_numpy() for ste_data_df in ste_data]
+                            min_ste_exp = min(map(len, x_ste))
+                            x_ste = np.array([x[:min_ste_exp] for x in x_ste]).mean(0)
 
                             # Get STE saturation value and episodes to saturation
-                            ste_saturation, ste_eps_to_sat, _ = get_block_saturation_perf(
-                                ste_data, col_to_use=self.perf_measure)
+                            ste_saturation, ste_eps_to_sat, _ = get_block_saturation_perf(x_ste)
 
                             # Check for valid performance
-                            if task_eps_to_sat == 0 or ste_eps_to_sat == 0:
+                            if ste_eps_to_sat == 0:
                                 print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
                                 continue
 
@@ -101,8 +106,28 @@ class SampleEfficiency(Metric):
                             se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
                             sample_efficiency[task_data['regime_num'].iloc[-1]] = \
                                 (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
-                        else:
-                            print(f"Cannot compute {self.name} for task {task} - Performance measure not in STE data")
+                        elif self.ste_averaging_method == 'metrics':
+                            sample_efficiency_vals = []
+                            
+                            for ste_data_df in ste_data:
+                                ste_data_df = ste_data_df[ste_data_df['block_type'] == 'train']
+
+                                # Get STE saturation value and episodes to saturation
+                                ste_saturation, ste_eps_to_sat, _ = get_block_saturation_perf(
+                                    ste_data_df, col_to_use=self.perf_measure)
+
+                                # Check for valid performance
+                                if ste_eps_to_sat == 0:
+                                    print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
+                                    continue
+
+                                # Compute sample efficiency
+                                se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
+                                se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
+                                sample_efficiency_vals.append(
+                                    (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat))
+
+                            sample_efficiency[task_data['regime_num'].iloc[-1]] = np.mean(sample_efficiency_vals)
                     else:
                         print(f"Cannot compute {self.name} for task {task} - No STE data available")
 

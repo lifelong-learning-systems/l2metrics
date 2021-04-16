@@ -464,10 +464,10 @@ def evaluate() -> None:
 
     # Save data
     if args.do_save:
-        with open(args.output_dir.parent / (args.output + '.tsv'), 'w', newline='\n') as metrics_file:
+        with open(args.output_dir / (args.output + '.tsv'), 'w', newline='\n') as metrics_file:
             ll_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
                 ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
-        with open(args.output_dir.parent / (args.output + '.json'), 'w', newline='\n') as metrics_file:
+        with open(args.output_dir / (args.output + '.json'), 'w', newline='\n') as metrics_file:
             json.dump(ll_metrics_dicts, metrics_file)
 
 

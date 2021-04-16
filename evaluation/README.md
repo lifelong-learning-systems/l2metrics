@@ -103,7 +103,13 @@ optional arguments:
 This directory also contains the outputs of an example evaluation produced by running the following command:
 
 ```bash
-python -m evaluation.evaluate --eval-dir=./example_eval/m12_eval/ --ste-dir=agent_config --perf-measure=performance --maintenance-method=both --transfer-method=both --output-dir=example_results/normalized/example_normalized --output=example_metrics_normalized
+python -m evaluation.evaluate -l ../../example_eval/m12_eval/ -O ./example_results/ -o example_metrics
+```
+
+Similarly to the `l2metrics` package, you may also specify a JSON file containing the desired evaluation settings instead of using the command-line arguments. The settings loaded from the JSON file will take precedence over any arguments specified on the command line.
+
+```bash
+python -m evaluation.evaluate -c evaluation_settings.json
 ```
 
 ### Metrics TSV File

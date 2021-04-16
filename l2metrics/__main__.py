@@ -108,29 +108,29 @@ def run() -> None:
     parser.add_argument('--no-save', dest='do_save', action='store_false',
                         help='Do not save metrics outputs')
 
-    # Configuration file settings
-    parser.add_argument('-c', '--load-config', type=str,
+    # Settings file arguments
+    parser.add_argument('-c', '--load-settings', type=str,
                         help='Load L2Metrics settings from JSON file')
-    parser.add_argument('-C', '--do-save-config', dest='do_save_config', default=True, action='store_true',
+    parser.add_argument('-C', '--do-save-settings', dest='do_save_settings', default=True, action='store_true',
                         help='Save L2Metrics settings to JSON file')
-    parser.add_argument('--no-save-config', dest='do_save_config', action='store_false',
+    parser.add_argument('--no-save-settings', dest='do_save_settings', action='store_false',
                         help='Do not save L2Metrics settings to JSON file')
 
     # Parse arguments
     args = parser.parse_args()
     kwargs = vars(args)
 
-    if args.load_config:
-        with open(args.load_config, 'r') as config_file:
-            kwargs.update(json.load(config_file))
+    if args.load_settings:
+        with open(args.load_settings, 'r') as settings_file:
+            kwargs.update(json.load(settings_file))
 
     if args.ste_store_mode:
         util.store_ste_data(log_dir=Path(args.log_dir), mode=args.ste_store_mode)
     else:
         # Load data range data for normalization and standardize names to lowercase
         if args.data_range_file:
-            with open(args.data_range_file) as config_json:
-                data_range = json.load(config_json)
+            with open(args.data_range_file) as data_range_file:
+                data_range = json.load(data_range_file)
                 data_range = {key.lower(): val for key, val in data_range.items()}
         else:
             data_range = None
@@ -161,9 +161,9 @@ def run() -> None:
                         show_eval_lines=args.show_eval_lines)
             report.plot_ste_data(save=args.do_save)
 
-        # Save configuration settings used to run calculate metrics
-        if args.do_save_config:
-            report.save_config(filename=args.output)
+        # Save settings used to run calculate metrics
+        if args.do_save_settings:
+            report.save_settings(filename=args.output)
 
 
 if __name__ == '__main__':

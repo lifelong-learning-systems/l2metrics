@@ -187,7 +187,7 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
         clamp_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
         do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
-        do_save_config (bool, optional): Flag for saving L2Metrics settings to JSON file. Defaults to
+        do_save_settings (bool, optional): Flag for saving L2Metrics settings to JSON file. Defaults to
             False.
 
     Returns:
@@ -204,7 +204,7 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
     do_save_plots = kwargs.get('do_save_plots', False)
     show_raw_data = kwargs.get('show_raw_data', False)
     show_eval_lines = kwargs.get('show_eval_lines', True)
-    do_save_config = kwargs.get('do_save_config', False)
+    do_save_settings = kwargs.get('do_save_settings', False)
 
     # Initialize metrics report
     report = MetricsReport(**kwargs)
@@ -230,8 +230,8 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
         report.plot_ste_data(save=do_save_plots, output_dir=output_dir)
         plt.close('all')
     
-    if do_save_config:
-        report.save_config(filename=str(Path(output_dir) / log_dir.name))
+    if do_save_settings:
+        report.save_settings(filename=str(Path(output_dir) / log_dir.name))
 
     return ll_metrics_df, ll_metrics_dict
 
@@ -436,10 +436,11 @@ def evaluate() -> None:
     parser.add_argument('--no-save', dest='do_save', action='store_false',
                         help='Do not save metrics outputs')
 
-    # Configuration file settings
-    parser.add_argument('-C', '--do-save-config', dest='do_save_config', default=True, action='store_true',
+    # Settings file arguments
+    # TODO: Add argument to load evaluation settings
+    parser.add_argument('-C', '--do-save-settings', dest='do_save_settings', default=True, action='store_true',
                         help='Save L2Metrics settings to JSON file')
-    parser.add_argument('--no-save-config', dest='do_save_config', action='store_false',
+    parser.add_argument('--no-save-settings', dest='do_save_settings', action='store_false',
                         help='Do not save L2Metrics settings to JSON file')
 
     # Parse arguments

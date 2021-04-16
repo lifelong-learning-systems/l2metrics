@@ -109,7 +109,7 @@ Once these logs are generated, you'll need to store Single-Task Expert (STE) dat
   - `./examples/ste_task3_1_run1/`
   - `./examples/ste_task3_1_run2/`
   - `./examples/multi_task/`
-- Example `config.json` file for setting command-line arguments
+- Example `settings.json` file for setting command-line arguments
 - Example `data_range.json` file to show how the user can specify task normalization ranges
 
 ### Command-Line Execution
@@ -124,8 +124,8 @@ usage: python -m l2metrics [-h] [-l LOG_DIR] [-s {w,a}] [-v {time,metrics}]
                    [-g {none,flat,hanning,hamming,bartlett,blackman}]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
                    [-o OUTPUT] [-r] [-e] [--no-show-eval-lines] [-P]
-                   [--no-plot] [-S] [--no-save] [-c LOAD_CONFIG] [-C]
-                   [--no-save-config]
+                   [--no-plot] [-S] [--no-save] [-c LOAD_SETTINGS] [-C]
+                   [--no-save-settings]
 
 Run L2Metrics from the command line
 
@@ -153,8 +153,8 @@ optional arguments:
                         Method for smoothing data, window type
   -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
                         Window length for smoothing data
-  -x, --clamp-outliers
-                        Remove outliers in data for metrics by clamping to quantiles
+  -x, --clamp-outliers  Remove outliers in data for metrics by clamping to
+                        quantiles
   -d DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
                         JSON file containing task performance ranges for
                         normalization
@@ -171,10 +171,11 @@ optional arguments:
   --no-plot             Do not plot performance
   -S, --do-save         Save metrics outputs
   --no-save             Do not save metrics outputs
-  -c LOAD_CONFIG, --load-config LOAD_CONFIG
+  -c LOAD_SETTINGS, --load-settings LOAD_SETTINGS
                         Load L2Metrics settings from JSON file
-  -C, --do-save-config  Save L2Metrics settings to JSON file
-  --no-save-config      Do not save L2Metrics settings to JSON file
+  -C, --do-save-settings
+                        Save L2Metrics settings to JSON file
+  --no-save-settings    Do not save L2Metrics settings to JSON file
 ```
 
 By default, the L2Metrics package will calculate metrics with the following options:
@@ -193,7 +194,7 @@ By default, the L2Metrics package will calculate metrics with the following opti
 - Show raw data is `disabled` and is also currently unsupported.
 - Draw lines between evaluation blocks is `enabled`.
 - Saving of results and log data is `enabled`.
-- Saving of configuration settings is `enabled`.
+- Saving of settings is `enabled`.
 
 **Note**: Valid values for the performance measure input argument are determined by the `metrics_columns` dictionary in `logger_info.json`.
 
@@ -208,7 +209,7 @@ python -m l2metrics -l examples/ste_task3_1_run1 -s w
 python -m l2metrics -l examples/ste_task3_1_run2 -s a
 ```
 
-The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single-task expert data is pickled and saved. The STE store mode specified in the example commands is `w`, which is "write" or "overwrite." This mode will create a new pickle file for the STE if one does not already exist; if there is already a file for the same task in the `taskinfo` location, it will be overwritten in this mode. The append mode, `a`, can be used to store multiple runs of STE data in the same pickle file. Then, the STE averaging method can be selected in the `l2metrics` module to modify how multiple STE runs are handled. Storing STE data assumes the provided log only contains data for a single task/variant.
+The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single-task expert data is pickled and saved. The STE store mode specified in the first three example commands is `w`, which is "write" or "overwrite." This mode will create a new pickle file for the STE if one does not already exist; if there is already a file for the same task in the `taskinfo` location, it will be overwritten in this mode. The last example command used the append mode, `a`, which allows users to store multiple runs of STE data in the same pickle file. Then, the STE averaging method can be selected in the `l2metrics` module to modify how multiple STE runs are handled. Storing STE data assumes the provided log only contains data for a single task/variant.
 
 Replace the log directory argument with logs for other STE tasks and repeat until all STE data is stored.
 
@@ -220,15 +221,22 @@ To generate a metrics plot and report with default settings, run the following c
 python -m l2metrics -l examples/multi_task -p performance
 ```
 
-If you do not wish to provide a fully qualified path to your log directory, you may copy it to your `$L2DATA/logs` directory. This is the default location for logs generated using the TEF.
-
 The default outputs of the above command are:
 
 - `multi_task_data.feather`: The log data DataFrame containing raw and pre-processed data.
-- `multi_task_config.json`: The configurations used to generate the metrics report.
+- `multi_task_settings.json`: The settings used to generate the metrics report.
 - `multi_task_metrics.json`: The lifetime and task-level metrics of the run.
 - `multi_task.png`: The performance plot.
 - `multi_task_ste.png`: The performance relative to STE plot.
+
+If you wish to generate a metrics report with modified settings (e.g., disabling normalization or aggregating lifetime metrics with the mean operator), you can either modify the arguments on the command line or specify a JSON file containing the desired settings. The settings loaded from the JSON file will take precedence over any arguments specified on the command line.
+
+```bash
+cd examples/
+python -m l2metrics -c settings.json
+```
+
+**Note**: If you do not wish to provide a fully qualified path to your log directory, you may copy it to your `$L2DATA/logs` directory. This is the default location for logs generated using the TEF.
 
 ### Log Data
 
@@ -264,21 +272,38 @@ The `multi_task_data.feather` file contains the following columns:
 
 As alluded to above, the Metrics Framework stores all intermediate values of the performance measure during pre-processing, following the order of operations (clamp outliers -> normalize -> smooth). The original column (e.g., `performance`) is overwritten after each step in the data pre-processing and is used by the framework to compute metrics.
 
-### Configuration File
+### Output Settings File
 
-If saving of L2Metrics configuration is enabled, the framework will generate a JSON file containing the primary parameters used to calculate L2Metrics:
+If saving of L2Metrics settings is enabled, the framework will generate a JSON file containing the primary parameters used to calculate L2Metrics:
 
-- `log_dir`
-- `perf_measure`
-- `ste_averaging_method`
-- `aggregation_method`
-- `maintenance_method`
-- `transfer_method`
-- `normalization_method`
-- `smoothing_method`
-- `window_length`
-- `clamp_outliers`
-- `data_range`
+```json
+{
+  "log_dir": "multi_task",
+  "perf_measure": "performance",
+  "ste_averaging_method": "time",
+  "aggregation_method": "median",
+  "maintenance_method": "mrlep",
+  "transfer_method": "contrast",
+  "normalization_method": "task",
+  "smoothing_method": "flat",
+  "window_length": null,
+  "clamp_outliers": false,
+  "data_range": {
+    "task1_1": {
+      "min": 1.917608012692288,
+      "max": 99.73909708414915
+    },
+    "task2_1": {
+      "min": 2.5,
+      "max": 99.924058441952
+    },
+    "task3_1": {
+      "min": 2.5,
+      "max": 99.92008048384649
+    }
+  }
+}
+```
 
 ### Metrics and Metrics File
 
@@ -286,7 +311,7 @@ The metrics module will print the lifetime metrics to the console when it has su
 
 | perf_recovery | perf_maintenance_mrlep | forward_transfer_contrast | backward_transfer_contrast | ste_rel_perf | sample_efficiency |
 | ------------- | ---------------------- | ------------------------- | -------------------------- | ------------ | ----------------- |
-| 0.0           | -2.74                  | 1.00                      | -0.02                      | 1.11         | 0.71              |
+| 0.0           | 3.43                  | 1.00                      | 0.03                      | 1.10         | 0.91              |
 
 If saving is enabled, the framework will also generate a JSON file containing lifetime and task-level metrics for the scenario. Please refer to the [evaluation README](./evaluation/README.md#metrics-json-file) for more information on the format of this file.
 

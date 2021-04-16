@@ -12,8 +12,8 @@ usage: calc_metrics.py [-h] [-l LOG_DIR] [-s {w,a}] [-v {time,metrics}]
                    [-g {none,flat,hanning,hamming,bartlett,blackman}]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
                    [-o OUTPUT] [-r] [-e] [--no-show-eval-lines] [-P]
-                   [--no-plot] [-S] [--no-save] [-c LOAD_CONFIG] [-C]
-                   [--no-save-config]
+                   [--no-plot] [-S] [--no-save] [-c LOAD_SETTINGS] [-C]
+                   [--no-save-settings]
 
 Run L2Metrics from the command line
 
@@ -41,8 +41,8 @@ optional arguments:
                         Method for smoothing data, window type
   -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
                         Window length for smoothing data
-  -x, --clamp-outliers
-                        Remove outliers in data for metrics by clamping to quantiles
+  -x, --clamp-outliers  Remove outliers in data for metrics by clamping to
+                        quantiles
   -d DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
                         JSON file containing task performance ranges for
                         normalization
@@ -59,10 +59,11 @@ optional arguments:
   --no-plot             Do not plot performance
   -S, --do-save         Save metrics outputs
   --no-save             Do not save metrics outputs
-  -c LOAD_CONFIG, --load-config LOAD_CONFIG
+  -c LOAD_SETTINGS, --load-settings LOAD_SETTINGS
                         Load L2Metrics settings from JSON file
-  -C, --do-save-config  Save L2Metrics settings to JSON file
-  --no-save-config      Do not save L2Metrics settings to JSON file
+  -C, --do-save-settings
+                        Save L2Metrics settings to JSON file
+  --no-save-settings    Do not save L2Metrics settings to JSON file
 ```
 
 ## Writing a Custom Metric

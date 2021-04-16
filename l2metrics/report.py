@@ -440,29 +440,29 @@ class MetricsReport():
         # Save data
         self._log_data.reset_index(drop=True).to_feather(filename + '_data.feather')
 
-    def save_config(self, filename: str = None) -> None:
+    def save_settings(self, filename: str = None) -> None:
         # Generate filename
         if filename is None:
             filename = Path(self.log_dir).name
         else:
             filename = filename.replace(" ", "_")
 
-        # Build configuration JSON
-        config_json = {}
-        config_json['log_dir'] = str(self.log_dir)
-        config_json['perf_measure'] = self.perf_measure
-        config_json['ste_averaging_method'] = self.ste_averaging_method
-        config_json['aggregation_method'] = self.aggregation_method
-        config_json['maintenance_method'] = self.maintenance_method
-        config_json['transfer_method'] = self.transfer_method
-        config_json['normalization_method'] = self.normalization_method
-        config_json['smoothing_method'] = self.smoothing_method
-        config_json['window_length'] = self.window_length
-        config_json['clamp_outliers'] = self.clamp_outliers
-        config_json['data_range'] = self.normalizer.data_range if self.normalizer else None
+        # Build settings JSON
+        settings_json = {}
+        settings_json['log_dir'] = str(self.log_dir)
+        settings_json['perf_measure'] = self.perf_measure
+        settings_json['ste_averaging_method'] = self.ste_averaging_method
+        settings_json['aggregation_method'] = self.aggregation_method
+        settings_json['maintenance_method'] = self.maintenance_method
+        settings_json['transfer_method'] = self.transfer_method
+        settings_json['normalization_method'] = self.normalization_method
+        settings_json['smoothing_method'] = self.smoothing_method
+        settings_json['window_length'] = self.window_length
+        settings_json['clamp_outliers'] = self.clamp_outliers
+        settings_json['data_range'] = self.normalizer.data_range if self.normalizer else None
 
-        with open(filename + '_config.json', 'w') as output_config:
-            json.dump(config_json, output_config)
+        with open(filename + '_settings.json', 'w') as outfile:
+            json.dump(settings_json, outfile)
 
     def plot(self, save: bool = False, show_raw_data: bool = False, show_eval_lines: bool = True,
              output_dir: str = '', input_title: str = None) -> None:

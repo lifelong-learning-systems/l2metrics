@@ -8,7 +8,7 @@ The package also contains a `validate` module that checks for the existence of r
 
 To evaluate multi-lifetime metrics for a lifetime learning agent, you must first generate multiple log files for varying levels of complexity and difficulty in accordance with the L2Logger format version 1.0. An [example_eval](https://github.com/darpa-l2m/example_eval) repository was created to demonstrate the proper format of logs required for evaluation.
 
-Once logs have been generated or unzipped, the LL agent can be evaluated with either the Jupyter notebook (`evaluation.ipynb`) or the Python scripts (`evaluate.py` / `parallel_evaluation.py`). Both methods require some configuration or input arguments for properly generating the metrics summary report.
+Once logs have been generated or unzipped, the LL agent can be evaluated with either the Jupyter notebook (`evaluation.ipynb`) or the Python scripts (`evaluate.py` / `parallel_evaluation.py`). Both methods require modifying some settings or input arguments for properly generating the metrics summary report.
 
 **Note**: The evaluation scripts assume the directory structure described in the example evaluation repository README for finding STE and LL logs. The scripts will raise an error if the directory structure does not match what is expected. You may also need to modify the `eval_dir` variable in `process_evaluation` of `parallel_evaluation.py` in order to properly locate the log files.
 
@@ -24,7 +24,7 @@ usage: python -m evaluation.evaluate [-h] -l EVAL_DIR [-s STE_DIR] [-v {time,met
                    [-O OUTPUT_DIR] [-o OUTPUT] [-u] [-r] [-e]
                    [--no-show-eval-lines] [-T] [--no-store-ste] [-P]
                    [--no-plot] [-L] [--no-save-plots] [-S] [--no-save] [-C]
-                   [--no-save-config]
+                   [--no-save-settings]
 
 Run L2M evaluation from the command line
 
@@ -73,8 +73,8 @@ optional arguments:
   --no-save-plots       Save scenario and STE plots
   -S, --do-save         Save metrics outputs
   --no-save             Do not save metrics outputs
-  -C, --do-save-config  Save L2Metrics settings to JSON file
-  --no-save-config      Do not save L2Metrics settings to JSON file
+  -C, --do-save-settings  Save L2Metrics settings to JSON file
+  --no-save-settings      Do not save L2Metrics settings to JSON file
 ```
 
 **Note**: Valid values for the performance measure input argument are determined by the `metrics_columns` dictionary in `logger_info.json`.

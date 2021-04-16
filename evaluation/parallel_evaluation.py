@@ -40,13 +40,13 @@ perf_measure = {
 
 
 def process_evaluation(args):
-    eval_dir, sg_name, configuration = args
+    eval_dir, sg_name, processing_mode = args
 
     # Build file and directory strings
     kwargs = {}
     kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval/' + eval_dir + '/')
-    kwargs['output_dir'] = Path('results/' + configuration + '/' + sg_name + '_' + configuration)
-    kwargs['output'] = sg_name + '_metrics_' + configuration
+    kwargs['output_dir'] = Path('results/' + processing_mode + '/' + sg_name + '_' + processing_mode)
+    kwargs['output'] = sg_name + '_metrics_' + processing_mode
     kwargs['ste_dir'] = 'agent_config'
     kwargs['ste_averaging_method'] = 'metrics'
     kwargs['perf_measure'] = perf_measure[sg_name]
@@ -61,17 +61,17 @@ def process_evaluation(args):
     kwargs['do_plot'] = True
     kwargs['do_save_plots'] = True
     kwargs['do_save'] = True
-    kwargs['do_save_config'] = True
+    kwargs['do_save_settings'] = True
 
     # Create output directory if it doesn't exist
     kwargs['output_dir'].mkdir(parents=True, exist_ok=True)
 
-    # Generate other input arguments based on configuration
-    kwargs['normalization_method'] = 'task' if configuration in [
+    # Generate other input arguments based on data processing mode
+    kwargs['normalization_method'] = 'task' if processing_mode in [
         'normalized', 'normalized_no_outliers'] else 'none'
-    kwargs['smoothing_method'] = 'flat' if configuration in [
+    kwargs['smoothing_method'] = 'flat' if processing_mode in [
         'smoothed', 'normalized', 'normalized_no_outliers'] else 'none'
-    kwargs['clamp_outliers'] = configuration in ['normalized_no_outliers']
+    kwargs['clamp_outliers'] = processing_mode in ['normalized_no_outliers']
 
     ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(**kwargs)
 
@@ -88,10 +88,10 @@ def run():
     # Configure metrics report
     eval_dirs = ['m9_eval']
     sg_names = ['argonne', 'hrl', 'sri', 'teledyne', 'upenn']
-    configurations = ['raw', 'smoothed', 'normalized', 'normalized_no_outliers']
+    processing_modes = ['raw', 'smoothed', 'normalized', 'normalized_no_outliers']
 
     # Parallel processing
-    sg_configs = list(product(eval_dirs, sg_names, configurations))
+    sg_configs = list(product(eval_dirs, sg_names, processing_modes))
 
     with Pool(psutil.cpu_count(logical=False)) as p:
         list(tqdm(p.imap(process_evaluation, sg_configs), total=len(sg_configs)))

@@ -1,7 +1,7 @@
 {
     "log_dir": "multi_task",
     "ste_store_mode": null,
-    "ste_averaging_method": "metrics",
+    "ste_averaging_method": "time",
     "perf_measure": "performance",
     "aggregation_method": "median",
     "maintenance_method": "both",
@@ -10,12 +10,12 @@
     "smoothing_method": "flat",
     "window_length": null,
     "clamp_outliers": true,
-    "data_range_file": null,
+    "data_range_file": "data_range.json",
     "noise": [0, 0],
     "output": null,
     "show_raw_data": true,
     "show_eval_lines": true,
     "do_plot": true,
     "do_save": true,
-    "do_save_config": true
+    "do_save_settings": true
   }

@@ -6,10 +6,10 @@ This directory contains a Python script with an example for creating custom metr
 
 ```
 usage: calc_metrics.py [-h] [-l LOG_DIR] [-s {w,a}] [-v {time,metrics}]
-                   [-p PERF_MEASURE] [-a {mean,median}]
-                   [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
-                   [-n {none,task,run}]
-                   [-g {none,flat,hanning,hamming,bartlett,blackman}]
+                   [-p PERF_MEASURE] [-a {median,mean}]
+                   [-m {mrlep,mrtlp,both}] [-t {contrast,ratio,both}]
+                   [-n {task,run,none}]
+                   [-g {flat,hanning,hamming,bartlett,blackman,none}]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
                    [-o OUTPUT] [-r] [-e] [--no-show-eval-lines] [-P]
                    [--no-plot] [-S] [--no-save] [-c LOAD_SETTINGS] [-C]
@@ -26,18 +26,18 @@ optional arguments:
                         append (a)
   -v {time,metrics}, --ste-averaging-method {time,metrics}
                         Method for handling STE runs, time-series averaging
-                        (time) or LL metric averaging (metric)
+                        (time) or LL metric averaging (metrics)
   -p PERF_MEASURE, --perf-measure PERF_MEASURE
                         Name of column to use for metrics calculations
-  -a {mean,median}, --aggregation-method {mean,median}
+  -a {median,mean}, --aggregation-method {median,mean}
                         Method for aggregating within-lifetime metrics
-  -m {mrtlp,mrlep,both}, --maintenance-method {mrtlp,mrlep,both}
+  -m {mrlep,mrtlp,both}, --maintenance-method {mrlep,mrtlp,both}
                         Method for computing performance maintenance
   -t {contrast,ratio,both}, --transfer-method {contrast,ratio,both}
                         Method for computing forward and backward transfer
-  -n {none,task,run}, --normalization-method {none,task,run}
+  -n {task,run,none}, --normalization-method {task,run,none}
                         Method for normalizing data
-  -g {none,flat,hanning,hamming,bartlett,blackman}, --smoothing-method {none,flat,hanning,hamming,bartlett,blackman}
+  -g {flat,hanning,hamming,bartlett,blackman,none}, --smoothing-method {flat,hanning,hamming,bartlett,blackman,none}
                         Method for smoothing data, window type
   -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
                         Window length for smoothing data

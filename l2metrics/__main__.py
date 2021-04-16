@@ -40,18 +40,18 @@ def run() -> None:
     # Method for handling multiple STE runs
     parser.add_argument('-v', '--ste-averaging-method', default='time', choices=['time', 'metrics'],
                         help='Method for handling STE runs, time-series averaging (time) or '
-                        'LL metric averaging (metric)')
+                        'LL metric averaging (metrics)')
 
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf-measure', default='reward', type=str,
                         help='Name of column to use for metrics calculations')
 
     # Method for aggregating within-lifetime metrics
-    parser.add_argument('-a', '--aggregation-method', default='median', type=str, choices=['mean', 'median'],
+    parser.add_argument('-a', '--aggregation-method', default='median', type=str, choices=['median', 'mean'],
                         help='Method for aggregating within-lifetime metrics')
 
     # Method for calculating performance maintenance
-    parser.add_argument('-m', '--maintenance-method', default='mrlep', type=str, choices=['mrtlp', 'mrlep', 'both'],
+    parser.add_argument('-m', '--maintenance-method', default='mrlep', type=str, choices=['mrlep', 'mrtlp', 'both'],
                         help='Method for computing performance maintenance')
 
     # Method for calculating forward and backward transfer
@@ -59,11 +59,11 @@ def run() -> None:
                         help='Method for computing forward and backward transfer')
 
     # Method for normalization
-    parser.add_argument('-n', '--normalization-method', default='task', type=str, choices=['none', 'task', 'run'],
+    parser.add_argument('-n', '--normalization-method', default='task', type=str, choices=['task', 'run', 'none'],
                         help='Method for normalizing data')
 
     # Method for smoothing
-    parser.add_argument('-g', '--smoothing-method', default='flat', type=str, choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
+    parser.add_argument('-g', '--smoothing-method', default='flat', type=str, choices=['flat', 'hanning', 'hamming', 'bartlett', 'blackman', 'none'],
                         help='Method for smoothing data, window type')
 
     # Window length for smoothing
@@ -109,7 +109,7 @@ def run() -> None:
                         help='Do not save metrics outputs')
 
     # Settings file arguments
-    parser.add_argument('-c', '--load-settings', type=str,
+    parser.add_argument('-c', '--load-settings', default='', type=str,
                         help='Load L2Metrics settings from JSON file')
     parser.add_argument('-C', '--do-save-settings', dest='do_save_settings', default=True, action='store_true',
                         help='Save L2Metrics settings to JSON file')

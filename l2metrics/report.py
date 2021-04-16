@@ -50,11 +50,7 @@ class MetricsReport():
         self._metrics = []
         self.ll_metrics_dict = {}
 
-        if 'log_dir' in kwargs:
-            self.log_dir = Path(kwargs['log_dir'])
-        else:
-            raise RuntimeError("log_dir is required")
-
+        self.log_dir = Path(kwargs.get('log_dir', ''))
         self.perf_measure = kwargs.get('perf_measure', 'reward')
         self.ste_averaging_method = kwargs.get('ste_averaging_method', 'time')
         self.aggregation_method = kwargs.get('aggregation_method', 'median')

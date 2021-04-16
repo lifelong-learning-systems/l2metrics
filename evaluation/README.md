@@ -69,7 +69,7 @@ optional arguments:
   --no-store-ste        Do not store STE data
   -P, --do-plot         Plot performance
   --no-plot             Do not plot performance
-  -L, --save-plots      Save scenario and STE plots
+  -L, --do-save-plots      Save scenario and STE plots
   --no-save-plots       Save scenario and STE plots
   -S, --do-save         Save metrics outputs
   --no-save             Do not save metrics outputs

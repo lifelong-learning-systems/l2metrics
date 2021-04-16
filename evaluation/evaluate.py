@@ -194,11 +194,7 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
         Tuple[pd.DataFrame, dict]: DataFrame containing lifelong metrics from scenarios.
     """
 
-    if 'log_dir' in kwargs:
-        log_dir = Path(kwargs['log_dir'])
-    else:
-        raise RuntimeError("log_dir is required")
-
+    log_dir = kwargs.get('log_dir', Path(''))
     do_plot = kwargs.get('do_plot', False)
     output_dir = kwargs.get('output_dir', '')
     do_save_plots = kwargs.get('do_save_plots', False)
@@ -258,7 +254,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
         smoothing_method (str, optional): Method for smoothing data.
             Valid values are 'none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'.
             Defaults to 'flat'.
-        window_lenth (int, optional): Window length for smoothing data. Defaults to 'None'.
+        window_length (int, optional): Window length for smoothing data. Defaults to 'None'.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
             Defaults to False.
@@ -278,11 +274,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
             scenario type, complexity, and difficulty.
     """
 
-    if 'eval_dir' in kwargs:
-        eval_dir = kwargs['eval_dir']
-    else:
-        raise RuntimeError("eval_dir is required")
-
+    eval_dir = kwargs.get('eval_dir', Path(''))
     ste_dir = kwargs.get('ste_dir', '')
     do_store_ste = kwargs.get('do_store_ste', False)
     
@@ -342,7 +334,7 @@ def evaluate() -> None:
         description='Run L2M evaluation from the command line')
 
     # Evaluation directory be absolute or relative paths
-    parser.add_argument('-l', '--eval-dir', required=True, type=str,
+    parser.add_argument('-l', '--eval-dir', default='', type=str,
                         help='Evaluation directory containing logs')
 
     # Evaluation directory be absolute or relative paths
@@ -425,7 +417,7 @@ def evaluate() -> None:
                         help='Do not plot performance')
 
     # Flag for enabling plot save
-    parser.add_argument('-L', '--save-plots', dest='do_save_plots', default=True, action='store_true',
+    parser.add_argument('-L', '--do-save-plots', dest='do_save_plots', default=True, action='store_true',
                         help='Save scenario and STE plots')
     parser.add_argument('--no-save-plots', dest='do_save_plots', action='store_false',
                         help='Save scenario and STE plots')

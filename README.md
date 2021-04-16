@@ -104,9 +104,10 @@ To calculate metrics on the performance of your system, you must first generate 
 Once these logs are generated, you'll need to store Single-Task Expert (STE) data and pass the log directories as command-line arguments to compute STE-related metrics. Several example files are included to get you started:
 
 - Example STE and LL log directories:
-  - `./examples/ste_task1/`
-  - `./examples/ste_task2/`
-  - `./examples/ste_task3/`
+  - `./examples/ste_task1_1_run1/`
+  - `./examples/ste_task2_1_run1/`
+  - `./examples/ste_task3_1_run1/`
+  - `./examples/ste_task3_1_run2/`
   - `./examples/multi_task/`
 - Example `config.json` file for setting command-line arguments
 - Example `data_range.json` file to show how the user can specify task normalization ranges
@@ -201,9 +202,10 @@ By default, the L2Metrics package will calculate metrics with the following opti
 The following commands are examples of how to store STE data from the provided logs, run from the root L2Metrics directory:
 
 ```bash
-python -m l2metrics -l examples/ste_task1 -s w
-python -m l2metrics -l examples/ste_task2 -s w
-python -m l2metrics -l examples/ste_task3 -s w
+python -m l2metrics -l examples/ste_task1_1_run1 -s w
+python -m l2metrics -l examples/ste_task2_1_run1 -s w
+python -m l2metrics -l examples/ste_task3_1_run1 -s w
+python -m l2metrics -l examples/ste_task3_1_run2 -s a
 ```
 
 The specified log data will be stored in the `$L2DATA` directory under the `taskinfo` subdirectory, where all single-task expert data is pickled and saved. The STE store mode specified in the example commands is `w`, which is "write" or "overwrite." This mode will create a new pickle file for the STE if one does not already exist; if there is already a file for the same task in the `taskinfo` location, it will be overwritten in this mode. The append mode, `a`, can be used to store multiple runs of STE data in the same pickle file. Then, the STE averaging method can be selected in the `l2metrics` module to modify how multiple STE runs are handled. Storing STE data assumes the provided log only contains data for a single task/variant.
@@ -212,7 +214,7 @@ Replace the log directory argument with logs for other STE tasks and repeat unti
 
 ### Generating Metrics Report
 
-To generate a metrics plot and report, run the following command from the root L2Metrics directory:
+To generate a metrics plot and report with default settings, run the following command from the root L2Metrics directory:
 
 ```bash
 python -m l2metrics -l examples/multi_task -p performance

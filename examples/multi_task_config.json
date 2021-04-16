@@ -1,5 +1,5 @@
 {
-  "log_dir": "examples\\multi_task",
+  "log_dir": "multi_task",
   "perf_measure": "performance",
   "ste_averaging_method": "time",
   "aggregation_method": "median",
@@ -10,17 +10,17 @@
   "window_length": null,
   "clamp_outliers": false,
   "data_range": {
-    "task1": {
+    "task2_1": {
       "min": 2.5,
-      "max": 99.20632314540028
+      "max": 99.924058441952
     },
-    "task2": {
-      "min": 2.5,
-      "max": 99.8922081657999
+    "task1_1": {
+      "min": 1.917608012692288,
+      "max": 99.73909708414915
     },
-    "task3": {
+    "task3_1": {
       "min": 2.5,
-      "max": 99.99463054023266
+      "max": 99.92008048384649
     }
   }
 }

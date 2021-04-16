@@ -55,55 +55,16 @@ class MetricsReport():
         else:
             raise RuntimeError("log_dir is required")
 
-        if 'perf_measure' in kwargs:
-            self.perf_measure = kwargs['perf_measure']
-        else:
-            self.perf_measure = 'reward'
-
-        if 'ste_averaging_method' in kwargs:
-            self.ste_averaging_method = kwargs['ste_averaging_method']
-        else:
-            self.ste_averaging_method = 'time'
-
-        if 'aggregation_method' in kwargs:
-            self.aggregation_method = kwargs['aggregation_method']
-        else:
-            self.aggregation_method = 'median'
-
-        if 'maintenance_method' in kwargs:
-            self.maintenance_method = kwargs['maintenance_method']
-        else:
-            self.maintenance_method = 'mrlep'
-
-        if 'transfer_method' in kwargs:
-            self.transfer_method = kwargs['transfer_method']
-        else:
-            self.transfer_method = 'contrast'
-
-        if 'normalization_method' in kwargs:
-            self.normalization_method = kwargs['normalization_method']
-        else:
-            self.normalization_method = 'task'
-
-        if 'smoothing_method' in kwargs:
-            self.smoothing_method = kwargs['smoothing_method']
-        else:
-            self.smoothing_method = 'flat'
-
-        if 'window_length' in kwargs:
-            self.window_length = kwargs['window_length']
-        else:
-            self.window_length = None
-
-        if 'clamp_outliers' in kwargs:
-            self.clamp_outliers = kwargs['clamp_outliers']
-        else:
-            self.clamp_outliers = False
-
-        if 'data_range' in kwargs:
-            self.data_range = kwargs['data_range']
-        else:
-            self.data_range = None
+        self.perf_measure = kwargs.get('perf_measure', 'reward')
+        self.ste_averaging_method = kwargs.get('ste_averaging_method', 'time')
+        self.aggregation_method = kwargs.get('aggregation_method', 'median')
+        self.maintenance_method = kwargs.get('maintenance_method', 'mrlep')
+        self.transfer_method = kwargs.get('transfer_method', 'contrast')
+        self.normalization_method = kwargs.get('normalization_method', 'task')
+        self.smoothing_method = kwargs.get('smoothing_method', 'flat')
+        self.window_length = kwargs.get('window_length', None)
+        self.clamp_outliers = kwargs.get('clamp_outliers', False)
+        self.data_range = kwargs.get('data_range', None)
 
         # Initialize list of LL metrics
         self.task_metrics = ['perf_recovery']
@@ -150,7 +111,7 @@ class MetricsReport():
         self._log_data = self._log_data[self._log_data[self.perf_measure].notna()]
 
         # Save raw data as separate column
-        self._log_data[self.perf_measure + '_raw'] = self._log_data[self.perf_measure].values
+        self._log_data[self.perf_measure + '_raw'] = self._log_data[self.perf_measure].to_numpy()
 
         # Get block summary
         self.block_info = l2l.parse_blocks(self._log_data)
@@ -220,7 +181,7 @@ class MetricsReport():
         # Filter outliers per-task
         for task in self._unique_tasks:
             # Get task data from dataframe
-            x = self._log_data[self._log_data['task_name'] == task][self.perf_measure].values
+            x = self._log_data[self._log_data['task_name'] == task][self.perf_measure].to_numpy()
 
             # Initialize bounds
             lower_bound = 0
@@ -228,7 +189,7 @@ class MetricsReport():
 
             if self.ste_data.get(task) is not None:
                 x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
-                                        [self.perf_measure].values for ste_data_df in self.ste_data.get(task)])
+                                        [self.perf_measure].to_numpy() for ste_data_df in self.ste_data.get(task)])
                 x_comb = np.append(x, x_ste)
                 lower_bound, upper_bound = np.quantile(x_comb, quantiles)
             else:
@@ -237,7 +198,7 @@ class MetricsReport():
             self._log_data.loc[self._log_data['task_name'] == task, self.perf_measure] = x.clip(lower_bound, upper_bound)
 
         # Save filtered data as separate column
-        self._log_data[self.perf_measure + '_filtered'] = self._log_data[self.perf_measure].values
+        self._log_data[self.perf_measure + '_filtered'] = self._log_data[self.perf_measure].to_numpy()
 
     def normalize_data(self) -> None:
         # Instantiate normalizer
@@ -249,7 +210,7 @@ class MetricsReport():
         self._log_data = self.normalizer.normalize(self._log_data)
 
         # Save normalized data as separate column
-        self._log_data[self.perf_measure + '_normalized'] = self._log_data[self.perf_measure].values
+        self._log_data[self.perf_measure + '_normalized'] = self._log_data[self.perf_measure].to_numpy()
 
         # Normalize STE data
         for task, ste_data in self.ste_data.items():
@@ -261,21 +222,21 @@ class MetricsReport():
         # Smooth LL data
         for regime_num in self.block_info['regime_num'].unique():
             x = self._log_data[self._log_data['regime_num']
-                               == regime_num][self.perf_measure].values
+                               == regime_num][self.perf_measure].to_numpy()
             self._log_data.loc[self._log_data['regime_num'] == regime_num,
                                self.perf_measure] = smooth(x, window_len=self.window_length,
                                                            window=self.smoothing_method)
 
         # Save normalized data as separate column
         self._log_data[self.perf_measure +
-                       '_smoothed'] = self._log_data[self.perf_measure].values
+                       '_smoothed'] = self._log_data[self.perf_measure].to_numpy()
 
         # Smooth STE data
         for task, ste_data in self.ste_data.items():
             if ste_data is not None:
                 for idx, ste_data_df in enumerate(ste_data):
                     for regime_num in ste_data_df['regime_num'].unique():
-                        x = ste_data_df[ste_data_df['regime_num'] == regime_num][self.perf_measure].values
+                        x = ste_data_df[ste_data_df['regime_num'] == regime_num][self.perf_measure].to_numpy()
                         self.ste_data[task][idx].loc[ste_data_df['regime_num'] == regime_num, self.perf_measure] = smooth(
                             x, window_len=self.window_length, window=self.smoothing_method)
 
@@ -320,16 +281,7 @@ class MetricsReport():
         self.ll_metrics_df['num_ex'] = num_ex
 
         # Build JSON
-        self.ll_metrics_dict['run_id'] = Path(self.log_dir).name
-        self.ll_metrics_dict['complexity'] = self.scenario_info['complexity']
-        self.ll_metrics_dict['difficulty'] = self.scenario_info['difficulty']
-        self.ll_metrics_dict['scenario_type'] = self.scenario_info['scenario_type']
-        self.ll_metrics_dict['metrics_column'] = self.perf_measure
-        self.ll_metrics_dict['min'] = data_min
-        self.ll_metrics_dict['max'] = data_max
-        self.ll_metrics_dict['num_lx'] = num_lx
-        self.ll_metrics_dict['num_ex'] = num_ex
-        self.ll_metrics_dict.update(self.lifetime_metrics_df.loc[0].T.to_dict())
+        self.ll_metrics_dict = json.loads(self.ll_metrics_df.loc[0].T.to_json())
         self.ll_metrics_dict['task_metrics'] = self.task_metrics_df.T.to_dict()
 
         for task in self._unique_tasks:
@@ -400,15 +352,15 @@ class MetricsReport():
             for metric in self.task_metrics:
                 if metric in tm.keys():
                     if metric == 'perf_recovery':
-                        pr = tm[metric].dropna().values
+                        pr = tm[metric].dropna().to_numpy()
                         self.task_metrics_df.at[task, metric] = np.NaN if len(pr) == 0 else pr[0]
                         self.task_metrics_df.at[task, 'recovery_times'] = list(
-                            tm['recovery_time'].dropna().values)
+                            tm['recovery_time'].dropna().to_numpy())
                     elif metric in ['perf_maintenance_mrtlp', 'perf_maintenance_mrlep']:
-                        pm = tm[metric].dropna().values
+                        pm = tm[metric].dropna().to_numpy()
                         self.task_metrics_df.at[task, metric] = pm[0] if len(pm) else np.NaN
                         maintenance_val_name = 'maintenance_val_' + metric.split('_')[-1]
-                        maintenance_values = list(tm[maintenance_val_name].values)
+                        maintenance_values = list(tm[maintenance_val_name].to_numpy())
                         self.task_metrics_df.at[task, maintenance_val_name] = [
                             maintenance_values[s] for s in np.ma.clump_unmasked(np.ma.masked_invalid(maintenance_values))]
                     elif metric in ['forward_transfer_contrast', 'forward_transfer_ratio',
@@ -416,7 +368,7 @@ class MetricsReport():
                         self.task_metrics_df.at[task, metric] = getattr(self, metric)[task]
                     else:
                         # Drop NaN values
-                        metric_values = tm[metric].dropna().values
+                        metric_values = tm[metric].dropna().to_numpy()
 
                         if len(metric_values) == 0:
                             self.task_metrics_df.at[task, metric] = np.NaN
@@ -436,7 +388,7 @@ class MetricsReport():
                     # Get the first calculated transfer values for each task pair
                     metric_vals = [v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()]
                 else:
-                    metric_vals = self.task_metrics_df[metric].dropna().values
+                    metric_vals = self.task_metrics_df[metric].dropna().to_numpy()
 
                 if len(metric_vals):
                     # Aggregate metric values

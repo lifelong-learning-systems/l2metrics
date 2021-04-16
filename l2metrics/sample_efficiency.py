@@ -89,7 +89,7 @@ class SampleEfficiency(Metric):
                         if self.ste_averaging_method == 'time':
                             # Average all the STE data together after truncating to same length
                             x_ste = [ste_data_df[ste_data_df['block_type'] == 'train']
-                                     [self.perf_measure].values for ste_data_df in ste_data]
+                                     [self.perf_measure].to_numpy() for ste_data_df in ste_data]
                             min_ste_exp = min(map(len, x_ste))
                             x_ste = np.array([x[:min_ste_exp] for x in x_ste]).mean(0)
 

@@ -78,14 +78,14 @@ class STERelativePerf(Metric):
                         if self.ste_averaging_method == 'time':
                             # Average all the STE data together after truncating to same length
                             x_ste = [ste_data_df[ste_data_df['block_type'] == 'train']
-                                     [self.perf_measure].values for ste_data_df in ste_data]
+                                     [self.perf_measure].to_numpy() for ste_data_df in ste_data]
                             min_ste_exp = min(map(len, x_ste))
                             x_ste = np.array([x[:min_ste_exp] for x in x_ste]).mean(0)
 
                             # Compute relative performance
                             min_exp = min(task_data.shape[0], len(x_ste))
                             task_perf = np.nansum(task_data.head(
-                                min_exp)[self.perf_measure].values)
+                                min_exp)[self.perf_measure].to_numpy())
                             ste_perf = np.nansum(x_ste)
                             rel_perf = task_perf / ste_perf
                             ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
@@ -98,9 +98,9 @@ class STERelativePerf(Metric):
                                 # Compute relative performance
                                 min_exp = np.min([task_data.shape[0], ste_data_df.shape[0]])
                                 task_perf = np.nansum(task_data.head(
-                                    min_exp)[self.perf_measure].values)
+                                    min_exp)[self.perf_measure].to_numpy())
                                 ste_perf = np.nansum(ste_data_df.head(
-                                    min_exp)[self.perf_measure].values)
+                                    min_exp)[self.perf_measure].to_numpy())
                                 rel_perf_vals.append(task_perf / ste_perf)
 
                             ste_rel_perf[task_data['regime_num'].iloc[-1]] = np.mean(rel_perf_vals)

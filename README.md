@@ -246,7 +246,7 @@ read_arrow = feather.read_table('/path/to/file')
 
 The `multi_task_data.feather` file contains the following columns:
 
-- `regime_num`: Regime number
+- `regime_num`: Regime number, defined as unique block number, block type, task name, and task parameter combination
 - `block_num`: Block number from scenario definition
 - `block_type`: Block type from scenario definition
 - `exp_num`: Experience number

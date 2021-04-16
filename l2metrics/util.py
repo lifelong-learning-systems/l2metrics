@@ -105,7 +105,7 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
         task_info_dir.mkdir(parents=True, exist_ok=True)
 
     # Get base directory to store ste data
-    filename = task_info_dir/ (task_name[0] + '.pickle')
+    filename = task_info_dir / (task_name[0] + '.pickle')
 
     # Store ste data in task info directory        
     if mode == 'a':
@@ -173,8 +173,8 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
             block_type = row['block_type']
 
             # Get data for current regime
-            x = dataframe.loc[dataframe['regime_num'] == regime_num, x_axis_col].values
-            y = dataframe.loc[dataframe['regime_num'] == regime_num, y_axis_col].values
+            x = dataframe.loc[dataframe['regime_num'] == regime_num, x_axis_col].to_numpy()
+            y = dataframe.loc[dataframe['regime_num'] == regime_num, y_axis_col].to_numpy()
 
             if show_block_boundary:
                 ax.axes.axvline(x[0], linewidth=1, linestyle=':')
@@ -277,9 +277,9 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
 
                 # Average all the STE data together after truncating to same length
                 y1 = [ste_data_df[ste_data_df['block_type'] == 'train']
-                            [perf_measure].values for ste_data_df in ste_data.get(task_name)]
+                            [perf_measure].to_numpy() for ste_data_df in ste_data.get(task_name)]
                 y1 = np.array([x[:min(map(len, y1))] for x in y1]).mean(0)
-                y2 = task_data[perf_measure].values
+                y2 = task_data[perf_measure].to_numpy()
                 
                 x1 = list(range(0, len(y1)))
                 x2 = list(range(0, len(y2)))

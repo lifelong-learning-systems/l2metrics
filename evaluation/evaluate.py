@@ -199,35 +199,12 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
     else:
         raise RuntimeError("log_dir is required")
 
-    if 'do_plot' in kwargs:
-        do_plot = kwargs['do_plot']
-    else:
-        do_plot = False
-
-    if 'output_dir' in kwargs:
-        output_dir = kwargs['output_dir']
-    else:
-        output_dir = ''
-
-    if 'do_save_plots' in kwargs:
-        do_save_plots = kwargs['do_save_plots']
-    else:
-        do_save_plots = False
-    
-    if 'show_raw_data' in kwargs:
-        show_raw_data = kwargs['show_raw_data']
-    else:
-        show_raw_data = False
-
-    if 'show_eval_lines' in kwargs:
-        show_eval_lines = kwargs['show_eval_lines']
-    else:
-        show_eval_lines = True
-
-    if 'do_save_config' in kwargs:
-        do_save_config = kwargs['do_save_config']
-    else:
-        do_save_config = False
+    do_plot = kwargs.get('do_plot', False)
+    output_dir = kwargs.get('output_dir', '')
+    do_save_plots = kwargs.get('do_save_plots', False)
+    show_raw_data = kwargs.get('show_raw_data', False)
+    show_eval_lines = kwargs.get('show_eval_lines', True)
+    do_save_config = kwargs.get('do_save_config', False)
 
     # Initialize metrics report
     report = MetricsReport(**kwargs)
@@ -306,15 +283,8 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
     else:
         raise RuntimeError("eval_dir is required")
 
-    if 'ste_dir' in kwargs:
-        ste_dir = kwargs['ste_dir']
-    else:
-        ste_dir = ''
-
-    if 'do_store_ste' in kwargs:
-        do_store_ste = kwargs['do_store_ste']
-    else:
-        do_store_ste = False
+    ste_dir = kwargs.get('ste_dir', '')
+    do_store_ste = kwargs.get('do_store_ste', False)
     
     # Initialize LL metric dataframe
     ll_metrics_df = pd.DataFrame()

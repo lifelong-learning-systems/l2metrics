@@ -33,7 +33,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Generate path from evaluation directory input
-    eval_dir: Path = Path(args.eval_dir)
+    eval_dir = Path(args.eval_dir)
 
     required_files = (
         (eval_dir / 'docs/eval_protocol.docx', eval_dir / 'docs/eval_protocol.pdf'),
@@ -47,8 +47,8 @@ def main() -> None:
         eval_dir / 'agent_config/ste_logs/ste_logs.zip',
     )
 
-    num_required_files: int = len(required_files)
-    num_files_found: int = 0
+    num_required_files = len(required_files)
+    num_files_found = 0
 
     for f in required_files:
         if hasattr(f, '__iter__'):

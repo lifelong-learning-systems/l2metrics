@@ -80,11 +80,11 @@ class Transfer(Metric):
             for task, other_task in permutations(unique_tasks, 2):
                 # Get testing and training indices for task pair
                 training_regs = block_info[(block_info['task_name'] == task) & (
-                    block_info['block_type'] == 'train')]['regime_num'].values
+                    block_info['block_type'] == 'train')]['regime_num'].to_numpy()
 
                 other_blocks = block_info[block_info['task_name'] == other_task]
-                other_test_regs = other_blocks[other_blocks['block_type'] == 'test']['regime_num'].values
-                other_training_regs = other_blocks[other_blocks['block_type'] == 'train']['regime_num'].values
+                other_test_regs = other_blocks[other_blocks['block_type'] == 'test']['regime_num'].to_numpy()
+                other_training_regs = other_blocks[other_blocks['block_type'] == 'train']['regime_num'].to_numpy()
 
                 # FT - Must have tested task 2 before training task 1 then tested task 2 again
                 if len(training_regs):
@@ -100,8 +100,8 @@ class Transfer(Metric):
                     for training_regime in valid_ft_training_regs:
                         for test_regime_1, test_regime_2 in zip(other_test_regs, other_test_regs[1:]):
                             if test_regime_1 < training_regime < test_regime_2:
-                                tp_1 = metrics_df[metrics_df['regime_num'] == test_regime_1]['term_perf'].values[0]
-                                tp_2 = metrics_df[metrics_df['regime_num'] == test_regime_2]['term_perf'].values[0]
+                                tp_1 = metrics_df[metrics_df['regime_num'] == test_regime_1]['term_perf'].to_numpy()[0]
+                                tp_2 = metrics_df[metrics_df['regime_num'] == test_regime_2]['term_perf'].to_numpy()[0]
 
                                 if self.do_contrast:
                                     forward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
@@ -115,8 +115,8 @@ class Transfer(Metric):
                     for training_regime in valid_bt_training_regs:
                         for test_regime_1, test_regime_2 in zip(other_test_regs, other_test_regs[1:]):
                             if test_regime_1 < training_regime < test_regime_2:                                    
-                                tp_1 = metrics_df[(metrics_df['regime_num'] == test_regime_1)]['term_perf'].values[0]
-                                tp_2 = metrics_df[(metrics_df['regime_num'] == test_regime_2)]['term_perf'].values[0]
+                                tp_1 = metrics_df[(metrics_df['regime_num'] == test_regime_1)]['term_perf'].to_numpy()[0]
+                                tp_2 = metrics_df[(metrics_df['regime_num'] == test_regime_2)]['term_perf'].to_numpy()[0]
 
                                 if self.do_contrast:
                                     backward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]

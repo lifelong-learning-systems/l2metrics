@@ -11,7 +11,7 @@ class Normalizer():
 
     valid_methods = ['task', 'run']
 
-    def __init__(self, perf_measure: str, data: pd.DataFrame, ste_data: dict = None,
+    def __init__(self, perf_measure: str, data: pd.DataFrame, ste_data: dict = {},
                  data_range: defaultdict = None, method: str = 'task', scale: int = 100) -> None:
         """Constructor for Normalizer.
 
@@ -19,7 +19,7 @@ class Normalizer():
             perf_measure (str): Name of column to use for metrics calculations.
             data (pd.DataFrame, optional): Reference data for calculating data range. Assumed
                 DataFrame with task name as index and one column of performance data.
-            ste_data (dict, optional): The STE data for computing quantiles. Defaults to None.
+            ste_data (dict, optional): The STE data for computing quantiles. Defaults to {}.
             data_range (defaultdict, optional): Dictionary object for data range. Defaults to None.
             method (str, optional): Normalization method. Valid values are 'task' and 'run'.
                 Defaults to 'task'.
@@ -52,7 +52,7 @@ class Normalizer():
         if self._validate_scale(scale):
             self.scale = scale
 
-    def calculate_data_range(self, data: pd.DataFrame, ste_data: dict = None) -> None:
+    def calculate_data_range(self, data: pd.DataFrame, ste_data: dict = {}) -> None:
         """Calculates data range per task for given data.
 
         A task data range is the minimum and maximum value of the task performance.
@@ -60,13 +60,13 @@ class Normalizer():
         Args:
             data (pd.DataFrame): Reference data for calculating data range. Assumed
                 DataFrame with task name as index and one column of performance data.
-            ste_data (dict, optional): The STE data for computing quantiles. Defaults to None.
+            ste_data (dict, optional): The STE data for computing quantiles. Defaults to {}.
 
         Raises:
             Exception: If data contains more than just performance values and task name.
         """
 
-        data_column = data.columns.values
+        data_column = data.columns.to_numpy()
 
         if len(data_column) > 1:
             raise Exception(f'Data must only have one column with performance measures')
@@ -82,7 +82,7 @@ class Normalizer():
 
             if ste_data.get(task) is not None:
                 x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
-                                        [self.perf_measure].values for ste_data_df in ste_data.get(task)])
+                                        [self.perf_measure].to_numpy() for ste_data_df in ste_data.get(task)])
                 self.data_range[task]['min'] = min(task_min, np.nanmin(x_ste))
                 self.data_range[task]['max'] = max(task_max, np.nanmax(x_ste))
             else:
@@ -174,12 +174,12 @@ class Normalizer():
                     task_max = self.data_range[task]['max']
 
                     data.loc[data.task_name == task, self.perf_measure] = \
-                        (data[data['task_name'] == task][self.perf_measure].values - task_min) / \
+                        (data[data['task_name'] == task][self.perf_measure].to_numpy() - task_min) / \
                         (task_max - task_min) * self.scale
                 else:
                     raise Exception(f"Missing data range for task '{task}'")
             return data
         elif self.method == 'run':
-            data.loc[:, self.perf_measure] = (data[self.perf_measure].values - self.run_min) / \
+            data.loc[:, self.perf_measure] = (data[self.perf_measure].to_numpy() - self.run_min) / \
                 (self.run_max - self.run_min) * self.scale
             return data

@@ -41,7 +41,7 @@ class TerminalPerformance(Metric):
         eps_to_terminal_perf = {}
 
         # Iterate over all of the blocks and compute the within block performance
-        for idx in range(max(block_info['regime_num'].values) + 1):
+        for idx in range(max(block_info['regime_num'].to_numpy()) + 1):
             # Need to get the part of the data corresponding to the block
             block_data = dataframe.loc[dataframe['regime_num'] == idx]
 

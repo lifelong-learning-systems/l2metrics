@@ -104,7 +104,7 @@ def get_block_saturation_perf(data: Union[pd.DataFrame, List], col_to_use: str =
     # Aggregate multiple reward values for the same episode
     if isinstance(data, pd.DataFrame):
         mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
-        mean_data = np.ravel(mean_reward_per_episode.values)
+        mean_data = np.ravel(mean_reward_per_episode.to_numpy())
     else:
         mean_data = np.array(data)
 
@@ -133,7 +133,7 @@ def get_block_saturation_perf(data: Union[pd.DataFrame, List], col_to_use: str =
 
 
 def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = None,
-                      window_len: int = None, term_window_ratio: float = 0.1) -> Tuple[float, int, int]:
+                      term_window_ratio: float = 0.1) -> Tuple[float, int, int]:
     """Calculates the terminal performance, episodes to terminal performance, and episodes to recovery.
 
     Args:
@@ -141,8 +141,8 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
         col_to_use (str): The column name of the metric to use for calculations.
         prev_val (float, optional): Previous saturation value for calculating recovery time.
             Defaults to None.
-        window_len (int, optional): The window length for smoothing the data. Defaults to None.
-        term_window_ratio (float, optional): [description]. Defaults to 0.1.
+        term_window_ratio (float, optional): The ratio of terminal data points used to compute the
+            terminal performance. Defaults to 0.1 for training blocks and 1.0 for evaluation blocks.
 
     Returns:
         Tuple[float, int, int]: Terminal performance, episodes to terminal performance,
@@ -151,7 +151,7 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
 
     # Aggregate multiple reward values for the same episode
     mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
-    mean_data = np.ravel(mean_reward_per_episode.values)
+    mean_data = np.ravel(mean_reward_per_episode.to_numpy())
     mean_data = mean_data[~np.isnan(mean_data)]
 
     if len(mean_data):

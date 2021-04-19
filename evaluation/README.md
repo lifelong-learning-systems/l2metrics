@@ -16,7 +16,7 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 
 ```
 usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-s STE_DIR] [-v {time,metrics}]
-                   [-p PERF_MEASURE] [-a {mean,median}]
+                   [-p PERF_MEASURE] [-a {median,mean}]
                    [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
                    [-n {task,run}]
                    [-g {none,flat,hanning,hamming,bartlett,blackman}]
@@ -39,7 +39,7 @@ optional arguments:
                         (time) orLL metric averaging (metric)
   -p PERF_MEASURE, --perf-measure PERF_MEASURE
                         Name of column to use for metrics calculations
-  -a {mean,median}, --aggregation-method {mean,median}
+  -a {median,mean}, --aggregation-method {median,mean}
                         Method for aggregating within-lifetime metrics
   -m {mrtlp,mrlep,both}, --maintenance-method {mrtlp,mrlep,both}
                         Method for computing performance maintenance

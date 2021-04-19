@@ -351,7 +351,7 @@ def evaluate() -> None:
                         help='Name of column to use for metrics calculations')
 
     # Method for aggregating within-lifetime metrics
-    parser.add_argument('-a', '--aggregation-method', default='median', choices=['mean', 'median'],
+    parser.add_argument('-a', '--aggregation-method', default='median', choices=['median', 'mean'],
                         help='Method for aggregating within-lifetime metrics')
 
     # Method for calculating performance maintenance

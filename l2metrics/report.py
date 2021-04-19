@@ -191,7 +191,13 @@ class MetricsReport():
             else:
                 lower_bound, upper_bound = np.quantile(x, quantiles)
 
+            # Filter LL data
             self._log_data.loc[self._log_data['task_name'] == task, self.perf_measure] = x.clip(lower_bound, upper_bound)
+
+            # Filter STE data
+            for idx, ste_data_df in enumerate(self.ste_data.get(task, [])):
+                x = ste_data_df[ste_data_df['task_name'] == task][self.perf_measure].to_numpy()
+                self.ste_data[task][idx].loc[ste_data_df['task_name'] == task, self.perf_measure] = x.clip(lower_bound, upper_bound)
 
         # Save filtered data as separate column
         self._log_data[self.perf_measure + '_filtered'] = self._log_data[self.perf_measure].to_numpy()

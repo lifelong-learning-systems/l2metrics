@@ -124,7 +124,7 @@ class MetricsReport():
             self.filter_outliers(quantiles=(0.1, 0.9))
 
         # Normalize LL and STE data
-        if self.normalization_method:
+        if self.normalization_method != 'none':
             self.normalize_data()
         else:
             self.normalizer = None

@@ -16,8 +16,8 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 
 ```
 usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-s STE_DIR] [-v {time,metrics}]
-                   [-p PERF_MEASURE] [-a {median,mean}]
-                   [-m {mrtlp,mrlep,both}] [-t {contrast,ratio,both}]
+                   [-p PERF_MEASURE] [-a {mean,median}]
+                   [-m {mrtlp,mrlep,both}] [-t {ratio,contrast,both}]
                    [-n {task,run}]
                    [-g {none,flat,hanning,hamming,bartlett,blackman}]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE]
@@ -39,11 +39,11 @@ optional arguments:
                         (time) orLL metric averaging (metric)
   -p PERF_MEASURE, --perf-measure PERF_MEASURE
                         Name of column to use for metrics calculations
-  -a {median,mean}, --aggregation-method {median,mean}
+  -a {mean,median}, --aggregation-method {mean,median}
                         Method for aggregating within-lifetime metrics
   -m {mrtlp,mrlep,both}, --maintenance-method {mrtlp,mrlep,both}
                         Method for computing performance maintenance
-  -t {contrast,ratio,both}, --transfer-method {contrast,ratio,both}
+  -t {ratio,contrast,both}, --transfer-method {ratio,contrast,both}
                         Method for computing forward and backward transfer
   -n {task,run}, --normalization-method {task,run}
                         Method for normalizing data
@@ -120,12 +120,12 @@ The TSV file lists all the computed LL metrics from the scenarios found in the s
 - `agent_config`: Corresponding agent configuration of scenario
 - `run_id`: Run ID or scenario name, extracted from scenario directory name
 - `perf_recovery`: Lifetime performance recovery
-- `perf_maintenance_mrtlp`: Lifetime performance maintenance, most recent terminal learning performance
 - `perf_maintenance_mrlep`: Lifetime performance maintenance, most recent learning evaluation performance
-- `forward_transfer_contrast`: Lifetime forward transfer, contrast
-- `backward_transfer_contrast`: Lifetime backward transfer, contrast
+- `perf_maintenance_mrtlp`: Lifetime performance maintenance, most recent terminal learning performance
 - `forward_transfer_ratio`: Lifetime forward transfer, ratio
 - `backward_transfer_ratio`: Lifetime backward transfer, ratio
+- `forward_transfer_contrast`: Lifetime forward transfer, contrast
+- `backward_transfer_contrast`: Lifetime backward transfer, contrast
 - `ste_rel_perf`: Lifetime relative performance compared to STE
 - `sample_efficiency`: Lifetime sample efficiency
 - `complexity`: Scenario complexity
@@ -142,12 +142,12 @@ The TSV file lists all the computed LL metrics from the scenarios found in the s
 The JSON file lists all the task-level metrics in addition to all the computed LL metrics from the scenario found in the specified evaluation directory. This file is JSON formatted due to the complex nested structures and varying object types corresponding to each metric. The task-level metrics reported for each scenario are as follows:
 
 - `perf_recovery`: Task performance recovery
-- `perf_maintenance_mrtlp`: Task performance maintenance, most recent terminal learning performance
 - `perf_maintenance_mrlep`: Task performance maintenance, most recent learning evaluation performance
-- `forward_transfer_contrast`: List of task forward transfer, contrast
-- `backward_transfer_contrast`: List of task backward transfer, contrast
+- `perf_maintenance_mrtlp`: Task performance maintenance, most recent terminal learning performance
 - `forward_transfer_ratio`: List of task forward transfer, ratio
 - `backward_transfer_ratio`: List of task backward transfer, ratio
+- `forward_transfer_contrast`: List of task forward transfer, contrast
+- `backward_transfer_contrast`: List of task backward transfer, contrast
 - `ste_rel_perf`: Task relative performance compared to STE
 - `sample_efficiency`: Task sample efficiency
 - `recovery_times`: List of recovery times used for computing performance recovery

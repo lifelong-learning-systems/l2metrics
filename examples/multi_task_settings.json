@@ -2,7 +2,7 @@
   "log_dir": "multi_task",
   "perf_measure": "performance",
   "ste_averaging_method": "time",
-  "aggregation_method": "median",
+  "aggregation_method": "mean",
   "maintenance_method": "mrlep",
   "transfer_method": "contrast",
   "normalization_method": "task",

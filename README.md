@@ -25,7 +25,7 @@ Lifelong Learning Metrics (L2Metrics) is a Python library containing foundationa
 
 ## Metrics
 
-The L2Metrics library supports the following lifelong learning metrics as defined in the [Lifelong Learning Metrics for L2M specification version 0.67](https://github.com/darpa-l2m/shared_docs/blob/master/working_groups/metrics/metrics_specifications/Lifelong_Learning_Metrics_for_L2M.docx):
+The L2Metrics library supports the following lifelong learning metrics as defined in the [Lifelong Learning Metrics for L2M specification version 0.68](https://github.com/darpa-l2m/shared_docs/blob/master/working_groups/metrics/metrics_specifications/Lifelong_Learning_Metrics_for_L2M.docx):
 
 - Performance Recovery (PR)
 - Performance Maintenance (PM)
@@ -118,8 +118,8 @@ This section describes how to run L2Metrics from the command line.
 
 ```
 usage: python -m l2metrics [-h] [-l LOG_DIR] [-R] [-s {w,a}] [-v {time,metrics}]
-                   [-p PERF_MEASURE] [-a {median,mean}]
-                   [-m {mrlep,mrtlp,both}] [-t {contrast,ratio,both}]
+                   [-p PERF_MEASURE] [-a {mean,median}]
+                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
                    [-n {task,run,none}]
                    [-g {flat,hanning,hamming,bartlett,blackman,none}]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
@@ -143,11 +143,11 @@ optional arguments:
                         (time) or LL metric averaging (metrics)
   -p PERF_MEASURE, --perf-measure PERF_MEASURE
                         Name of column to use for metrics calculations
-  -a {median,mean}, --aggregation-method {median,mean}
+  -a {mean,median}, --aggregation-method {mean,median}
                         Method for aggregating within-lifetime metrics
   -m {mrlep,mrtlp,both}, --maintenance-method {mrlep,mrtlp,both}
                         Method for computing performance maintenance
-  -t {contrast,ratio,both}, --transfer-method {contrast,ratio,both}
+  -t {ratio,contrast,both}, --transfer-method {ratio,contrast,both}
                         Method for computing forward and backward transfer
   -n {task,run,none}, --normalization-method {task,run,none}
                         Method for normalizing data
@@ -184,9 +184,9 @@ By default, the L2Metrics package will calculate metrics with the following opti
 
 - STE averaging method is `time`, which averages the time-series training data across STE logs for relative performance and sample efficiency calculations.
 - Performance measure is `reward`.
-- Aggregation method is `median`, which reports the lifetime metrics as the median of task-level metrics as opposed to mean.
+- Aggregation method is `mean`, which reports the lifetime metrics as the mean of task-level metrics as opposed to median.
 - Performance maintenance method is `mrlep`, which uses the most recent learning evaluation performance as opposed to the most recent terminal learning performance (`mrtlp`).
-- Forward and backward transfer use `contrast`.
+- Forward and backward transfer use `ratio`.
 - Normalization method is `task`, which computes the per-task data ranges by looking at LL and STE log data, then normalizing to [0, 100].
 - Smoothing method is `flat`, which smooths data with a rectangular sliding window. Other available options include [hanning](https://numpy.org/doc/stable/reference/generated/numpy.hanning.html#numpy.hanning), [hamming](https://numpy.org/doc/stable/reference/generated/numpy.hamming.html#numpy.hamming), [bartlett](https://numpy.org/doc/stable/reference/generated/numpy.bartlett.html#numpy.bartlett), and [blackman](https://numpy.org/doc/stable/reference/generated/numpy.blackman.html).
 - Smoothing window length is `None`, which defaults to min(int(`block_length` \* 0.2), 100).
@@ -290,7 +290,7 @@ If saving of L2Metrics settings is enabled, the framework will generate a JSON f
   "ste_averaging_method": "time",
   "aggregation_method": "median",
   "maintenance_method": "mrlep",
-  "transfer_method": "contrast",
+  "transfer_method": "ratio",
   "normalization_method": "task",
   "smoothing_method": "flat",
   "window_length": null,

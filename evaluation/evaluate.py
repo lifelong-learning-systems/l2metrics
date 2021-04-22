@@ -171,36 +171,43 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
 
     Args:
         log_dir (Path): Path to scenario directory.
-        perf_measure (str): Name of column to use for metrics calculations.
-        maintenance_method (str): Method for computing maintenance values.
-            Valid values are 'mrtlp', 'mrlep', and 'both'.
+        ste_averaging_method (str, optional): Method for averaging multiple runs of STE data.
+            Valid values are 'time' and 'metrics'. Defaults to 'time'.
+        perf_measure (str, optional): Name of column to use for metrics calculations.
+        aggregation_method (str, optional): Method for aggregating within-lifetime metrics.
+            Valid values are 'mean' and 'median'. Defaults to 'mean'.
+        maintenance_method (str, optional): Method for computing maintenance values.
+            Valid values are 'mrlep', 'mrtlp', and 'both'. Defaults to 'mrlep'.
         transfer_method (str, optional): Method for computing forward and backward transfer.
-            Valid values are 'contrast', 'ratio', and 'both'. Defaults to 'both'.
+            Valid values are 'ratio', 'contrast', and 'both'. Defaults to 'ratio'.
         normalization_method (str, optional): Method for normalizing data.
-            Valid values are 'none', 'task', and 'run'. Defaults to 'task'.
-
+            Valid values are 'task', 'run', and 'none'. Defaults to 'task'.
+        smoothing_method (str, optional): Method for smoothing data, window type.
+            Valid values are 'flat', 'hanning', 'hamming', 'bartlett', 'blackman', and 'none'.
+            Defaults to 'flat'.
+        window_length (int, optional): Window length for smoothing data. Defaults to None.
+        clamp_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
             Defaults to False.
         show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
             changing slope of evaluation performance. Defaults to True.
-        clamp_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
-        do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
-        do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
-        do_save_settings (bool, optional): Flag for saving L2Metrics settings to JSON file. Defaults to
-            False.
+        do_plot (bool, optional): Flag for enabling plotting. Defaults to True.
+        do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to True.
+        do_save_settings (bool, optional): Flag for saving L2Metrics settings to JSON file.
+            Defaults to True.
 
     Returns:
         Tuple[pd.DataFrame, dict]: DataFrame containing lifelong metrics from scenarios.
     """
 
     log_dir = kwargs.get('log_dir', Path(''))
-    do_plot = kwargs.get('do_plot', False)
     output_dir = kwargs.get('output_dir', '')
-    do_save_plots = kwargs.get('do_save_plots', False)
     show_raw_data = kwargs.get('show_raw_data', False)
     show_eval_lines = kwargs.get('show_eval_lines', True)
-    do_save_settings = kwargs.get('do_save_settings', False)
+    do_plot = kwargs.get('do_plot', True)
+    do_save_plots = kwargs.get('do_save_plots', True)
+    do_save_settings = kwargs.get('do_save_settings', True)
 
     # Initialize metrics report
     report = MetricsReport(**kwargs)
@@ -244,25 +251,6 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
         eval_dir (Path): Path to evaluation directory containing LL logs.
         ste_dir (str): Agent configuration directory of STE data. A value of '' will save all STE
             logs in every agent configuration directory.
-        perf_measure (str): Name of column to use for metrics calculations.
-        maintenance_method (str): Method for computing maintenance values.
-            Valid values are 'mrtlp', 'mrlep', and 'both.'
-        transfer_method (str): Method for computing forward and backward transfer.
-            Valid values are 'contrast', 'ratio', and 'both.'
-        normalization_method (str, optional): Method for normalizing data.
-            Valid values are 'none', 'task', and 'run'. Defaults to 'task'.
-        smoothing_method (str, optional): Method for smoothing data.
-            Valid values are 'none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'.
-            Defaults to 'flat'.
-        window_length (int, optional): Window length for smoothing data. Defaults to 'None'.
-        output_dir (str, optional): Output directory of results. Defaults to ''.
-        show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
-            Defaults to False.
-        show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
-            changing slope of evaluation performance. Defaults to True.
-        clamp_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
-        do_plot (bool, optional): Flag for enabling plotting. Defaults to False.
-        do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to False.
         do_store_ste (bool, optional): Flag for enabling save of STE data. Defaults to True.
 
     Raises:
@@ -351,7 +339,7 @@ def evaluate() -> None:
                         help='Name of column to use for metrics calculations')
 
     # Method for aggregating within-lifetime metrics
-    parser.add_argument('-a', '--aggregation-method', default='median', choices=['median', 'mean'],
+    parser.add_argument('-a', '--aggregation-method', default='mean', choices=['mean', 'median'],
                         help='Method for aggregating within-lifetime metrics')
 
     # Method for calculating performance maintenance
@@ -359,7 +347,7 @@ def evaluate() -> None:
                         help='Method for computing performance maintenance')
 
     # Method for calculating forward and backward transfer
-    parser.add_argument('-t', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='ratio', choices=['ratio', 'contrast', 'both'],
                         help='Method for computing forward and backward transfer')
 
     # Method for normalization

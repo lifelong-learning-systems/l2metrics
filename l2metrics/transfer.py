@@ -37,11 +37,11 @@ class Transfer(Metric):
         self.perf_measure = perf_measure
 
         # Check for valid transfer method
-        if method not in ['contrast', 'ratio', 'both']:
+        if method not in ['ratio', 'contrast', 'both']:
             raise Exception(f'Invalid transfer method: {method}')
         else:
-            self.do_contrast = method in ['contrast', 'both']
             self.do_ratio = method in ['ratio', 'both']
+            self.do_contrast = method in ['contrast', 'both']
 
     def validate(self, block_info: pd.DataFrame) -> None:
         # Initialize variables for checking block type format
@@ -103,13 +103,13 @@ class Transfer(Metric):
                                 tp_1 = metrics_df[metrics_df['regime_num'] == test_regime_1]['term_perf'].to_numpy()[0]
                                 tp_2 = metrics_df[metrics_df['regime_num'] == test_regime_2]['term_perf'].to_numpy()[0]
 
-                                if self.do_contrast:
-                                    forward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
                                 if self.do_ratio:
                                     if tp_1 == 0:
                                         continue
                                     else:
                                         forward_transfer['ratio'][test_regime_2] = [{task: tp_2 / tp_1}]
+                                if self.do_contrast:
+                                    forward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
 
                     # Calculate backward transfer
                     for training_regime in valid_bt_training_regs:
@@ -118,33 +118,33 @@ class Transfer(Metric):
                                 tp_1 = metrics_df[(metrics_df['regime_num'] == test_regime_1)]['term_perf'].to_numpy()[0]
                                 tp_2 = metrics_df[(metrics_df['regime_num'] == test_regime_2)]['term_perf'].to_numpy()[0]
 
-                                if self.do_contrast:
-                                    backward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
                                 if self.do_ratio:
                                     if tp_1 == 0:
                                         continue
                                     else:
                                         backward_transfer['ratio'][test_regime_2] = [{task: tp_2 / tp_1}]
+                                if self.do_contrast:
+                                    backward_transfer['contrast'][test_regime_2] = [{task: (tp_2 - tp_1) / (tp_1 + tp_2)}]
 
-            if not (forward_transfer['contrast'] or forward_transfer['ratio']):
+            if not (forward_transfer['ratio'] or forward_transfer['contrast']):
                 print('No valid task pairs for forward transfer')
             else:
-                if self.do_contrast:
-                    metrics_df = fill_metrics_df(
-                        forward_transfer['contrast'], 'forward_transfer_contrast', metrics_df)
                 if self.do_ratio:
                     metrics_df = fill_metrics_df(
                         forward_transfer['ratio'], 'forward_transfer_ratio', metrics_df)
-
-            if not (backward_transfer['contrast'] or backward_transfer['ratio']):
-                print('No valid task pairs for backward transfer')
-            else:
                 if self.do_contrast:
                     metrics_df = fill_metrics_df(
-                        backward_transfer['contrast'], 'backward_transfer_contrast', metrics_df)
+                        forward_transfer['contrast'], 'forward_transfer_contrast', metrics_df)
+
+            if not (backward_transfer['ratio'] or backward_transfer['contrast']):
+                print('No valid task pairs for backward transfer')
+            else:
                 if self.do_ratio:
                     metrics_df = fill_metrics_df(
                         backward_transfer['ratio'], 'backward_transfer_ratio', metrics_df)
+                if self.do_contrast:
+                    metrics_df = fill_metrics_df(
+                        backward_transfer['contrast'], 'backward_transfer_contrast', metrics_df)
 
             return metrics_df
         except Exception as e:

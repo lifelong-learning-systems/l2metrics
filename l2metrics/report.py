@@ -53,9 +53,9 @@ class MetricsReport():
         self.log_dir = Path(kwargs.get('log_dir', ''))
         self.perf_measure = kwargs.get('perf_measure', 'reward')
         self.ste_averaging_method = kwargs.get('ste_averaging_method', 'time')
-        self.aggregation_method = kwargs.get('aggregation_method', 'median')
+        self.aggregation_method = kwargs.get('aggregation_method', 'mean')
         self.maintenance_method = kwargs.get('maintenance_method', 'mrlep')
-        self.transfer_method = kwargs.get('transfer_method', 'contrast')
+        self.transfer_method = kwargs.get('transfer_method', 'ratio')
         self.normalization_method = kwargs.get('normalization_method', 'task')
         self.smoothing_method = kwargs.get('smoothing_method', 'flat')
         self.window_length = kwargs.get('window_length', None)
@@ -64,14 +64,14 @@ class MetricsReport():
 
         # Initialize list of LL metrics
         self.task_metrics = ['perf_recovery']
-        if self.maintenance_method in ['mrtlp', 'both']:
-            self.task_metrics.extend(['perf_maintenance_mrtlp'])
         if self.maintenance_method in ['mrlep', 'both']:
             self.task_metrics.extend(['perf_maintenance_mrlep'])
-        if self.transfer_method in ['contrast', 'both']:
-            self.task_metrics.extend(['forward_transfer_contrast', 'backward_transfer_contrast'])
+        if self.maintenance_method in ['mrtlp', 'both']:
+            self.task_metrics.extend(['perf_maintenance_mrtlp'])
         if self.transfer_method in ['ratio', 'both']:
             self.task_metrics.extend(['forward_transfer_ratio', 'backward_transfer_ratio'])
+        if self.transfer_method in ['contrast', 'both']:
+            self.task_metrics.extend(['forward_transfer_contrast', 'backward_transfer_contrast'])
         self.task_metrics.extend(['ste_rel_perf', 'sample_efficiency'])
 
         # Get metric fields
@@ -124,7 +124,7 @@ class MetricsReport():
             self.filter_outliers(quantiles=(0.1, 0.9))
 
         # Normalize LL and STE data
-        if self.normalization_method:
+        if self.normalization_method != 'none':
             self.normalize_data()
         else:
             self.normalizer = None
@@ -191,7 +191,13 @@ class MetricsReport():
             else:
                 lower_bound, upper_bound = np.quantile(x, quantiles)
 
+            # Filter LL data
             self._log_data.loc[self._log_data['task_name'] == task, self.perf_measure] = x.clip(lower_bound, upper_bound)
+
+            # Filter STE data
+            for idx, ste_data_df in enumerate(self.ste_data.get(task, [])):
+                x = ste_data_df[ste_data_df['task_name'] == task][self.perf_measure].to_numpy()
+                self.ste_data[task][idx].loc[ste_data_df['task_name'] == task, self.perf_measure] = x.clip(lower_bound, upper_bound)
 
         # Save filtered data as separate column
         self._log_data[self.perf_measure + '_filtered'] = self._log_data[self.perf_measure].to_numpy()
@@ -310,20 +316,20 @@ class MetricsReport():
         # Initialize certain task metrics data objects
         num_tasks = len(self._unique_tasks)
         self.task_metrics_df['recovery_times'] = [[]] * num_tasks
-        if self.maintenance_method in ['mrtlp', 'both']:
-            self.task_metrics_df['maintenance_val_mrtlp'] = [[]] * num_tasks
         if self.maintenance_method in ['mrlep', 'both']:
             self.task_metrics_df['maintenance_val_mrlep'] = [[]] * num_tasks
-        if self.transfer_method in ['contrast', 'both']:
-            self.task_metrics_df['forward_transfer_contrast'] = [{}] * num_tasks
-            self.task_metrics_df['backward_transfer_contrast'] = [{}] * num_tasks
-            self.forward_transfer_contrast = defaultdict(dict)
-            self.backward_transfer_contrast = defaultdict(dict)
+        if self.maintenance_method in ['mrtlp', 'both']:
+            self.task_metrics_df['maintenance_val_mrtlp'] = [[]] * num_tasks
         if self.transfer_method in ['ratio', 'both']:
             self.task_metrics_df['forward_transfer_ratio'] = [{}] * num_tasks
             self.task_metrics_df['backward_transfer_ratio'] = [{}] * num_tasks
             self.forward_transfer_ratio = defaultdict(dict)
             self.backward_transfer_ratio = defaultdict(dict)
+        if self.transfer_method in ['contrast', 'both']:
+            self.task_metrics_df['forward_transfer_contrast'] = [{}] * num_tasks
+            self.task_metrics_df['backward_transfer_contrast'] = [{}] * num_tasks
+            self.forward_transfer_contrast = defaultdict(dict)
+            self.backward_transfer_contrast = defaultdict(dict)
 
         # Create data structures for transfer values
         for _, row in self._metrics_df.iterrows():
@@ -388,10 +394,10 @@ class MetricsReport():
 
                 if len(metric_vals):
                     # Aggregate metric values
-                    if self.aggregation_method == 'median':
-                        self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
-                    elif self.aggregation_method == 'mean':
+                    if self.aggregation_method == 'mean':
                         self.lifetime_metrics_df[metric] = [np.mean(metric_vals)]
+                    elif self.aggregation_method == 'median':
+                        self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
 
     def report(self) -> None:
         """Print summary report of lifetime metrics and return metric objects.

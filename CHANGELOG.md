@@ -2,6 +2,13 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.7.1 - 2021-04-26
+
+- Updated reference to metrics specification document 0.68
+- Updated default settings for aggregation (mean) and transfer (ratio)
+- Fixed bug with setting normalization method to none
+- Clamp outliers in STE data as well as LL data
+
 ## 2.7.0 - 2021-04-16
 
 - Minor performance optimizations

@@ -50,7 +50,7 @@ def process_evaluation(args):
     kwargs['ste_dir'] = 'agent_config'
     kwargs['ste_averaging_method'] = 'metrics'
     kwargs['perf_measure'] = perf_measure[sg_name]
-    kwargs['aggregation_method'] = 'median'
+    kwargs['aggregation_method'] = 'mean'
     kwargs['maintenance_method'] = 'both'
     kwargs['transfer_method'] = 'both'
     kwargs['window_length'] = None

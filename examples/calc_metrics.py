@@ -65,41 +65,49 @@ def run() -> None:
     parser.add_argument('-l', '--log-dir', default=None, type=str,
                         help='Log directory of scenario')
 
+    # Flag for recursively calculating metrics on valid subdirectories within log directory 
+    parser.add_argument('-R', '--recursive', action='store_true',
+                        help='Recursively compute metrics on logs found in specified directory')
+
     # Mode for storing log data as STE data
     parser.add_argument('-s', '--ste-store-mode', default=None, choices=['w', 'a'],
                         help='Mode for storing log data as STE, overwrite (w) or append (a)')
 
     # Method for handling multiple STE runs
-    parser.add_argument('--ste-averaging-method', default='time', choices=['time', 'metrics'],
+    parser.add_argument('-v', '--ste-averaging-method', default='time', choices=['time', 'metrics'],
                         help='Method for handling STE runs, time-series averaging (time) or '
-                        'LL metric averaging (metric)')
+                        'LL metric averaging (metrics)')
 
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf-measure', default='reward', type=str,
                         help='Name of column to use for metrics calculations')
 
     # Method for aggregating within-lifetime metrics
-    parser.add_argument('-a', '--aggregation-method', default='median', choices=['mean', 'median'],
+    parser.add_argument('-a', '--aggregation-method', default='mean', type=str, choices=['mean', 'median'],
                         help='Method for aggregating within-lifetime metrics')
 
     # Method for calculating performance maintenance
-    parser.add_argument('-m', '--maintenance-method', default='mrlep', choices=['mrtlp', 'mrlep', 'both'],
+    parser.add_argument('-m', '--maintenance-method', default='mrlep', type=str, choices=['mrlep', 'mrtlp', 'both'],
                         help='Method for computing performance maintenance')
 
     # Method for calculating forward and backward transfer
-    parser.add_argument('-t', '--transfer-method', default='contrast', choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='ratio', type=str, choices=['ratio', 'contrast', 'both'],
                         help='Method for computing forward and backward transfer')
 
     # Method for normalization
-    parser.add_argument('-n', '--normalization-method', default='task', choices=['none', 'task', 'run'],
+    parser.add_argument('-n', '--normalization-method', default='task', type=str, choices=['task', 'run', 'none'],
                         help='Method for normalizing data')
 
     # Method for smoothing
-    parser.add_argument('-w', '--smoothing-method', default='flat', choices=['none', 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'],
-                        help='Method for smoothing data')
+    parser.add_argument('-g', '--smoothing-method', default='flat', type=str, choices=['flat', 'hanning', 'hamming', 'bartlett', 'blackman', 'none'],
+                        help='Method for smoothing data, window type')
+
+    # Window length for smoothing
+    parser.add_argument('-w', '--window-length', default=None, type=int,
+                        help='Window length for smoothing data')
 
     # Flag for removing outliers
-    parser.add_argument('--clamp-outliers', action='store_true',
+    parser.add_argument('-x', '--clamp-outliers', action='store_true',
                         help='Remove outliers in data for metrics by clamping to quantiles')
 
     # Data range file for normalization
@@ -107,7 +115,7 @@ def run() -> None:
                         help='JSON file containing task performance ranges for normalization')
 
     # Mean and standard deviation for adding noise to log data
-    parser.add_argument('--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
+    parser.add_argument('-N', '--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
                         help='Mean and standard deviation for Gaussian noise in log data')
 
     # Output filename
@@ -119,27 +127,27 @@ def run() -> None:
                         help='Show raw data points under smoothed data for plotting')
 
     # Flag for showing evaluation block lines
-    parser.add_argument('--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
+    parser.add_argument('-e', '--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
                         help='Show lines between evaluation blocks')
     parser.add_argument('--no-show-eval-lines', dest='show_eval_lines', action='store_false',
                         help='Do not show lines between evaluation blocks')
 
     # Flag for enabling/disabling plotting
-    parser.add_argument('--do-plot', dest='do_plot', default=True, action='store_true',
+    parser.add_argument('-P', '--do-plot', dest='do_plot', default=True, action='store_true',
                         help='Plot performance')
     parser.add_argument('--no-plot', dest='do_plot', action='store_false',
                         help='Do not plot performance')
 
     # Flag for enabling/disabling save
-    parser.add_argument('--do-save', dest='do_save', default=True, action='store_true',
+    parser.add_argument('-S', '--do-save', dest='do_save', default=True, action='store_true',
                         help='Save metrics outputs')
     parser.add_argument('--no-save', dest='do_save', action='store_false',
                         help='Do not save metrics outputs')
 
     # Settings file arguments
-    parser.add_argument('--load-settings', type=str,
+    parser.add_argument('-c', '--load-settings', default='', type=str,
                         help='Load L2Metrics settings from JSON file')
-    parser.add_argument('--do-save-settings', dest='do_save_settings', default=True, action='store_true',
+    parser.add_argument('-C', '--do-save-settings', dest='do_save_settings', default=True, action='store_true',
                         help='Save L2Metrics settings to JSON file')
     parser.add_argument('--no-save-settings', dest='do_save_settings', action='store_false',
                         help='Do not save L2Metrics settings to JSON file')

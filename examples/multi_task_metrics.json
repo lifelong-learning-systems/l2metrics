@@ -1,10 +1,10 @@
 {
-  "perf_recovery": 0.0,
-  "perf_maintenance_mrlep": 3.4305340174,
-  "forward_transfer_contrast": 1.0,
-  "backward_transfer_contrast": 0.0256073734,
-  "ste_rel_perf": 1.0965322961,
-  "sample_efficiency": 0.9143720788,
+  "perf_recovery": -2.0,
+  "perf_maintenance_mrlep": 3.855814336,
+  "forward_transfer_ratio": 12.7602959694,
+  "backward_transfer_ratio": 1.0831924335,
+  "ste_rel_perf": 1.1063315766,
+  "sample_efficiency": 0.9133716955,
   "run_id": "multi_task",
   "complexity": "2-intermediate",
   "difficulty": "2-medium",
@@ -18,24 +18,17 @@
     "task1_1": {
       "perf_recovery": -6.0,
       "perf_maintenance_mrlep": 3.4305340174334833,
-      "forward_transfer_contrast": {
+      "forward_transfer_ratio": {},
+      "backward_transfer_ratio": {
         "task2_1": [
-          1.0
+          1.0564357621543066,
+          1.0152121534708918,
+          1.0001741136956974
         ],
         "task3_1": [
-          1.0
-        ]
-      },
-      "backward_transfer_contrast": {
-        "task2_1": [
-          0.02744348410629896,
-          0.007548661040323269,
-          0.00008704926961368041
-        ],
-        "task3_1": [
-          0.02377126273198689,
-          -0.0019515722115232173,
-          0.006044476693062725
+          1.0487001904871414,
+          0.996104458008453,
+          1.0121624691474171
         ]
       },
       "ste_rel_perf": 1.0594947702743842,
@@ -70,22 +63,22 @@
     "task2_1": {
       "perf_recovery": -0.0,
       "perf_maintenance_mrlep": 6.090194553614775,
-      "forward_transfer_contrast": {
+      "forward_transfer_ratio": {
         "task3_1": [
-          0.8546542890904424
+          12.76029596941125
         ]
       },
-      "backward_transfer_contrast": {
+      "backward_transfer_ratio": {
         "task1_1": [
-          0.08447741322341801,
-          0.009963611409832939,
-          0.0009121584206172524,
-          0.001264301241524661
+          1.184544683973009,
+          1.020127768079356,
+          1.0018259824264808,
+          1.0025318034452886
         ],
         "task3_1": [
-          0.013745197461684303,
-          0.0031063182207603794,
-          0.0013762537407881778
+          1.027873521987033,
+          1.0062319950011445,
+          1.0027563008509333
         ]
       },
       "ste_rel_perf": 1.0965322961322805,
@@ -117,17 +110,17 @@
     "task3_1": {
       "perf_recovery": -0.0,
       "perf_maintenance_mrlep": 2.0467144368394656,
-      "forward_transfer_contrast": {},
-      "backward_transfer_contrast": {
+      "forward_transfer_ratio": {},
+      "backward_transfer_ratio": {
         "task1_1": [
-          -0.01895481703128897,
-          -0.011732341841806384,
-          -0.005628240658757558
+          0.9627955691175522,
+          0.9768074195978588,
+          0.9888065182913506
         ],
         "task2_1": [
-          0.09861384197217044,
-          0.01408214038484525,
-          0.00003518705500764876
+          1.2188048731254775,
+          1.0285665590647524,
+          1.00007037658636
         ]
       },
       "ste_rel_perf": 1.1629676633508115,

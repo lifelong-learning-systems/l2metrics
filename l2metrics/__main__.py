@@ -53,7 +53,7 @@ def run() -> None:
                         help='Name of column to use for metrics calculations')
 
     # Method for aggregating within-lifetime metrics
-    parser.add_argument('-a', '--aggregation-method', default='median', type=str, choices=['median', 'mean'],
+    parser.add_argument('-a', '--aggregation-method', default='mean', type=str, choices=['mean', 'median'],
                         help='Method for aggregating within-lifetime metrics')
 
     # Method for calculating performance maintenance
@@ -61,7 +61,7 @@ def run() -> None:
                         help='Method for computing performance maintenance')
 
     # Method for calculating forward and backward transfer
-    parser.add_argument('-t', '--transfer-method', default='contrast', type=str, choices=['contrast', 'ratio', 'both'],
+    parser.add_argument('-t', '--transfer-method', default='ratio', type=str, choices=['ratio', 'contrast', 'both'],
                         help='Method for computing forward and backward transfer')
 
     # Method for normalization

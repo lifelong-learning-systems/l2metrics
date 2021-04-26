@@ -6,8 +6,8 @@ This directory contains a Python script with an example for creating custom metr
 
 ```
 usage: calc_metrics.py [-h] [-l LOG_DIR] [-R] [-s {w,a}] [-v {time,metrics}]
-                   [-p PERF_MEASURE] [-a {median,mean}]
-                   [-m {mrlep,mrtlp,both}] [-t {contrast,ratio,both}]
+                   [-p PERF_MEASURE] [-a {mean,median}]
+                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
                    [-n {task,run,none}]
                    [-g {flat,hanning,hamming,bartlett,blackman,none}]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
@@ -31,11 +31,11 @@ optional arguments:
                         (time) or LL metric averaging (metrics)
   -p PERF_MEASURE, --perf-measure PERF_MEASURE
                         Name of column to use for metrics calculations
-  -a {median,mean}, --aggregation-method {median,mean}
+  -a {mean,median}, --aggregation-method {mean,median}
                         Method for aggregating within-lifetime metrics
   -m {mrlep,mrtlp,both}, --maintenance-method {mrlep,mrtlp,both}
                         Method for computing performance maintenance
-  -t {contrast,ratio,both}, --transfer-method {contrast,ratio,both}
+  -t {ratio,contrast,both}, --transfer-method {ratio,contrast,both}
                         Method for computing forward and backward transfer
   -n {task,run,none}, --normalization-method {task,run,none}
                         Method for normalizing data

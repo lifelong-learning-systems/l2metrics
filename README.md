@@ -288,7 +288,7 @@ If saving of L2Metrics settings is enabled, the framework will generate a JSON f
   "log_dir": "multi_task",
   "perf_measure": "performance",
   "ste_averaging_method": "time",
-  "aggregation_method": "median",
+  "aggregation_method": "mean",
   "maintenance_method": "mrlep",
   "transfer_method": "ratio",
   "normalization_method": "task",
@@ -316,9 +316,9 @@ If saving of L2Metrics settings is enabled, the framework will generate a JSON f
 
 The metrics module will print the lifetime metrics to the console when it has successfully completed execution. The following table shows an example of a metrics report output:
 
-| perf_recovery | perf_maintenance_mrlep | forward_transfer_contrast | backward_transfer_contrast | ste_rel_perf | sample_efficiency |
+| perf_recovery | perf_maintenance_mrlep | forward_transfer_ratio | backward_transfer_ratio | ste_rel_perf | sample_efficiency |
 | ------------- | ---------------------- | ------------------------- | -------------------------- | ------------ | ----------------- |
-| 0.0           | 3.43                  | 1.00                      | 0.03                      | 1.10         | 0.91              |
+| -2.0           | 3.86                  | 12.76                      | 1.08                      | 1.11         | 0.91              |
 
 If saving is enabled, the framework will also generate a JSON file containing lifetime and task-level metrics for the scenario. Please refer to the [evaluation README](./evaluation/README.md#metrics-json-file) for more information on the format of this file.
 

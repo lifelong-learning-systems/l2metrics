@@ -394,7 +394,7 @@ def evaluate() -> None:
 
     # Flag for disabling STE save
     parser.add_argument('-T', '--do-store-ste', dest='do_store_ste', default=True, action='store_true',
-                        help='Do not store STE data')
+                        help='Store STE data')
     parser.add_argument('--no-store-ste', dest='do_store_ste', action='store_false',
                         help='Do not store STE data')
 
@@ -408,7 +408,7 @@ def evaluate() -> None:
     parser.add_argument('-L', '--do-save-plots', dest='do_save_plots', default=True, action='store_true',
                         help='Save scenario and STE plots')
     parser.add_argument('--no-save-plots', dest='do_save_plots', action='store_false',
-                        help='Save scenario and STE plots')
+                        help='Do not save scenario and STE plots')
 
     # Flag for enabling/disabling save
     parser.add_argument('-S', '--do-save', dest='do_save', default=True, action='store_true',

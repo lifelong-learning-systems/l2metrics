@@ -143,6 +143,7 @@ def run() -> None:
     if args.recursive:
         ll_metrics_df = pd.DataFrame()
         ll_metrics_dicts = []
+        log_data_df = pd.DataFrame()
 
         # Iterate over all runs found in the directory
         dirs = [p for p in Path(args.log_dir).rglob("*") if p.is_dir()]
@@ -164,15 +165,35 @@ def run() -> None:
                     metrics_dict = report.ll_metrics_dict
                     ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                     ll_metrics_dicts.append(metrics_dict)
+                    df = report._log_data
+                    df['run_id'] = dir.name
+                    log_data_df = log_data_df.append(df, ignore_index=True)
+
+                    # Plot metrics
+                    if args.do_plot:
+                        report.plot(save=args.do_save, show_raw_data=args.show_raw_data,
+                                    show_eval_lines=args.show_eval_lines)
+                        report.plot_ste_data(save=args.do_save)
+
+        # Assign base filename
+        filename = args.output if args.output else 'll_metrics'
+
+        # Save settings used to run calculate metrics
+        if args.do_save_settings:
+            with open(filename + '_settings.json', 'w') as settings_file:
+                kwargs['log_dir'] = str(kwargs.get('log_dir', ''))
+                json.dump(kwargs, settings_file)
 
         # Save data
         if args.do_save and args.ste_store_mode is None:
-            filename = args.output if args.output else 'll_metrics'
-
-            with open(filename + '.tsv', 'w', newline='\n') as metrics_file:
-                ll_metrics_df.set_index(['run_id']).to_csv(metrics_file, sep='\t')
-            with open(filename + '.json', 'w', newline='\n') as metrics_file:
-                json.dump(ll_metrics_dicts, metrics_file)
+            if not ll_metrics_df.empty:
+                with open(filename + '.tsv', 'w', newline='\n') as metrics_file:
+                    ll_metrics_df.set_index(['run_id']).to_csv(metrics_file, sep='\t')
+            if ll_metrics_dicts:
+                with open(filename + '.json', 'w', newline='\n') as metrics_file:
+                    json.dump(ll_metrics_dicts, metrics_file)
+            if not log_data_df.empty:
+                log_data_df.reset_index(drop=True).to_feather(filename + '_data.feather')
     else:
         if args.ste_store_mode:
             # Store STE data

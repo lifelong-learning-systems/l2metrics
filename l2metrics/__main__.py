@@ -130,44 +130,53 @@ def run() -> None:
         with open(args.load_settings, 'r') as settings_file:
             kwargs.update(json.load(settings_file))
 
-    if args.ste_store_mode:
-        util.store_ste_data(log_dir=Path(args.log_dir), mode=args.ste_store_mode)
+    # Load data range data for normalization and standardize names to lowercase
+    if args.data_range_file:
+        with open(args.data_range_file) as data_range_file:
+            data_range = json.load(data_range_file)
+            data_range = {key.lower(): val for key, val in data_range.items()}
     else:
-        # Load data range data for normalization and standardize names to lowercase
-        if args.data_range_file:
-            with open(args.data_range_file) as data_range_file:
-                data_range = json.load(data_range_file)
-                data_range = {key.lower(): val for key, val in data_range.items()}
-        else:
-            data_range = None
+        data_range = None
+    kwargs['data_range'] = data_range
 
-        kwargs['data_range'] = data_range
+    # Check for recursive flag
+    if args.recursive:
+        ll_metrics_df = pd.DataFrame()
+        ll_metrics_dicts = []
 
-        if args.recursive:
-            ll_metrics_df = pd.DataFrame()
-            ll_metrics_dicts = []
+        # Iterate over all runs found in the directory
+        dirs = [p for p in Path(args.log_dir).rglob("*") if p.is_dir()]
+        for dir in tqdm(dirs, desc=Path(args.log_dir).name):
+            # Check if current path is log directory for single run
+            if all(x in [f.name for f in dir.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
+                if args.ste_store_mode:
+                    # Store STE data
+                    try:
+                        util.store_ste_data(log_dir=dir, mode=args.ste_store_mode)
+                    except Exception as e:
+                        print(e)
+                else:
+                    # Compute and store the LL metrics
+                    kwargs['log_dir'] = dir
+                    report = MetricsReport(**kwargs)
+                    report.calculate()
+                    metrics_df = report.ll_metrics_df
+                    metrics_dict = report.ll_metrics_dict
+                    ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
+                    ll_metrics_dicts.append(metrics_dict)
 
-            # Compute and store the LL metrics for all runs found in the directory
-            for path in tqdm(list(Path(args.log_dir).rglob("*")), desc=Path(args.log_dir).name):
-                if path.is_dir():
-                    # Check if current path is log directory for single run
-                    if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
-                        kwargs['log_dir'] = path
-                        report = MetricsReport(**kwargs)
-                        report.calculate()
-                        metrics_df = report.ll_metrics_df
-                        metrics_dict = report.ll_metrics_dict
-                        ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
-                        ll_metrics_dicts.append(metrics_dict)
+        # Save data
+        if args.do_save and args.ste_store_mode is None:
+            filename = args.output if args.output else 'll_metrics'
 
-            # Save data
-            if args.do_save:
-                filename = args.output if args.output else 'll_metrics'
-
-                with open(filename + '.tsv', 'w', newline='\n') as metrics_file:
-                    ll_metrics_df.set_index(['run_id']).to_csv(metrics_file, sep='\t')
-                with open(filename + '.json', 'w', newline='\n') as metrics_file:
-                    json.dump(ll_metrics_dicts, metrics_file)
+            with open(filename + '.tsv', 'w', newline='\n') as metrics_file:
+                ll_metrics_df.set_index(['run_id']).to_csv(metrics_file, sep='\t')
+            with open(filename + '.json', 'w', newline='\n') as metrics_file:
+                json.dump(ll_metrics_dicts, metrics_file)
+    else:
+        if args.ste_store_mode:
+            # Store STE data
+            util.store_ste_data(log_dir=Path(args.log_dir), mode=args.ste_store_mode)
         else:
             # Initialize metrics report
             report = MetricsReport(**kwargs)

@@ -94,7 +94,7 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
 
     # Check for number of tasks in scenario
     if len(task_name) != 1:
-        raise Exception('Scenario trains more than one task')
+        raise Exception(f'Scenario trains more than one task: {log_dir.name}')
 
     # Add STE dataframe to list
     ste_data = [ste_data_df]
@@ -119,7 +119,7 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
     with open(filename, 'wb') as ste_file:
         pickle.dump(ste_data, ste_file)
 
-    print(f'Stored STE data for {task_name[0]}')
+    print(f'Stored STE data for {task_name[0]} in {log_dir.name}')
 
 
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,

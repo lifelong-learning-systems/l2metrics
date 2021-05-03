@@ -21,6 +21,7 @@ import json
 import traceback
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
 from l2metrics import util
 from l2metrics.report import MetricsReport
@@ -88,6 +89,10 @@ def run() -> None:
     parser.add_argument('-N', '--noise', default=[0, 0], metavar=('MEAN', 'STD'), nargs=2, type=float,
                         help='Mean and standard deviation for Gaussian noise in log data')
 
+    # Output directory
+    parser.add_argument('-O', '--output-dir', default='results', type=str,
+                        help='Directory for output files')
+
     # Output filename
     parser.add_argument('-o', '--output', default=None, type=str,
                         help='Specify output filename for plot and results')
@@ -129,6 +134,11 @@ def run() -> None:
     if args.load_settings:
         with open(args.load_settings, 'r') as settings_file:
             kwargs.update(json.load(settings_file))
+
+    kwargs['output_dir'] = Path(args.output_dir)
+
+    # Create output directory if it doesn't exist
+    args.output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load data range data for normalization and standardize names to lowercase
     if args.data_range_file:
@@ -172,28 +182,30 @@ def run() -> None:
                     # Plot metrics
                     if args.do_plot:
                         report.plot(save=args.do_save, show_raw_data=args.show_raw_data,
-                                    show_eval_lines=args.show_eval_lines)
-                        report.plot_ste_data(save=args.do_save)
+                                    show_eval_lines=args.show_eval_lines, output_dir=str(args.output_dir))
+                        report.plot_ste_data(save=args.do_save, output_dir=str(args.output_dir))
+                        plt.close('all')
 
         # Assign base filename
-        filename = args.output if args.output else 'll_metrics'
+        filename = args.output_dir / (args.output if args.output else 'll_metrics')
 
         # Save settings used to run calculate metrics
         if args.do_save_settings:
-            with open(filename + '_settings.json', 'w') as settings_file:
+            with open(str(filename) + '_settings.json', 'w') as settings_file:
                 kwargs['log_dir'] = str(kwargs.get('log_dir', ''))
+                kwargs['output_dir'] = str(kwargs.get('output_dir', ''))
                 json.dump(kwargs, settings_file)
 
         # Save data
         if args.do_save and args.ste_store_mode is None:
             if not ll_metrics_df.empty:
-                with open(filename + '.tsv', 'w', newline='\n') as metrics_file:
+                with open(str(filename) + '.tsv', 'w', newline='\n') as metrics_file:
                     ll_metrics_df.set_index(['run_id']).to_csv(metrics_file, sep='\t')
             if ll_metrics_dicts:
-                with open(filename + '.json', 'w', newline='\n') as metrics_file:
+                with open(str(filename) + '.json', 'w', newline='\n') as metrics_file:
                     json.dump(ll_metrics_dicts, metrics_file)
             if not log_data_df.empty:
-                log_data_df.reset_index(drop=True).to_feather(filename + '_data.feather')
+                log_data_df.reset_index(drop=True).to_feather(str(filename) + '_data.feather')
     else:
         if args.ste_store_mode:
             # Store STE data
@@ -214,18 +226,18 @@ def run() -> None:
 
             # Save metrics to file
             if args.do_save:
-                report.save_metrics(filename=args.output)
-                report.save_data(filename=args.output)
+                report.save_metrics(output_dir=args.output_dir, filename=args.output)
+                report.save_data(output_dir=args.output_dir, filename=args.output)
 
             # Plot metrics
             if args.do_plot:
                 report.plot(save=args.do_save, show_raw_data=args.show_raw_data,
-                            show_eval_lines=args.show_eval_lines)
-                report.plot_ste_data(save=args.do_save)
+                            show_eval_lines=args.show_eval_lines, output_dir=str(args.output_dir))
+                report.plot_ste_data(save=args.do_save, output_dir=str(args.output_dir))
 
             # Save settings used to run calculate metrics
             if args.do_save_settings:
-                report.save_settings(filename=args.output)
+                report.save_settings(output_dir=args.output_dir, filename=args.output)
 
 
 if __name__ == '__main__':

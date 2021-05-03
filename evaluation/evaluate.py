@@ -166,7 +166,7 @@ def store_ste_data(log_dir: Path) -> None:
         raise FileNotFoundError(f"STE logs not found in expected location!")
 
 
-def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
+def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame]:
     """Compute lifelong learning metrics for single LL logs found at input path.
 
     Args:
@@ -198,7 +198,7 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
             Defaults to True.
 
     Returns:
-        Tuple[pd.DataFrame, dict]: DataFrame containing lifelong metrics from scenarios.
+        Tuple[pd.DataFrame, dict]: DataFrame containing lifelong metrics from scenarios and log data.
     """
 
     log_dir = kwargs.get('log_dir', Path(''))
@@ -226,20 +226,23 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict]:
     ll_metrics_df['agent_config'] = log_dir.parts[-4]
     ll_metrics_dict['agent_config'] = log_dir.parts[-4]
 
+    # Get log data
+    log_data_df = report._log_data
+    log_data_df['run_id'] = log_dir.name
+
     if do_plot:
-        report.save_data(filename=str(Path(output_dir) / log_dir.name))
         report.plot(save=do_save_plots, show_raw_data=show_raw_data, show_eval_lines=show_eval_lines,
                     output_dir=output_dir)
         report.plot_ste_data(save=do_save_plots, output_dir=output_dir)
         plt.close('all')
     
     if do_save_settings:
-        report.save_settings(filename=str(Path(output_dir) / log_dir.name))
+        report.save_settings(output_dir=output_dir, filename=log_dir.name)
 
-    return ll_metrics_df, ll_metrics_dict
+    return ll_metrics_df, ll_metrics_dict, log_data_df
 
 
-def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
+def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame]:
     """Compute lifelong learning metrics for all LL logs in provided evaluation log directory.
 
     This function iterates through all the lifelong learning logs it finds in the provided
@@ -258,8 +261,9 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
             structure described in the evaluation protocol.
 
     Returns:
-        pd.DataFrame: DataFrame containing lifelong metrics from all parsed scenarios, sorted by
-            scenario type, complexity, and difficulty.
+        Tuple[pd.DataFrame, List, pd.DataFrame]: DataFrame containing lifelong metrics from all
+            parsed scenarios, sorted by scenario type, complexity, and difficulty. List of lifetime
+            and task-level metrics for each scenario. Log data from each scenario.
     """
 
     eval_dir = kwargs.get('eval_dir', Path(''))
@@ -269,6 +273,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
     # Initialize LL metric dataframe
     ll_metrics_df = pd.DataFrame()
     ll_metrics_dicts = []
+    log_data_df = pd.DataFrame()
 
     # Iterate through agent configuration directories
     for agent_config in tqdm(list(eval_dir.glob('agent_config*')), desc='Agents'):
@@ -288,16 +293,18 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
                 if path.is_dir():
                     # Check if current path is log directory for single run
                     if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
-                        metrics_df, metrics_dict = compute_scenario_metrics(log_dir=path, **kwargs)
+                        metrics_df, metrics_dict, data_df = compute_scenario_metrics(log_dir=path, **kwargs)
                         ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                         ll_metrics_dicts.append(metrics_dict)
+                        log_data_df = log_data_df.append(data_df, ignore_index=True)
                     else:
                         # Iterate through subdirectories containing LL logs
                         for sub_path in tqdm(list(path.iterdir()), desc=path.name):
                             if sub_path.is_dir():
-                                metrics_df, metrics_dict = compute_scenario_metrics(log_dir=sub_path, **kwargs)
+                                metrics_df, metrics_dict, data_df = compute_scenario_metrics(log_dir=sub_path, **kwargs)
                                 ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                                 ll_metrics_dicts.append(metrics_dict)
+                                log_data_df = log_data_df.append(data_df, ignore_index=True)
         else:
             raise FileNotFoundError(f"LL logs not found in expected location!")
 
@@ -305,7 +312,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List]:
         if not ll_metrics_df.empty:
             ll_metrics_df = ll_metrics_df.sort_values(by=['scenario_type', 'complexity', 'difficulty'])
 
-    return ll_metrics_df, ll_metrics_dicts
+    return ll_metrics_df, ll_metrics_dicts, log_data_df
 
 
 def evaluate() -> None:
@@ -444,7 +451,7 @@ def evaluate() -> None:
 
     # Compute LL metric data
     matplotlib.use('Agg')
-    ll_metrics_df, ll_metrics_dicts = compute_eval_metrics(**kwargs)
+    ll_metrics_df, ll_metrics_dicts, log_data_df = compute_eval_metrics(**kwargs)
 
     # Display aggregated data
     display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['mean', 'std']))
@@ -452,11 +459,15 @@ def evaluate() -> None:
 
     # Save data
     if args.do_save:
-        with open(args.output_dir / (args.output + '.tsv'), 'w', newline='\n') as metrics_file:
-            ll_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
-                ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
-        with open(args.output_dir / (args.output + '.json'), 'w', newline='\n') as metrics_file:
-            json.dump(ll_metrics_dicts, metrics_file)
+        if not ll_metrics_df.empty:
+            with open(args.output_dir / (args.output + '.tsv'), 'w', newline='\n') as metrics_file:
+                ll_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
+                    ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
+        if ll_metrics_dicts:
+            with open(args.output_dir / (args.output + '.json'), 'w', newline='\n') as metrics_file:
+                json.dump(ll_metrics_dicts, metrics_file)
+        if not log_data_df.empty:
+            log_data_df.reset_index(drop=True).to_feather(args.output_dir / (args.output + '_data.feather'))
 
 
 if __name__ == '__main__':

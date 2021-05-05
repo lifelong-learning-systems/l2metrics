@@ -74,7 +74,7 @@ class STERelativePerf(Metric):
                     # Get STE data
                     ste_data = self.ste_data.get(task)
 
-                    if ste_data is not None:
+                    if ste_data:
                         if self.ste_averaging_method == 'time':
                             # Average all the STE data together after truncating to same length
                             x_ste = [ste_data_df[ste_data_df['block_type'] == 'train']

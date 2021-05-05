@@ -76,7 +76,7 @@ class SampleEfficiency(Metric):
                     # Get STE data
                     ste_data = self.ste_data.get(task)
 
-                    if ste_data is not None:
+                    if ste_data:
                         # Get task saturation value and episodes to saturation
                         task_saturation, task_eps_to_sat, _ = get_block_saturation_perf(
                             task_data, col_to_use=self.perf_measure)

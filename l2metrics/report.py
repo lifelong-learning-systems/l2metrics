@@ -183,7 +183,7 @@ class MetricsReport():
             lower_bound = 0
             upper_bound = 100
 
-            if self.ste_data.get(task) is not None:
+            if self.ste_data.get(task):
                 x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
                                         [self.perf_measure].to_numpy() for ste_data_df in self.ste_data.get(task)])
                 x_comb = np.append(x, x_ste)

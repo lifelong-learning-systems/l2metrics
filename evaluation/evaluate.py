@@ -457,8 +457,11 @@ def evaluate() -> None:
     ll_metrics_df, ll_metrics_dicts, log_data_df = compute_eval_metrics(**kwargs)
 
     # Display aggregated data
-    display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['mean', 'std']))
-    display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['median', scipy.stats.iqr]))
+    try:
+        display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['mean', 'std']))
+        display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['median', scipy.stats.iqr]))
+    except Exception as e:
+        print(e)
 
     # Save data
     if args.do_save:

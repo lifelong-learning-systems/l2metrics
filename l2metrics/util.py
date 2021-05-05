@@ -44,14 +44,14 @@ def get_ste_data_names() -> list:
         return []
 
 
-def load_ste_data(task_name: str) -> Union[List[pd.DataFrame], None]:
+def load_ste_data(task_name: str) -> List[pd.DataFrame]:
     """Loads the STE data corresponding to the given task name.
 
     Args:
         task_name (str): The name of the STE data file.
 
     Returns:
-        Union[List[pd.DataFrame], None]: The STE data if found, else None.
+        List[pd.DataFrame]: The STE data if found, else empty list.
     """
 
     if task_name in get_ste_data_names():
@@ -60,7 +60,7 @@ def load_ste_data(task_name: str) -> Union[List[pd.DataFrame], None]:
             ste_data = pickle.load(ste_file)
             return ste_data
     else:
-        return None
+        return []
 
 
 def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
@@ -271,7 +271,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
 
         if len(task_data):
             # Load STE data
-            if ste_data.get(task_name) is not None:
+            if ste_data.get(task_name):
                 # Create subplot
                 ax = fig.add_subplot(rows, cols, index + 1)
 

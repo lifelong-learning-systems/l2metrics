@@ -69,20 +69,26 @@ class Transfer(Metric):
             # Validate data
             self.validate(block_info)
 
+            # Use sleep evaluation blocks if they exist
+            if 'sleep' in block_info['block_subtype'].to_numpy():
+                block_info_df = block_info[~(block_info.block_type.isin(['test']) & block_info.block_subtype.isin(['wake']))]
+            else:
+                block_info_df = block_info.copy()
+
             # Initialize metric dictionaries
             forward_transfer = {'ratio': {}, 'contrast': {}}
             backward_transfer = {'ratio': {}, 'contrast': {}}
 
             # Find eligible tasks for forward transfer
-            unique_tasks = block_info.loc[:, 'task_name'].unique()
+            unique_tasks = block_info_df.task_name.unique()
 
             # Determine valid transfer pairs
             for task, other_task in permutations(unique_tasks, 2):
                 # Get testing and training indices for task pair
-                training_regs = block_info[(block_info['task_name'] == task) & (
-                    block_info['block_type'] == 'train')]['regime_num'].to_numpy()
+                training_regs = block_info_df[(block_info_df['task_name'] == task) & (
+                    block_info_df['block_type'] == 'train')]['regime_num'].to_numpy()
 
-                other_blocks = block_info[block_info['task_name'] == other_task]
+                other_blocks = block_info_df[block_info_df['task_name'] == other_task]
                 other_test_regs = other_blocks[other_blocks['block_type'] == 'test']['regime_num'].to_numpy()
                 other_training_regs = other_blocks[other_blocks['block_type'] == 'train']['regime_num'].to_numpy()
 

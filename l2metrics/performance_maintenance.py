@@ -69,6 +69,12 @@ class PerformanceMaintenance(Metric):
             # Validate block structure
             self.validate(block_info)
 
+            # Use sleep evaluation blocks if they exist
+            if 'sleep' in block_info['block_subtype'].to_numpy():
+                block_info_df = block_info[~(block_info.block_type.isin(['test']) & block_info.block_subtype.isin(['wake']))]
+            else:
+                block_info_df = block_info.copy()
+
             # Initialize metric columns
             maintenance_values_mrtlp = {}
             maintenance_values_mrlep = {}
@@ -76,16 +82,16 @@ class PerformanceMaintenance(Metric):
             pm_values_mrlep = {}
 
             # Get unique tasks in scenario
-            unique_tasks = block_info.loc[:, 'task_name'].unique()
+            unique_tasks = block_info_df.task_name.unique()
 
             # Iterate over tasks
             for task in unique_tasks:
                 # Get training and test regimes
-                training_regs = block_info[(block_info['task_name'] == task) &
-                                              (block_info['block_type'] == 'train')]['regime_num'].to_numpy()
+                training_regs = block_info_df[(block_info_df['task_name'] == task) &
+                                              (block_info_df['block_type'] == 'train')]['regime_num'].to_numpy()
 
-                test_regs = block_info[(block_info['task_name'] == task) &
-                                          (block_info['block_type'] == 'test')]['regime_num'].to_numpy()
+                test_regs = block_info_df[(block_info_df['task_name'] == task) &
+                                          (block_info_df['block_type'] == 'test')]['regime_num'].to_numpy()
 
                 # Get reference test regimes
                 ref_test_regs = np.array([test_regs[np.argmax(
@@ -93,11 +99,11 @@ class PerformanceMaintenance(Metric):
 
                 # Iterate over test regimes
                 for test_regime in test_regs:
-                    # Get performance of current test regime
-                    test_perf = metrics_df['term_perf'][test_regime]
-
                     # Check that current test block occurred after last reference test
                     if np.any(test_regime > ref_test_regs) and test_regime not in ref_test_regs:
+                        # Get performance of current test regime
+                        test_perf = metrics_df['term_perf'][test_regime]
+
                         if self.do_mrtlp:
                             ref_regime = training_regs[test_regime > training_regs][-1]
                             mrtlp = metrics_df['term_perf'][ref_regime]
@@ -121,7 +127,7 @@ class PerformanceMaintenance(Metric):
 
                     # Calculate performance maintenance value
                     if m.size:
-                        pm_values_mrtlp[block_info.index[block_info['task_name'] == task][-1]] = np.mean(m)
+                        pm_values_mrtlp[block_info_df.index[block_info_df['task_name'] == task][-1]] = np.mean(m)
 
                 metrics_df = fill_metrics_df(pm_values_mrtlp, 'perf_maintenance_mrtlp', metrics_df)
             
@@ -139,7 +145,7 @@ class PerformanceMaintenance(Metric):
 
                     # Calculate performance maintenance value
                     if m.size:
-                        pm_values_mrlep[block_info.index[block_info['task_name'] == task][-1]] = np.mean(m)
+                        pm_values_mrlep[block_info_df.index[block_info_df['task_name'] == task][-1]] = np.mean(m)
 
                 metrics_df = fill_metrics_df(pm_values_mrlep, 'perf_maintenance_mrlep', metrics_df)
 

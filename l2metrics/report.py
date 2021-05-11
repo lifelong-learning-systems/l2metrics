@@ -138,8 +138,8 @@ class MetricsReport():
 
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
-        block_info_keys_to_include = ['block_num', 'block_type', 'task_name', 'regime_num']
-        if len(self.block_info.loc[:, 'task_params'].unique()) > 1:
+        block_info_keys_to_include = ['block_num', 'block_type', 'block_subtype', 'task_name', 'regime_num']
+        if len(self.block_info.task_params.unique()) > 1:
             block_info_keys_to_include.append('task_params')
 
         self._metrics_df = self.block_info[block_info_keys_to_include].copy()

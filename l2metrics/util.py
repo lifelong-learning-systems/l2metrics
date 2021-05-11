@@ -264,7 +264,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
     for index, (task_color, task_name) in enumerate(zip(task_colors, unique_tasks)):
         # Get block info for task during training
         task_blocks = block_info[(block_info['task_name'] == task_name) & (
-            block_info['block_type'] == 'train')]
+            block_info['block_type'] == 'train') & (block_info['block_subtype'] == 'wake')]
 
         # Get data concatenated data for task
         task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]

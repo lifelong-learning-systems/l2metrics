@@ -47,6 +47,7 @@ class RecoveryTime(Metric):
         for task in unique_tasks:
             # Get train blocks in order of appearance
             tr_block_info = block_info.sort_index().loc[(block_info['block_type'] == 'train') &
+                                                        (block_info['block_subtype'] == 'wake') &
                                                         (block_info['task_name'] == task),
                                                         ['task_name', 'task_params']]
             tr_indices = tr_block_info.index

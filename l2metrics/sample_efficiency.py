@@ -67,7 +67,7 @@ class SampleEfficiency(Metric):
             for task in self.unique_tasks:
                 # Get block info for task during training
                 task_blocks = block_info[(block_info['task_name'] == task) & (
-                    block_info['block_type'] == 'train')]
+                    block_info['block_type'] == 'train') & (block_info['block_subtype'] == 'wake')]
 
                 # Get data concatenated data for task
                 task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]

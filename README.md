@@ -99,7 +99,7 @@ pip install -e <path_to_l2metrics>
 
 ## Usage
 
-To calculate metrics on the performance of your system, you must first generate log files in accordance with the L2Logger format version 1.0. Please refer to the L2Logger documentation for more details on how to generate compatible logs.
+To calculate metrics on the performance of your system, you must first generate log files in accordance with the L2Logger format version 1.1. Please refer to the L2Logger documentation for more details on how to generate compatible logs.
 
 Once these logs are generated, you'll need to store Single-Task Expert (STE) data and pass the log directories as command-line arguments to compute STE-related metrics. Several example files are included to get you started:
 

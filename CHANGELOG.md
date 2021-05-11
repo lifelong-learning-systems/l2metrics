@@ -2,6 +2,15 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.8.0 - 2021-05-11
+
+- Applied recursive option for storing STE data
+- Aggregated log data into single feather file for recursive flag
+- Output plots for recursive flag
+- Add output directory flag to l2metrics
+- Updated documentation and parameter descriptions
+- Updated metrics calculations for scenarios with wake/sleep blocks
+
 ## 2.7.1 - 2021-04-26
 
 - Updated reference to metrics specification document 0.68

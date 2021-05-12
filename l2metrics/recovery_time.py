@@ -81,6 +81,10 @@ class RecoveryTime(Metric):
                     prev_val = metrics_df['term_perf'][ref_ind]
                     block_data = dataframe.loc[assess_ind]
 
+                    # Check for proper number of rows in block data
+                    if block_data.ndim == 1:
+                        block_data = pd.DataFrame(block_data).T
+
                     _, _, eps_to_rec = get_terminal_perf(block_data,
                                                          col_to_use=self.perf_measure,
                                                          prev_val=prev_val)

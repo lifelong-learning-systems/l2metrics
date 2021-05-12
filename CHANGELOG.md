@@ -10,6 +10,7 @@ All notable changes to this repository are documented here. We are using [Semant
 - Add output directory flag to l2metrics
 - Updated documentation and parameter descriptions
 - Updated metrics calculations for scenarios with wake/sleep blocks
+- Fix bug with learning block length of 1 when computing recovery time
 
 ## 2.7.1 - 2021-04-26
 

@@ -150,8 +150,12 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
     """
 
     # Aggregate multiple reward values for the same episode
-    mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
-    mean_data = np.ravel(mean_reward_per_episode.to_numpy())
+    if data.shape[0] > 1:
+        mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
+        mean_data = np.ravel(mean_reward_per_episode.to_numpy())
+    else:
+        mean_data = np.ravel(data[col_to_use].to_numpy(np.float))
+
     mean_data = mean_data[~np.isnan(mean_data)]
 
     if len(mean_data):

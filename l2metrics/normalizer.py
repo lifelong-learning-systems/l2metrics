@@ -80,7 +80,7 @@ class Normalizer():
             task_min = np.nanmin(data.loc[task])
             task_max = np.nanmax(data.loc[task])
 
-            if ste_data.get(task) is not None:
+            if ste_data.get(task):
                 x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
                                         [self.perf_measure].to_numpy() for ste_data_df in ste_data.get(task)])
                 self.data_range[task]['min'] = min(task_min, np.nanmin(x_ste))

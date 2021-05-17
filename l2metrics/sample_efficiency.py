@@ -67,7 +67,7 @@ class SampleEfficiency(Metric):
             for task in self.unique_tasks:
                 # Get block info for task during training
                 task_blocks = block_info[(block_info['task_name'] == task) & (
-                    block_info['block_type'] == 'train')]
+                    block_info['block_type'] == 'train') & (block_info['block_subtype'] == 'wake')]
 
                 # Get data concatenated data for task
                 task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
@@ -76,7 +76,7 @@ class SampleEfficiency(Metric):
                     # Get STE data
                     ste_data = self.ste_data.get(task)
 
-                    if ste_data is not None:
+                    if ste_data:
                         # Get task saturation value and episodes to saturation
                         task_saturation, task_eps_to_sat, _ = get_block_saturation_perf(
                             task_data, col_to_use=self.perf_measure)

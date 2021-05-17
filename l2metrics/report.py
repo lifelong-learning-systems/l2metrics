@@ -138,8 +138,8 @@ class MetricsReport():
 
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
-        block_info_keys_to_include = ['block_num', 'block_type', 'task_name', 'regime_num']
-        if len(self.block_info.loc[:, 'task_params'].unique()) > 1:
+        block_info_keys_to_include = ['block_num', 'block_type', 'block_subtype', 'task_name', 'regime_num']
+        if len(self.block_info.task_params.unique()) > 1:
             block_info_keys_to_include.append('task_params')
 
         self._metrics_df = self.block_info[block_info_keys_to_include].copy()
@@ -183,7 +183,7 @@ class MetricsReport():
             lower_bound = 0
             upper_bound = 100
 
-            if self.ste_data.get(task) is not None:
+            if self.ste_data.get(task):
                 x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
                                         [self.perf_measure].to_numpy() for ste_data_df in self.ste_data.get(task)])
                 x_comb = np.append(x, x_ste)
@@ -409,10 +409,11 @@ class MetricsReport():
         print(tabulate(self.lifetime_metrics_df.fillna('N/A'), headers='keys', tablefmt='psql',
                        floatfmt=".2f", showindex=False))
 
-    def save_metrics(self, filename: str = None):
+    def save_metrics(self, output_dir: str = '', filename: str = None):
         """Save metrics out as JSON file.
 
         Args:
+            output_dir (str, optional): Output directory. Defaults to ''.
             filename (str, optional): Base filename for metrics file. Defaults to log directory name.
         """
 
@@ -423,14 +424,15 @@ class MetricsReport():
             filename = filename.replace(" ", "_")
 
         # Save metrics to file
-        with open(filename + '_metrics.json', 'w', newline='\n') as metrics_file:
+        with open(Path(output_dir) / (filename + '_metrics.json'), 'w', newline='\n') as metrics_file:
             json.dump(self.ll_metrics_dict, metrics_file)
 
-    def save_data(self, filename: str = None) -> None:
+    def save_data(self, output_dir: str = '', filename: str = None) -> None:
         """Save out raw and processed data.
 
         Args:
-            filename (str, optional): Base filename for data files. Defaults to log directory name.
+            output_dir (str, optional): Output directory. Defaults to ''.
+            filename (str, optional): Base filename for data file. Defaults to log directory name.
         """
 
         # Generate filename
@@ -440,9 +442,16 @@ class MetricsReport():
             filename = filename.replace(" ", "_")
 
         # Save data
-        self._log_data.reset_index(drop=True).to_feather(filename + '_data.feather')
+        self._log_data.reset_index(drop=True).to_feather(
+            str(Path(output_dir) / (filename + '_data.feather')))
 
-    def save_settings(self, filename: str = None) -> None:
+    def save_settings(self, output_dir: str = '', filename: str = None) -> None:
+        """Save out settings used to calculate metrics.
+
+        Args:
+            output_dir (str, optional): Output directory. Defaults to ''.
+            filename (str, optional): Base filename for settings file. Defaults to log directory name.
+        """
         # Generate filename
         if filename is None:
             filename = Path(self.log_dir).name
@@ -463,7 +472,7 @@ class MetricsReport():
         settings_json['clamp_outliers'] = self.clamp_outliers
         settings_json['data_range'] = self.normalizer.data_range if self.normalizer else None
 
-        with open(filename + '_settings.json', 'w') as outfile:
+        with open(Path(output_dir) / (filename + '_settings.json'), 'w') as outfile:
             json.dump(settings_json, outfile)
 
     def plot(self, save: bool = False, show_raw_data: bool = False, show_eval_lines: bool = True,

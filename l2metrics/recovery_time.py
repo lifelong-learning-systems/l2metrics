@@ -47,6 +47,7 @@ class RecoveryTime(Metric):
         for task in unique_tasks:
             # Get train blocks in order of appearance
             tr_block_info = block_info.sort_index().loc[(block_info['block_type'] == 'train') &
+                                                        (block_info['block_subtype'] == 'wake') &
                                                         (block_info['task_name'] == task),
                                                         ['task_name', 'task_params']]
             tr_indices = tr_block_info.index
@@ -79,6 +80,10 @@ class RecoveryTime(Metric):
                 for ref_ind, assess_ind in zip(ref_vals, assess_vals):
                     prev_val = metrics_df['term_perf'][ref_ind]
                     block_data = dataframe.loc[assess_ind]
+
+                    # Check for proper number of rows in block data
+                    if block_data.ndim == 1:
+                        block_data = pd.DataFrame(block_data).T
 
                     _, _, eps_to_rec = get_terminal_perf(block_data,
                                                          col_to_use=self.perf_measure,

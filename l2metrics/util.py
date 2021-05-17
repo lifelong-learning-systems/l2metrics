@@ -44,14 +44,14 @@ def get_ste_data_names() -> list:
         return []
 
 
-def load_ste_data(task_name: str) -> Union[List[pd.DataFrame], None]:
+def load_ste_data(task_name: str) -> List[pd.DataFrame]:
     """Loads the STE data corresponding to the given task name.
 
     Args:
         task_name (str): The name of the STE data file.
 
     Returns:
-        Union[List[pd.DataFrame], None]: The STE data if found, else None.
+        List[pd.DataFrame]: The STE data if found, else empty list.
     """
 
     if task_name in get_ste_data_names():
@@ -60,7 +60,7 @@ def load_ste_data(task_name: str) -> Union[List[pd.DataFrame], None]:
             ste_data = pickle.load(ste_file)
             return ste_data
     else:
-        return None
+        return []
 
 
 def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
@@ -94,7 +94,7 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
 
     # Check for number of tasks in scenario
     if len(task_name) != 1:
-        raise Exception('Scenario trains more than one task')
+        raise Exception(f'Scenario trains more than one task: {log_dir.name}')
 
     # Add STE dataframe to list
     ste_data = [ste_data_df]
@@ -119,7 +119,7 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
     with open(filename, 'wb') as ste_file:
         pickle.dump(ste_data, ste_file)
 
-    print(f'Stored STE data for {task_name[0]}')
+    print(f'Stored STE data for {task_name[0]} in {log_dir.name}')
 
 
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
@@ -264,14 +264,14 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
     for index, (task_color, task_name) in enumerate(zip(task_colors, unique_tasks)):
         # Get block info for task during training
         task_blocks = block_info[(block_info['task_name'] == task_name) & (
-            block_info['block_type'] == 'train')]
+            block_info['block_type'] == 'train') & (block_info['block_subtype'] == 'wake')]
 
         # Get data concatenated data for task
         task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
 
         if len(task_data):
             # Load STE data
-            if ste_data.get(task_name) is not None:
+            if ste_data.get(task_name):
                 # Create subplot
                 ax = fig.add_subplot(rows, cols, index + 1)
 

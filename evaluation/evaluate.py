@@ -198,7 +198,7 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
             Defaults to True.
 
     Returns:
-        Tuple[pd.DataFrame, dict]: DataFrame containing lifelong metrics from scenarios and log data.
+        Tuple[pd.DataFrame, dict, pd.DataFrame]: DataFrame containing lifelong metrics from scenarios and log data.
     """
 
     log_dir = kwargs.get('log_dir', Path(''))

@@ -17,9 +17,9 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 ```
 usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-s STE_DIR] [-v {time,metrics}]
                    [-p PERF_MEASURE] [-a {mean,median}]
-                   [-m {mrtlp,mrlep,both}] [-t {ratio,contrast,both}]
-                   [-n {task,run}]
-                   [-g {none,flat,hanning,hamming,bartlett,blackman}]
+                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
+                   [-n {task,run,none}]
+                   [-g {flat,hanning,hamming,bartlett,blackman,none}]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE]
                    [-O OUTPUT_DIR] [-o OUTPUT] [-u] [-r] [-e]
                    [--no-show-eval-lines] [-T] [--no-store-ste] [-P]
@@ -31,52 +31,63 @@ Run L2M evaluation from the command line
 optional arguments:
   -h, --help            show this help message and exit
   -l EVAL_DIR, --eval-dir EVAL_DIR
-                        Evaluation directory containing logs
+                        Evaluation directory containing logs. Defaults to "".
   -s STE_DIR, --ste-dir STE_DIR
-                        Agent configuration directory of STE data
+                        Agent configuration directory of STE data. Defaults to
+                        "".
   -v {time,metrics}, --ste-averaging-method {time,metrics}
                         Method for handling STE runs, time-series averaging
-                        (time) orLL metric averaging (metric)
+                        (time) or LL metric averaging (metrics). Defaults to
+                        time.
   -p PERF_MEASURE, --perf-measure PERF_MEASURE
-                        Name of column to use for metrics calculations
+                        Name of column to use for metrics calculations.
+                        Defaults to reward.
   -a {mean,median}, --aggregation-method {mean,median}
-                        Method for aggregating within-lifetime metrics
-  -m {mrtlp,mrlep,both}, --maintenance-method {mrtlp,mrlep,both}
-                        Method for computing performance maintenance
+                        Method for aggregating within-lifetime metrics.
+                        Defaults to mean.
+  -m {mrlep,mrtlp,both}, --maintenance-method {mrlep,mrtlp,both}
+                        Method for computing performance maintenance. Defaults
+                        to mrlep.
   -t {ratio,contrast,both}, --transfer-method {ratio,contrast,both}
-                        Method for computing forward and backward transfer
-  -n {task,run}, --normalization-method {task,run}
-                        Method for normalizing data
-  -g {none,flat,hanning,hamming,bartlett,blackman}, --smoothing-method {none,flat,hanning,hamming,bartlett,blackman}
-                        Method for smoothing data
+                        Method for computing forward and backward transfer.
+                        Defaults to ratio.
+  -n {task,run,none}, --normalization-method {task,run,none}
+                        Method for normalizing data. Defaults to task.
+  -g {flat,hanning,hamming,bartlett,blackman,none}, --smoothing-method {flat,hanning,hamming,bartlett,blackman,none}
+                        Method for smoothing data, window type. Defaults to
+                        flat.
   -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
-                        Window length for smoothing data
+                        Window length for smoothing data. Defaults to None.
   -x, --clamp-outliers  Remove outliers in data for metrics by clamping to
-                        quantiles
+                        quantiles. Defaults to false.
   -d DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
                         JSON file containing task performance ranges for
-                        normalization
+                        normalization. Defaults to None.
   -O OUTPUT_DIR, --output-dir OUTPUT_DIR
-                        Directory for output files
+                        Directory for output files. Defaults to results.
   -o OUTPUT, --output OUTPUT
-                        Output filename for results
+                        Output filename for results. Defaults to ll_metrics.
   -u, --do-unzip        Unzip all data found in evaluation directory
-  -r, --show-raw-data   Show raw data points under smoothed data for plotting
+  -r, --show-raw-data   Show raw data points under smoothed data for plotting.
+                        Defaults to false.
   -e, --show-eval-lines
-                        Show lines between evaluation blocks
+                        Show lines between evaluation blocks. Defaults to
+                        true.
   --no-show-eval-lines  Do not show lines between evaluation blocks
-  -T, --do-store-ste    Do not store STE data
+  -T, --do-store-ste    Store STE data. Defaults to true.
   --no-store-ste        Do not store STE data
-  -P, --do-plot         Plot performance
+  -P, --do-plot         Plot performance. Defaults to true.
   --no-plot             Do not plot performance
-  -L, --do-save-plots   Save scenario and STE plots
-  --no-save-plots       Save scenario and STE plots
-  -S, --do-save         Save metrics outputs
+  -L, --do-save-plots   Save scenario and STE plots. Defaults to true.
+  --no-save-plots       Do not save scenario and STE plots
+  -S, --do-save         Save metrics outputs. Defaults to true.
   --no-save             Do not save metrics outputs
   -c LOAD_SETTINGS, --load-settings LOAD_SETTINGS
-                        Load evaluation settings from JSON file
+                        Load evaluation settings from JSON file. Defaults to
+                        None.
   -C, --do-save-settings
-                        Save L2Metrics settings to JSON file
+                        Save L2Metrics settings to JSON file. Defaults to
+                        true.
   --no-save-settings    Do not save L2Metrics settings to JSON file
 ```
 

@@ -395,9 +395,9 @@ class MetricsReport():
                 if len(metric_vals):
                     # Aggregate metric values
                     if self.aggregation_method == 'mean':
-                        self.lifetime_metrics_df[metric] = [np.mean(metric_vals)]
+                        self.lifetime_metrics_df[metric] = [np.nanmean(metric_vals)]
                     elif self.aggregation_method == 'median':
-                        self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
+                        self.lifetime_metrics_df[metric] = [np.nanmedian(metric_vals)]
 
     def report(self) -> None:
         """Print summary report of lifetime metrics and return metric objects.

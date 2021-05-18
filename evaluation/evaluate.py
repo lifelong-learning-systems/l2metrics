@@ -448,6 +448,15 @@ def evaluate() -> None:
     # Create output directory if it doesn't exist
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Load data range data for normalization and standardize names to lowercase
+    if args.data_range_file:
+        with open(args.data_range_file) as data_range_file:
+            data_range = json.load(data_range_file)
+            data_range = {key.lower(): val for key, val in data_range.items()}
+    else:
+        data_range = None
+    kwargs['data_range'] = data_range
+
     # Unzip logs
     if args.do_unzip:
         unzip_logs(args.eval_dir)

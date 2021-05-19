@@ -54,7 +54,6 @@ def process_evaluation(args):
     kwargs['maintenance_method'] = 'both'
     kwargs['transfer_method'] = 'both'
     kwargs['window_length'] = None
-    # kwargs['data_range_file'] = 'data_range.json'
     kwargs['show_raw_data'] = False
     kwargs['show_eval_lines'] = True
     kwargs['do_store_ste'] = False
@@ -62,6 +61,17 @@ def process_evaluation(args):
     kwargs['do_save_plots'] = True
     kwargs['do_save'] = True
     kwargs['do_save_settings'] = True
+
+    data_range_file = None # 'data_range.json'
+
+    # Load data range data for normalization and standardize names to lowercase
+    if data_range_file:
+        with open(data_range_file) as f:
+            data_range = json.load(f)
+            data_range = {key.lower(): val for key, val in data_range.items()}
+    else:
+        data_range = None
+    kwargs['data_range'] = data_range
 
     # Create output directory if it doesn't exist
     kwargs['output_dir'].mkdir(parents=True, exist_ok=True)

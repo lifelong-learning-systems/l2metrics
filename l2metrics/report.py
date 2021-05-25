@@ -272,6 +272,8 @@ class MetricsReport():
 
         # Append scenario information to metrics dataframe
         self.ll_metrics_df = self.lifetime_metrics_df.copy()
+        if self.ll_metrics_df.empty:
+            self.ll_metrics_df = self.ll_metrics_df.append(pd.Series([np.nan]), ignore_index=True)
         self.ll_metrics_df['run_id'] = Path(self.log_dir).name
         self.ll_metrics_df['complexity'] = self.scenario_info['complexity']
         self.ll_metrics_df['difficulty'] = self.scenario_info['difficulty']

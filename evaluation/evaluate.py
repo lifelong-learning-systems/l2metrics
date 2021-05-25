@@ -446,7 +446,8 @@ def evaluate() -> None:
     kwargs['output_dir'] = Path(args.output_dir)
 
     # Create output directory if it doesn't exist
-    args.output_dir.mkdir(parents=True, exist_ok=True)
+    if args.do_save_plots or args.do_save or args.do_save_settings:
+        args.output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load data range data for normalization and standardize names to lowercase
     if args.data_range_file:

@@ -144,7 +144,8 @@ def run() -> None:
     kwargs['output_dir'] = Path(args.output_dir)
 
     # Create output directory if it doesn't exist
-    args.output_dir.mkdir(parents=True, exist_ok=True)
+    if (args.do_save or args.do_save_settings) and args.ste_store_mode is None:
+        args.output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load data range data for normalization and standardize names to lowercase
     if args.data_range_file:
@@ -196,7 +197,7 @@ def run() -> None:
         filename = args.output_dir / (args.output if args.output else 'll_metrics')
 
         # Save settings used to run calculate metrics
-        if args.do_save_settings:
+        if args.do_save_settings and args.ste_store_mode is None:
             with open(str(filename) + '_settings.json', 'w') as settings_file:
                 kwargs['log_dir'] = str(kwargs.get('log_dir', ''))
                 kwargs['output_dir'] = str(kwargs.get('output_dir', ''))

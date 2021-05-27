@@ -272,6 +272,8 @@ class MetricsReport():
 
         # Append scenario information to metrics dataframe
         self.ll_metrics_df = self.lifetime_metrics_df.copy()
+        if self.ll_metrics_df.empty:
+            self.ll_metrics_df = self.ll_metrics_df.append(pd.Series([np.nan]), ignore_index=True)
         self.ll_metrics_df['run_id'] = Path(self.log_dir).name
         self.ll_metrics_df['complexity'] = self.scenario_info['complexity']
         self.ll_metrics_df['difficulty'] = self.scenario_info['difficulty']
@@ -395,9 +397,9 @@ class MetricsReport():
                 if len(metric_vals):
                     # Aggregate metric values
                     if self.aggregation_method == 'mean':
-                        self.lifetime_metrics_df[metric] = [np.mean(metric_vals)]
+                        self.lifetime_metrics_df[metric] = [np.nanmean(metric_vals)]
                     elif self.aggregation_method == 'median':
-                        self.lifetime_metrics_df[metric] = [np.median(metric_vals)]
+                        self.lifetime_metrics_df[metric] = [np.nanmedian(metric_vals)]
 
     def report(self) -> None:
         """Print summary report of lifetime metrics and return metric objects.

@@ -86,7 +86,7 @@ class STERelativePerf(Metric):
                             min_exp = min(task_data.shape[0], len(x_ste))
                             task_perf = np.nansum(task_data.head(
                                 min_exp)[self.perf_measure].to_numpy())
-                            ste_perf = np.nansum(x_ste)
+                            ste_perf = np.nansum(x_ste[:min_exp])
                             rel_perf = task_perf / ste_perf
                             ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
                         elif self.ste_averaging_method == 'metrics':

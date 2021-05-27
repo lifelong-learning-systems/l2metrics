@@ -183,13 +183,12 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
                 ax.axvspan(x[0], x[-1] + 1, alpha=0.1, facecolor='black')
 
             if block_type == 'test':
-                y = np.nanmean(y) * np.ones(len(x))
                 if show_eval_lines:
                     x = list(range(x[0], x[0] + len(y)))
                     eval_x_data.extend(x)
-                    eval_y_data.extend(y)
+                    eval_y_data.extend(np.nanmean(y) * np.ones(len(x)))
                     eval_line.set_data(eval_x_data, eval_y_data)
-                    plt.draw()  
+                    plt.draw()
 
             # Match smoothed x and y length if data had NaNs
             if len(x) != len(y):

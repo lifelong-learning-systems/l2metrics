@@ -2,6 +2,14 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.8.1 - 2021-05-27
+
+- Updated evaluation package for M12 protocol
+- Replaced lifetime aggregation method calls with numpy version to ignore NaNs
+- Fixed bug with time-series averaging for multiple STE runs
+- Added checks for proper settings before creating output directories
+- Updated evaluation block plotting method to show pre-processed data instead of just mean line
+
 ## 2.8.0 - 2021-05-11
 
 - Applied recursive option for storing STE data

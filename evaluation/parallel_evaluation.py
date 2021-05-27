@@ -32,9 +32,9 @@ matplotlib.use('Agg')
 
 perf_measure = {
     'argonne': 'score',
-    'hrl': 'norm_reward',
+    'hrl': 'reward',
     'sri': 'reward',
-    'teledyne': 'id_accuracy_cumulative',
+    'teledyne': 'object_id_accuracy',
     'upenn': 'performance'
 }
 
@@ -45,8 +45,8 @@ def process_evaluation(args):
     # Build file and directory strings
     kwargs = {}
     kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval/' + eval_dir + '/')
-    kwargs['output_dir'] = Path('results/' + processing_mode + '/' + sg_name + '_' + processing_mode)
-    kwargs['output'] = sg_name + '_metrics_' + processing_mode
+    kwargs['output_dir'] = Path('results/' + processing_mode + '/' + sg_name)
+    kwargs['output'] = sg_name + '_' + processing_mode
     kwargs['ste_dir'] = ''
     kwargs['ste_averaging_method'] = 'time'
     kwargs['perf_measure'] = perf_measure[sg_name]
@@ -54,7 +54,6 @@ def process_evaluation(args):
     kwargs['maintenance_method'] = 'both'
     kwargs['transfer_method'] = 'both'
     kwargs['window_length'] = None
-    # kwargs['data_range_file'] = 'data_range.json'
     kwargs['show_raw_data'] = False
     kwargs['show_eval_lines'] = True
     kwargs['do_store_ste'] = False
@@ -62,6 +61,17 @@ def process_evaluation(args):
     kwargs['do_save_plots'] = True
     kwargs['do_save'] = True
     kwargs['do_save_settings'] = True
+
+    data_range_file = None # 'data_range.json'
+
+    # Load data range data for normalization and standardize names to lowercase
+    if data_range_file:
+        with open(data_range_file) as f:
+            data_range = json.load(f)
+            data_range = {key.lower(): val for key, val in data_range.items()}
+    else:
+        data_range = None
+    kwargs['data_range'] = data_range
 
     # Create output directory if it doesn't exist
     kwargs['output_dir'].mkdir(parents=True, exist_ok=True)
@@ -78,19 +88,19 @@ def process_evaluation(args):
     # Save the lifelong learning metrics DataFrame
     if kwargs['do_save']:
         if not ll_metrics_df.empty:
-            with open(kwargs['output_dir'].parent / (kwargs['output'] + '.tsv'), 'w', newline='\n') as metrics_file:
+            with open(kwargs['output_dir'] / (kwargs['output'] + '.tsv'), 'w', newline='\n') as metrics_file:
                 ll_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
                     ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
         if ll_metrics_dicts:
-            with open(kwargs['output_dir'].parent / (kwargs['output'] + '.json'), 'w', newline='\n') as metrics_file:
+            with open(kwargs['output_dir'] / (kwargs['output'] + '.json'), 'w', newline='\n') as metrics_file:
                 json.dump(ll_metrics_dicts, metrics_file)
         if not log_data_df.empty:
-            log_data_df.reset_index(drop=True).to_feather(kwargs['output_dir'].parent / (kwargs['output'] + '_data.feather'))
+            log_data_df.reset_index(drop=True).to_feather(kwargs['output_dir'] / (kwargs['output'] + '_data.feather'))
 
 
 def run():
     # Configure metrics report
-    eval_dirs = ['m9_eval']
+    eval_dirs = ['m12_eval']
     sg_names = ['argonne', 'hrl', 'sri', 'teledyne', 'upenn']
     processing_modes = ['raw', 'smoothed', 'normalized', 'normalized_no_outliers']
 

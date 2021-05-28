@@ -235,9 +235,6 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
                     output_dir=output_dir)
         report.plot_ste_data(save=do_save_plots, output_dir=output_dir)
         plt.close('all')
-    
-    if do_save_settings:
-        report.save_settings(output_dir=output_dir, filename=log_dir.name)
 
     return ll_metrics_df, ll_metrics_dict, log_data_df
 
@@ -484,6 +481,13 @@ def evaluate() -> None:
                 json.dump(ll_metrics_dicts, metrics_file)
         if not log_data_df.empty:
             log_data_df.reset_index(drop=True).to_feather(args.output_dir / (args.output + '_data.feather'))
+    
+    # Save settings for evaluation
+    if args.do_save_settings:
+        with open(args.output_dir / (args.output + '_settings.json'), 'w') as outfile:
+            kwargs['eval_dir'] = str(kwargs.get('eval_dir', ''))
+            kwargs['output_dir'] = str(kwargs.get('output_dir', ''))
+            json.dump(kwargs, outfile)
 
 
 if __name__ == '__main__':

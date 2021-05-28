@@ -286,6 +286,7 @@ class MetricsReport():
 
         # Build JSON
         self.ll_metrics_dict = json.loads(self.ll_metrics_df.loc[0].T.to_json())
+        self.ll_metrics_dict['normalization_data_range'] = self.normalizer.data_range if self.normalizer else None
         self.ll_metrics_dict['task_metrics'] = self.task_metrics_df.T.to_dict()
 
         for task in self._unique_tasks:
@@ -472,7 +473,6 @@ class MetricsReport():
         settings_json['smoothing_method'] = self.smoothing_method
         settings_json['window_length'] = self.window_length
         settings_json['clamp_outliers'] = self.clamp_outliers
-        settings_json['data_range'] = self.normalizer.data_range if self.normalizer else None
 
         with open(Path(output_dir) / (filename + '_settings.json'), 'w') as outfile:
             json.dump(settings_json, outfile)

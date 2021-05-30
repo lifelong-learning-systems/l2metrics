@@ -221,17 +221,17 @@ class MetricsReport():
                     self.ste_data[task][idx] = self.normalizer.normalize(ste_data_df)
 
     def smooth_data(self) -> None:
-        # Smooth LL data
+        # Smooth LX data
         for regime_num in self.block_info['regime_num'].unique():
-            x = self._log_data[self._log_data['regime_num']
-                               == regime_num][self.perf_measure].to_numpy()
-            self._log_data.loc[self._log_data['regime_num'] == regime_num,
-                               self.perf_measure] = smooth(x, window_len=self.window_length,
-                                                           window=self.smoothing_method)
+            if self.block_info.iloc[regime_num].block_type == 'train':
+                x = self._log_data[self._log_data['regime_num']
+                                   == regime_num][self.perf_measure].to_numpy()
+                self._log_data.loc[self._log_data['regime_num'] == regime_num,
+                                   self.perf_measure] = smooth(x, window_len=self.window_length,
+                                                               window=self.smoothing_method)
 
-        # Save normalized data as separate column
-        self._log_data[self.perf_measure +
-                       '_smoothed'] = self._log_data[self.perf_measure].to_numpy()
+        # Save smoothed data as separate column
+        self._log_data[self.perf_measure + '_smoothed'] = self._log_data[self.perf_measure].to_numpy()
 
         # Smooth STE data
         for task, ste_data in self.ste_data.items():

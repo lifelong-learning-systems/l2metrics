@@ -183,13 +183,17 @@ class MetricsReport():
             lower_bound = 0
             upper_bound = 100
 
-            if self.ste_data.get(task):
-                x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
-                                        [self.perf_measure].to_numpy() for ste_data_df in self.ste_data.get(task)])
-                x_comb = np.append(x, x_ste)
-                lower_bound, upper_bound = np.quantile(x_comb, quantiles)
+            if self.data_range:
+                lower_bound = self.data_range[task]['min']
+                upper_bound = self.data_range[task]['max']
             else:
-                lower_bound, upper_bound = np.quantile(x, quantiles)
+                if self.ste_data.get(task):
+                    x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
+                                            [self.perf_measure].to_numpy() for ste_data_df in self.ste_data.get(task)])
+                    x_comb = np.append(x, x_ste)
+                    lower_bound, upper_bound = np.quantile(x_comb, quantiles)
+                else:
+                    lower_bound, upper_bound = np.quantile(x, quantiles)
 
             # Filter LL data
             self._log_data.loc[self._log_data['task_name'] == task, self.perf_measure] = x.clip(lower_bound, upper_bound)

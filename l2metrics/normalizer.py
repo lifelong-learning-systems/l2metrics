@@ -174,12 +174,12 @@ class Normalizer():
                     task_max = self.data_range[task]['max']
 
                     data.loc[data.task_name == task, self.perf_measure] = \
-                        (data[data['task_name'] == task][self.perf_measure].to_numpy() - task_min) / \
-                        (task_max - task_min) * self.scale
+                        ((data[data['task_name'] == task][self.perf_measure].to_numpy() - task_min) / \
+                        (task_max - task_min) * self.scale) + 1
                 else:
                     raise Exception(f"Missing data range for task '{task}'")
             return data
         elif self.method == 'run':
-            data.loc[:, self.perf_measure] = (data[self.perf_measure].to_numpy() - self.run_min) / \
-                (self.run_max - self.run_min) * self.scale
+            data.loc[:, self.perf_measure] = ((data[self.perf_measure].to_numpy() - self.run_min) / \
+                (self.run_max - self.run_min) * self.scale) + 1
             return data

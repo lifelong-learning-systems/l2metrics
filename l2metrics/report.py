@@ -37,7 +37,7 @@ from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
 from .transfer import Transfer
-from .util import load_ste_data, plot_performance, plot_ste_data
+from .util import load_ste_data, plot_blocks, plot_performance, plot_ste_data
 
 
 class MetricsReport():
@@ -128,7 +128,7 @@ class MetricsReport():
             self.normalize_data()
         else:
             self.normalizer = None
-        
+
         # Smooth LL and STE data
         if self.smoothing_method != 'none':
             self.smooth_data()
@@ -486,11 +486,17 @@ class MetricsReport():
 
         if input_title is None:
             input_title = Path(self.log_dir).name
+        plot_filename = input_title
 
+        plot_blocks(self._log_data, self.perf_measure, self._unique_tasks,
+                    input_title=input_title, output_dir=output_dir, do_save_fig=save,
+                    plot_filename=plot_filename + '_block')
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
                          show_raw_data=show_raw_data, show_eval_lines=show_eval_lines,
                          y_axis_col=self.perf_measure, input_title=input_title,
-                         output_dir=output_dir, do_save_fig=save)
+                         output_dir=output_dir, do_save_fig=save,
+                         plot_filename=plot_filename + '_perf')
+
 
     def plot_ste_data(self, input_title: str = None,
                       save: bool = False, output_dir: str = '') -> None:

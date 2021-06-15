@@ -29,6 +29,10 @@ import numpy as np
 import pandas as pd
 
 
+color_selection = ['blue', 'green', 'red',
+                   'black', 'magenta', 'cyan', 'orange', 'purple']
+
+
 def get_ste_data_names() -> list:
     """Gets the names of the stored STE data in $L2DATA/taskinfo/.
 
@@ -122,12 +126,97 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
     print(f'Stored STE data for {task_name[0]} in {log_dir.name}')
 
 
+def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_title: str = '',
+                output_dir: str = '', do_save_fig: bool = False, plot_filename: str = 'block_plot'):
+    """Plot learning performance curves and evaluation blocks as separate plots.
+
+    Args:
+        dataframe (pd.DataFrame): The performance data to plot.
+        reward (str): The column name of the metric to plot.
+        unique_tasks (list): List of unique tasks in scenario.
+        input_title (str, optional): The plot title. Defaults to ''.
+        output_dir (str, optional): Output directory of results. Defaults to ''.
+        do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to False.
+        plot_filename (str, optional): The filename to use for saving. Defaults to 'block_plot'.
+    """
+
+    if reward + '_normalized' in dataframe.columns:
+        reward_col = reward + '_normalized'
+    else:
+        reward_col = reward + '_raw'
+    if reward + '_smoothed' in dataframe.columns:
+        reward_col_smooth = reward + '_smoothed'
+    else:
+        reward_col_smooth = None
+
+    df_test = dataframe[dataframe.block_type == 'test']
+    df_train = dataframe[dataframe.block_type == 'train']
+
+    fig, axes = plt.subplots(len(unique_tasks)+1, 1, figsize=(12, 12), sharex=True)
+    ax0 = axes[0]
+    ax0.set_ylabel(reward_col + ' (LX)')
+    ax0.grid()
+
+    if len(unique_tasks) < len(color_selection):
+        task_colors = color_selection[:len(unique_tasks)]
+    else:
+        task_colors = [color_selection[i % len(color_selection)] for i in range(len(unique_tasks))]
+
+    task_idx = 1
+    xv_max = None  # Workaround for inconsistent # of samples
+
+    # Plot training and test data
+    for task_color, task in zip(task_colors, unique_tasks):
+        x = df_train[df_train['task_name'] == task].exp_num
+        y = df_train[df_train['task_name'] == task][reward_col]
+        ax0.plot(x, y, '.', label=task, color=task_color, markersize=4)
+
+        ax = axes[task_idx]
+        x = df_test[df_test['task_name'] == task].exp_num
+        y = df_test[df_test['task_name'] == task][reward_col]
+        ax.plot(x, y, '.', label=task, color=task_color, markersize=4)
+        task_ex_block_data = df_test[df_test['task_name'] == task].groupby('block_num')
+        xv = task_ex_block_data.exp_num.median()
+        if xv_max is None or len(xv) > len(xv_max):
+            xv_max = xv
+        ex_median = task_ex_block_data[reward_col].median()
+        ex_iqr_lower = task_ex_block_data[reward_col].quantile(.25)
+        ex_iqr_upper = task_ex_block_data[reward_col].quantile(.75)
+        ax.fill_between(xv, ex_iqr_lower, ex_iqr_upper, color=task_color, alpha=0.5)
+        ax.plot(xv, ex_median, color=task_color)
+        ax.set_ylabel(task + ' (EX)')
+        ax.grid()
+        task_idx += 1
+
+    # Plot smoothed training data
+    if reward_col_smooth is not None:
+        for _, group in df_train.groupby('block_num'):
+            ax0.plot(group.exp_num, group[reward_col_smooth], 'k')
+
+    # Set plot title
+    if Path(input_title).parent != Path('.'):
+        _, input_title = os.path.split(input_title)
+
+    ax0.set_title(input_title)
+
+    # Enable plot legend
+    ax0.legend()
+
+    # Set y-axis limits
+    plt.setp(fig.axes, ylim=(df_test[reward_col].min(), df_test[reward_col].max()))
+
+    if do_save_fig:
+        print(f'Saving block plot with name: {plot_filename.replace(" ", "_")}')
+        fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + '.png'))
+
+
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
-                     x_axis_col: str = 'exp_num', y_axis_col: str = 'reward', input_title: str = "",
+                     x_axis_col: str = 'exp_num', y_axis_col: str = 'reward', input_title: str = '',
                      input_xlabel: str = 'Episodes', input_ylabel: str = 'Performance',
                      show_raw_data: bool = False, show_eval_lines: bool = True,
                      show_block_boundary: bool = False, shade_test_blocks: bool = True,
-                     output_dir: str = '', do_save_fig: bool = False, plot_filename: str = None) -> None:
+                     output_dir: str = '', do_save_fig: bool = False,
+                     plot_filename: str = 'performance_plot') -> None:
     """Plots the performance curves for the given DataFrame.
 
     Args:
@@ -136,7 +225,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         unique_tasks (list): List of unique tasks in scenario.
         x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
         y_axis_col (str, optional): The column name of the metric to plot. Defaults to 'reward'.
-        input_title (str, optional): The plot title. Defaults to "".
+        input_title (str, optional): The plot title. Defaults to ''.
         input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
         show_raw_data (bool, optional): Flag for enabling raw data in background of plot.
@@ -147,26 +236,25 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         shade_test_blocks (bool, optional): Flag for enabling block shading. Defaults to True.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to False.
-        plot_filename (str, optional): The filename to use for saving. Defaults to None.
+        plot_filename (str, optional): The filename to use for saving. Defaults to 'performance_plot'.
     """
 
     # Initialize figure
     fig = plt.figure(figsize=(12, 6))
     ax = fig.add_subplot(111)
-
-    color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'cyan', 'orange', 'purple']
-
+  
     if len(unique_tasks) < len(color_selection):
         task_colors = color_selection[:len(unique_tasks)]
     else:
         task_colors = [color_selection[i % len(color_selection)] for i in range(len(unique_tasks))]
 
     # Loop through tasks and plot their performance curves
-    for color, task in zip(task_colors, unique_tasks):
+    for task_color, task in zip(task_colors, unique_tasks):
         if show_eval_lines:
             eval_x_data = []
             eval_y_data = []
-            eval_line, = ax.plot(eval_x_data, eval_y_data, color=color, linestyle='--', alpha=0.2)
+            eval_line, = ax.plot(eval_x_data, eval_y_data,
+                                 color=task_color, linestyle='--', alpha=0.2)
 
         for _, row in block_info[block_info['task_name'] == task].iterrows():
             regime_num = row['regime_num']
@@ -194,7 +282,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
             if len(x) != len(y):
                 x = list(range(x[0], x[0] + len(y)))
 
-            ax.scatter(x, y, color=color, marker='*', s=8, label=task)
+            ax.scatter(x, y, color=task_color, marker='*', s=8, label=task)
 
             # if show_raw_data:
             #     ax.scatter(x, y, color=color, marker='*', s=8, alpha=0.05)
@@ -204,28 +292,21 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
     ax.legend(by_label.values(), by_label.keys())
 
     if Path(input_title).parent != Path('.'):
-        _, plot_filename = os.path.split(input_title)
-        input_title = plot_filename
-    else:
-        plot_filename = input_title
+        _, input_title = os.path.split(input_title)
 
     # Want the saved figured to have a grid so do this before saving
     ax.set(xlabel=input_xlabel, ylabel=input_ylabel, title=input_title)
     ax.grid()
 
     if do_save_fig:
-        if not plot_filename:
-            plot_filename = 'plot'
-        print(f'Saving figure with name: {plot_filename.replace(" ", "_")}')
+        print(f'Saving performance plot with name: {plot_filename.replace(" ", "_")}')
         fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + '.png'))
-    else:
-        plt.show()
 
 
 def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFrame, unique_tasks: list,
                   perf_measure: str = 'reward', input_title: str = '', input_xlabel: str = 'Episodes',
                   input_ylabel: str = 'Performance', output_dir: str = '', do_save: bool = False,
-                  plot_filename: str = None) -> None:
+                  plot_filename: str = 'ste_plot') -> None:
     """Plots the relative performance of tasks compared to Single-Task Experts.
 
     Args:
@@ -239,7 +320,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_save (bool, optional): Flag for enabling saving figure. Defaults to False.
-        plot_filename (str, optional): The filename to use for saving. Defaults to None.
+        plot_filename (str, optional): The filename to use for saving. Defaults to 'ste_plot'.
     """
 
     # Initialize figure
@@ -250,10 +331,9 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
     cols = min(len(unique_tasks), 2)
     rows = ceil(len(unique_tasks) / cols)
 
-    # Initialize max limit for x-axis
+    # Initialize axis limits
     x_limit = 0
-
-    color_selection = ['blue', 'green', 'red', 'black', 'magenta', 'cyan', 'orange', 'purple']
+    y_limit = (np.nan, np.nan)
 
     if len(unique_tasks) < len(color_selection):
         task_colors = color_selection[:len(unique_tasks)]
@@ -279,7 +359,9 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
                             [perf_measure].to_numpy() for ste_data_df in ste_data.get(task_name)]
                 y1 = np.array([x[:min(map(len, y1))] for x in y1]).mean(0)
                 y2 = task_data[perf_measure].to_numpy()
-                
+                y_limit = (np.nanmin([y_limit[0], np.nanmin(y1), np.nanmin(y2)]),
+                           np.nanmax([y_limit[1], np.nanmax(y1), np.nanmax(y2)]))
+
                 x1 = list(range(0, len(y1)))
                 x2 = list(range(0, len(y2)))
                 x_limit = max(x_limit, len(y1), len(y2))
@@ -296,12 +378,8 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
 
     fig.subplots_adjust(wspace=0.3, hspace=0.4)
 
-    plt.setp(fig.axes, xlim=(0, x_limit))
+    plt.setp(fig.axes, xlim=(0, x_limit), ylim=y_limit)
 
     if do_save:
-        if plot_filename is None:
-            plot_filename = 'ste_plot'
-        print(f'Saving figure with name: {plot_filename.replace(" ", "_")}')
+        print(f'Saving STE plot with name: {plot_filename.replace(" ", "_")}')
         fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + '.png'))
-    else:
-        plt.show()

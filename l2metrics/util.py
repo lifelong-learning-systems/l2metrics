@@ -203,7 +203,7 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
     ax0.legend()
 
     # Set y-axis limits
-    plt.setp(fig.axes, ylim=(df_test[reward_col].min(), df_test[reward_col].max()))
+    plt.setp(fig.axes, ylim=(np.nanmin(df_test[reward_col]), np.nanmax(df_test[reward_col])))
 
     if do_save_fig:
         print(f'Saving block plot with name: {plot_filename.replace(" ", "_")}')

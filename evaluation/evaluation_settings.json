@@ -15,7 +15,6 @@
     "output_dir": "results",
     "output": "ll_metrics",
     "do_unzip": false,
-    "show_raw_data": false,
     "show_eval_lines": true,
     "do_store_ste": true,
     "do_plot": true,

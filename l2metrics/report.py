@@ -37,7 +37,7 @@ from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
 from .transfer import Transfer
-from .util import load_ste_data, plot_performance, plot_ste_data
+from .util import load_ste_data, plot_blocks, plot_performance, plot_ste_data
 
 
 class MetricsReport():
@@ -98,13 +98,13 @@ class MetricsReport():
         # Filter data by completed experiences
         self._log_data = self._log_data[self._log_data['exp_status'] == 'complete']
 
+        # Drop all rows with NaN values
+        self._log_data = self._log_data[self._log_data[self.perf_measure].notna()]
+
         # Fill in regime number and sort
         self._log_data = l2l.fill_regime_num(self._log_data)
         self._log_data = self._log_data.sort_values(
             by=['regime_num', 'exp_num']).set_index("regime_num", drop=False)
-
-        # Drop all rows with NaN values
-        self._log_data = self._log_data[self._log_data[self.perf_measure].notna()]
 
         # Save raw data as separate column
         self._log_data[self.perf_measure + '_raw'] = self._log_data[self.perf_measure].to_numpy()
@@ -128,7 +128,7 @@ class MetricsReport():
             self.normalize_data()
         else:
             self.normalizer = None
-        
+
         # Smooth LL and STE data
         if self.smoothing_method != 'none':
             self.smooth_data()
@@ -183,13 +183,17 @@ class MetricsReport():
             lower_bound = 0
             upper_bound = 100
 
-            if self.ste_data.get(task):
-                x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
-                                        [self.perf_measure].to_numpy() for ste_data_df in self.ste_data.get(task)])
-                x_comb = np.append(x, x_ste)
-                lower_bound, upper_bound = np.quantile(x_comb, quantiles)
+            if self.data_range:
+                lower_bound = self.data_range[task]['min']
+                upper_bound = self.data_range[task]['max']
             else:
-                lower_bound, upper_bound = np.quantile(x, quantiles)
+                if self.ste_data.get(task):
+                    x_ste = np.concatenate([ste_data_df[ste_data_df['block_type'] == 'train']
+                                            [self.perf_measure].to_numpy() for ste_data_df in self.ste_data.get(task)])
+                    x_comb = np.append(x, x_ste)
+                    lower_bound, upper_bound = np.quantile(x_comb, quantiles)
+                else:
+                    lower_bound, upper_bound = np.quantile(x, quantiles)
 
             # Filter LL data
             self._log_data.loc[self._log_data['task_name'] == task, self.perf_measure] = x.clip(lower_bound, upper_bound)
@@ -215,23 +219,24 @@ class MetricsReport():
         self._log_data[self.perf_measure + '_normalized'] = self._log_data[self.perf_measure].to_numpy()
 
         # Normalize STE data
+        # TODO: Handle unprovided data range when STE data contains task not in LL logs
         for task, ste_data in self.ste_data.items():
             if ste_data is not None:
                 for idx, ste_data_df in enumerate(ste_data):
                     self.ste_data[task][idx] = self.normalizer.normalize(ste_data_df)
 
     def smooth_data(self) -> None:
-        # Smooth LL data
+        # Smooth LX data
         for regime_num in self.block_info['regime_num'].unique():
-            x = self._log_data[self._log_data['regime_num']
-                               == regime_num][self.perf_measure].to_numpy()
-            self._log_data.loc[self._log_data['regime_num'] == regime_num,
-                               self.perf_measure] = smooth(x, window_len=self.window_length,
-                                                           window=self.smoothing_method)
+            if self.block_info.iloc[regime_num].block_type == 'train':
+                x = self._log_data[self._log_data['regime_num']
+                                   == regime_num][self.perf_measure].to_numpy()
+                self._log_data.loc[self._log_data['regime_num'] == regime_num,
+                                   self.perf_measure] = smooth(x, window_len=self.window_length,
+                                                               window=self.smoothing_method)
 
-        # Save normalized data as separate column
-        self._log_data[self.perf_measure +
-                       '_smoothed'] = self._log_data[self.perf_measure].to_numpy()
+        # Save smoothed data as separate column
+        self._log_data[self.perf_measure + '_smoothed'] = self._log_data[self.perf_measure].to_numpy()
 
         # Smooth STE data
         for task, ste_data in self.ste_data.items():
@@ -286,6 +291,7 @@ class MetricsReport():
 
         # Build JSON
         self.ll_metrics_dict = json.loads(self.ll_metrics_df.loc[0].T.to_json())
+        self.ll_metrics_dict['normalization_data_range'] = self.normalizer.data_range if self.normalizer else None
         self.ll_metrics_dict['task_metrics'] = self.task_metrics_df.T.to_dict()
 
         for task in self._unique_tasks:
@@ -390,16 +396,16 @@ class MetricsReport():
                 if metric in ['forward_transfer_contrast', 'forward_transfer_ratio',
                               'backward_transfer_contrast', 'backward_transfer_ratio']:
                     # Get the first calculated transfer values for each task pair
-                    metric_vals = [v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()]
+                    metric_vals = np.array([v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()])
                 else:
                     metric_vals = self.task_metrics_df[metric].dropna().to_numpy()
 
                 if len(metric_vals):
                     # Aggregate metric values
                     if self.aggregation_method == 'mean':
-                        self.lifetime_metrics_df[metric] = [np.nanmean(metric_vals)]
+                        self.lifetime_metrics_df[metric] = [np.nanmean(metric_vals.astype(np.float))]
                     elif self.aggregation_method == 'median':
-                        self.lifetime_metrics_df[metric] = [np.nanmedian(metric_vals)]
+                        self.lifetime_metrics_df[metric] = [np.nanmedian(metric_vals.astype(np.float))]
 
     def report(self) -> None:
         """Print summary report of lifetime metrics and return metric objects.
@@ -472,21 +478,25 @@ class MetricsReport():
         settings_json['smoothing_method'] = self.smoothing_method
         settings_json['window_length'] = self.window_length
         settings_json['clamp_outliers'] = self.clamp_outliers
-        settings_json['data_range'] = self.normalizer.data_range if self.normalizer else None
 
         with open(Path(output_dir) / (filename + '_settings.json'), 'w') as outfile:
             json.dump(settings_json, outfile)
 
-    def plot(self, save: bool = False, show_raw_data: bool = False, show_eval_lines: bool = True,
-             output_dir: str = '', input_title: str = None) -> None:
+    def plot(self, save: bool = False, show_eval_lines: bool = True, output_dir: str = '',
+             input_title: str = None) -> None:
 
         if input_title is None:
             input_title = Path(self.log_dir).name
+        plot_filename = input_title
 
+        plot_blocks(self._log_data, self.perf_measure, self._unique_tasks,
+                    input_title=input_title, output_dir=output_dir, do_save_fig=save,
+                    plot_filename=plot_filename + '_block')
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
-                         show_raw_data=show_raw_data, show_eval_lines=show_eval_lines,
-                         y_axis_col=self.perf_measure, input_title=input_title,
-                         output_dir=output_dir, do_save_fig=save)
+                         show_eval_lines=show_eval_lines, y_axis_col=self.perf_measure,
+                         input_title=input_title, output_dir=output_dir, do_save_fig=save,
+                         plot_filename=plot_filename + '_perf')
+
 
     def plot_ste_data(self, input_title: str = None,
                       save: bool = False, output_dir: str = '') -> None:

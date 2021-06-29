@@ -178,6 +178,7 @@ def run() -> None:
                 report.plot(save=args.do_save, show_raw_data=args.show_raw_data,
                             show_eval_lines=args.show_eval_lines, output_dir=str(args.output_dir))
                 report.plot_ste_data(save=args.do_save, output_dir=str(args.output_dir))
+                plt.show()
 
             # Save settings used to run calculate metrics
             if args.do_save_settings:

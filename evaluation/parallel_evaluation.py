@@ -54,7 +54,6 @@ def process_evaluation(args):
     kwargs['maintenance_method'] = 'both'
     kwargs['transfer_method'] = 'both'
     kwargs['window_length'] = None
-    kwargs['show_raw_data'] = False
     kwargs['show_eval_lines'] = True
     kwargs['do_store_ste'] = False
     kwargs['do_plot'] = True
@@ -96,6 +95,13 @@ def process_evaluation(args):
                 json.dump(ll_metrics_dicts, metrics_file)
         if not log_data_df.empty:
             log_data_df.reset_index(drop=True).to_feather(kwargs['output_dir'] / (kwargs['output'] + '_data.feather'))
+    
+    # Save settings for evaluation
+    if kwargs['do_save_settings']:
+        with open(kwargs['output_dir'] / (kwargs['output'] + '_settings.json'), 'w') as outfile:
+            kwargs['eval_dir'] = str(kwargs.get('eval_dir', ''))
+            kwargs['output_dir'] = str(kwargs.get('output_dir', ''))
+            json.dump(kwargs, outfile)
 
 
 def run():

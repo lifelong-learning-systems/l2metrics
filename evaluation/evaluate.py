@@ -188,8 +188,6 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
         window_length (int, optional): Window length for smoothing data. Defaults to None.
         clamp_outliers (bool, optional): Flag for enabling outlier removal. Defaults to False.
         output_dir (str, optional): Output directory of results. Defaults to ''.
-        show_raw_data (bool, optional): Flag for enabling raw data in background of smoothed curve.
-            Defaults to False.
         show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
             changing slope of evaluation performance. Defaults to True.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to True.
@@ -203,7 +201,6 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
 
     log_dir = kwargs.get('log_dir', Path(''))
     output_dir = kwargs.get('output_dir', '')
-    show_raw_data = kwargs.get('show_raw_data', False)
     show_eval_lines = kwargs.get('show_eval_lines', True)
     do_plot = kwargs.get('do_plot', True)
     do_save_plots = kwargs.get('do_save_plots', True)
@@ -231,13 +228,9 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
     log_data_df['run_id'] = log_dir.name
 
     if do_plot:
-        report.plot(save=do_save_plots, show_raw_data=show_raw_data, show_eval_lines=show_eval_lines,
-                    output_dir=output_dir)
+        report.plot(save=do_save_plots, show_eval_lines=show_eval_lines, output_dir=output_dir)
         report.plot_ste_data(save=do_save_plots, output_dir=output_dir)
         plt.close('all')
-    
-    if do_save_settings:
-        report.save_settings(output_dir=output_dir, filename=log_dir.name)
 
     return ll_metrics_df, ll_metrics_dict, log_data_df
 
@@ -391,11 +384,6 @@ def evaluate() -> None:
     parser.add_argument('-u', '--do-unzip', action='store_true',
                         help='Unzip all data found in evaluation directory')
 
-    # Flag for showing raw performance data under smoothed data
-    parser.add_argument('-r', '--show-raw-data', action='store_true',
-                        help='Show raw data points under smoothed data for plotting. Defaults to \
-                            false.')
-
     # Flag for showing evaluation block lines
     parser.add_argument('-e', '--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
                         help='Show lines between evaluation blocks. Defaults to true.')
@@ -484,6 +472,13 @@ def evaluate() -> None:
                 json.dump(ll_metrics_dicts, metrics_file)
         if not log_data_df.empty:
             log_data_df.reset_index(drop=True).to_feather(args.output_dir / (args.output + '_data.feather'))
+    
+    # Save settings for evaluation
+    if args.do_save_settings:
+        with open(args.output_dir / (args.output + '_settings.json'), 'w') as outfile:
+            kwargs['eval_dir'] = str(kwargs.get('eval_dir', ''))
+            kwargs['output_dir'] = str(kwargs.get('output_dir', ''))
+            json.dump(kwargs, outfile)
 
 
 if __name__ == '__main__':

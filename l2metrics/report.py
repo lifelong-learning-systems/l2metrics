@@ -396,16 +396,16 @@ class MetricsReport():
                 if metric in ['forward_transfer_contrast', 'forward_transfer_ratio',
                               'backward_transfer_contrast', 'backward_transfer_ratio']:
                     # Get the first calculated transfer values for each task pair
-                    metric_vals = [v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()]
+                    metric_vals = np.array([v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()])
                 else:
                     metric_vals = self.task_metrics_df[metric].dropna().to_numpy()
 
                 if len(metric_vals):
                     # Aggregate metric values
                     if self.aggregation_method == 'mean':
-                        self.lifetime_metrics_df[metric] = [np.nanmean(metric_vals)]
+                        self.lifetime_metrics_df[metric] = [np.nanmean(metric_vals.astype(np.float))]
                     elif self.aggregation_method == 'median':
-                        self.lifetime_metrics_df[metric] = [np.nanmedian(metric_vals)]
+                        self.lifetime_metrics_df[metric] = [np.nanmedian(metric_vals.astype(np.float))]
 
     def report(self) -> None:
         """Print summary report of lifetime metrics and return metric objects.

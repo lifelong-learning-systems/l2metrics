@@ -54,7 +54,6 @@ def process_evaluation(args):
     kwargs['maintenance_method'] = 'both'
     kwargs['transfer_method'] = 'both'
     kwargs['window_length'] = None
-    kwargs['show_raw_data'] = False
     kwargs['show_eval_lines'] = True
     kwargs['do_store_ste'] = False
     kwargs['do_plot'] = True

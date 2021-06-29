@@ -87,8 +87,8 @@ def run() -> None:
 
                     # Plot metrics
                     if args.do_plot:
-                        report.plot(save=args.do_save, show_raw_data=args.show_raw_data,
-                                    show_eval_lines=args.show_eval_lines, output_dir=str(args.output_dir))
+                        report.plot(save=args.do_save, show_eval_lines=args.show_eval_lines,
+                                    output_dir=str(args.output_dir))
                         report.plot_ste_data(save=args.do_save, output_dir=str(args.output_dir))
                         plt.close('all')
 
@@ -137,8 +137,8 @@ def run() -> None:
 
             # Plot metrics
             if args.do_plot:
-                report.plot(save=args.do_save, show_raw_data=args.show_raw_data,
-                            show_eval_lines=args.show_eval_lines, output_dir=str(args.output_dir))
+                report.plot(save=args.do_save, show_eval_lines=args.show_eval_lines,
+                            output_dir=str(args.output_dir))
                 report.plot_ste_data(save=args.do_save, output_dir=str(args.output_dir))
                 plt.show()
 

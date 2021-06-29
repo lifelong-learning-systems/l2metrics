@@ -93,11 +93,6 @@ def init_parser():
     parser.add_argument('-o', '--output', default=None, type=str,
                         help='Specify output filename for plot and results. Defaults to None.')
 
-    # Flag for showing raw performance data under smoothed data
-    parser.add_argument('-r', '--show-raw-data', action='store_true',
-                        help='Show raw data points under smoothed data for plotting. Defaults to \
-                            false.')
-
     # Flag for showing evaluation block lines
     parser.add_argument('-e', '--show-eval-lines', dest='show_eval_lines', default=True, action='store_true',
                         help='Show lines between evaluation blocks. Defaults to true.')

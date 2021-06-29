@@ -482,8 +482,8 @@ class MetricsReport():
         with open(Path(output_dir) / (filename + '_settings.json'), 'w') as outfile:
             json.dump(settings_json, outfile)
 
-    def plot(self, save: bool = False, show_raw_data: bool = False, show_eval_lines: bool = True,
-             output_dir: str = '', input_title: str = None) -> None:
+    def plot(self, save: bool = False, show_eval_lines: bool = True, output_dir: str = '',
+             input_title: str = None) -> None:
 
         if input_title is None:
             input_title = Path(self.log_dir).name
@@ -493,9 +493,8 @@ class MetricsReport():
                     input_title=input_title, output_dir=output_dir, do_save_fig=save,
                     plot_filename=plot_filename + '_block')
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
-                         show_raw_data=show_raw_data, show_eval_lines=show_eval_lines,
-                         y_axis_col=self.perf_measure, input_title=input_title,
-                         output_dir=output_dir, do_save_fig=save,
+                         show_eval_lines=show_eval_lines, y_axis_col=self.perf_measure,
+                         input_title=input_title, output_dir=output_dir, do_save_fig=save,
                          plot_filename=plot_filename + '_perf')
 
 

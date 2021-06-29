@@ -123,9 +123,9 @@ usage: python -m l2metrics [-h] [-l LOG_DIR] [-R] [-s {w,a}] [-v {time,metrics}]
                    [-n {task,run,none}]
                    [-g {flat,hanning,hamming,bartlett,blackman,none}]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
-                   [-O OUTPUT_DIR] [-o OUTPUT] [-r] [-e]
-                   [--no-show-eval-lines] [-P] [--no-plot] [-S] [--no-save]
-                   [-c LOAD_SETTINGS] [-C] [--no-save-settings]
+                   [-O OUTPUT_DIR] [-o OUTPUT] [-e] [--no-show-eval-lines]
+                   [-P] [--no-plot] [-S] [--no-save] [-c LOAD_SETTINGS] [-C]
+                   [--no-save-settings]
 
 Run L2Metrics from the command line
 
@@ -174,8 +174,6 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Specify output filename for plot and results. Defaults
                         to None.
-  -r, --show-raw-data   Show raw data points under smoothed data for plotting.
-                        Defaults to false.
   -e, --show-eval-lines
                         Show lines between evaluation blocks. Defaults to
                         true.
@@ -206,7 +204,6 @@ By default, the L2Metrics package will calculate metrics with the following opti
 - Outlier clamping is `disabled`. When enabled, the outliers (detected using 0.1, 0.9 quantiles) will be clamped to the quantile bounds.
 - Gaussian noise is `disabled`.
 - Plotting is `enabled`.
-- Show raw data is `disabled` and is also currently unsupported.
 - Draw lines between evaluation blocks is `enabled`.
 - Saving of results and log data is `enabled`.
 - Saving of settings is `enabled`.

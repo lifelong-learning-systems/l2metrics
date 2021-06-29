@@ -2,6 +2,19 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.9.0 - 2021-06-29
+
+- Consolidated settings output into one JSON file
+- Added normalization range in metrics JSON for each run
+- Disabled smoothing for evaluation block data
+- Fixed bug with regime and block number mismatch by filtering NaNs before filling regime number
+- Implemented using input data range for clamping outliers
+- Updated normalization range to 1-101
+- Implemented new block plotting visualization
+- Created utility function for initializing l2metrics parser
+- Fixed bug with numpy array type when aggregating by median
+- Removed deprecated command-line argument: --show-rate-data
+
 ## 2.8.1 - 2021-05-27
 
 - Updated evaluation package for M12 protocol

@@ -219,6 +219,7 @@ class MetricsReport():
         self._log_data[self.perf_measure + '_normalized'] = self._log_data[self.perf_measure].to_numpy()
 
         # Normalize STE data
+        # TODO: Handle unprovided data range when STE data contains task not in LL logs
         for task, ste_data in self.ste_data.items():
             if ste_data is not None:
                 for idx, ste_data_df in enumerate(ste_data):
@@ -395,16 +396,16 @@ class MetricsReport():
                 if metric in ['forward_transfer_contrast', 'forward_transfer_ratio',
                               'backward_transfer_contrast', 'backward_transfer_ratio']:
                     # Get the first calculated transfer values for each task pair
-                    metric_vals = [v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()]
+                    metric_vals = np.array([v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()])
                 else:
                     metric_vals = self.task_metrics_df[metric].dropna().to_numpy()
 
                 if len(metric_vals):
                     # Aggregate metric values
                     if self.aggregation_method == 'mean':
-                        self.lifetime_metrics_df[metric] = [np.nanmean(metric_vals)]
+                        self.lifetime_metrics_df[metric] = [np.nanmean(metric_vals.astype(np.float))]
                     elif self.aggregation_method == 'median':
-                        self.lifetime_metrics_df[metric] = [np.nanmedian(metric_vals)]
+                        self.lifetime_metrics_df[metric] = [np.nanmedian(metric_vals.astype(np.float))]
 
     def report(self) -> None:
         """Print summary report of lifetime metrics and return metric objects.
@@ -481,8 +482,8 @@ class MetricsReport():
         with open(Path(output_dir) / (filename + '_settings.json'), 'w') as outfile:
             json.dump(settings_json, outfile)
 
-    def plot(self, save: bool = False, show_raw_data: bool = False, show_eval_lines: bool = True,
-             output_dir: str = '', input_title: str = None) -> None:
+    def plot(self, save: bool = False, show_eval_lines: bool = True, output_dir: str = '',
+             input_title: str = None) -> None:
 
         if input_title is None:
             input_title = Path(self.log_dir).name
@@ -492,9 +493,8 @@ class MetricsReport():
                     input_title=input_title, output_dir=output_dir, do_save_fig=save,
                     plot_filename=plot_filename + '_block')
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
-                         show_raw_data=show_raw_data, show_eval_lines=show_eval_lines,
-                         y_axis_col=self.perf_measure, input_title=input_title,
-                         output_dir=output_dir, do_save_fig=save,
+                         show_eval_lines=show_eval_lines, y_axis_col=self.perf_measure,
+                         input_title=input_title, output_dir=output_dir, do_save_fig=save,
                          plot_filename=plot_filename + '_perf')
 
 

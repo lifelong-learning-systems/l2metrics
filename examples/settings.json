@@ -13,7 +13,6 @@
     "data_range_file": "data_range.json",
     "noise": [0, 0],
     "output": null,
-    "show_raw_data": false,
     "show_eval_lines": true,
     "do_plot": true,
     "do_save": true,

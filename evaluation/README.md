@@ -21,7 +21,7 @@ usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-s STE_DIR] [-v {time,m
                    [-n {task,run,none}]
                    [-g {flat,hanning,hamming,bartlett,blackman,none}]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE]
-                   [-O OUTPUT_DIR] [-o OUTPUT] [-u] [-r] [-e]
+                   [-O OUTPUT_DIR] [-o OUTPUT] [-u] [-e]
                    [--no-show-eval-lines] [-T] [--no-store-ste] [-P]
                    [--no-plot] [-L] [--no-save-plots] [-S] [--no-save]
                    [-c LOAD_SETTINGS] [-C] [--no-save-settings]
@@ -68,8 +68,6 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Output filename for results. Defaults to ll_metrics.
   -u, --do-unzip        Unzip all data found in evaluation directory
-  -r, --show-raw-data   Show raw data points under smoothed data for plotting.
-                        Defaults to false.
   -e, --show-eval-lines
                         Show lines between evaluation blocks. Defaults to
                         true.

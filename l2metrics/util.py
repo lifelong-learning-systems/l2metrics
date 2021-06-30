@@ -203,7 +203,7 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
     ax0.legend()
 
     # Set y-axis limits
-    plt.setp(fig.axes, ylim=(df_test[reward_col].min(), df_test[reward_col].max()))
+    plt.setp(fig.axes, ylim=(np.nanmin(df_test[reward_col]), np.nanmax(df_test[reward_col])))
 
     if do_save_fig:
         print(f'Saving block plot with name: {plot_filename.replace(" ", "_")}')
@@ -213,9 +213,8 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
                      x_axis_col: str = 'exp_num', y_axis_col: str = 'reward', input_title: str = '',
                      input_xlabel: str = 'Episodes', input_ylabel: str = 'Performance',
-                     show_raw_data: bool = False, show_eval_lines: bool = True,
-                     show_block_boundary: bool = False, shade_test_blocks: bool = True,
-                     output_dir: str = '', do_save_fig: bool = False,
+                     show_eval_lines: bool = True, show_block_boundary: bool = False,
+                     shade_test_blocks: bool = True, output_dir: str = '', do_save_fig: bool = False,
                      plot_filename: str = 'performance_plot') -> None:
     """Plots the performance curves for the given DataFrame.
 
@@ -228,8 +227,6 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         input_title (str, optional): The plot title. Defaults to ''.
         input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
-        show_raw_data (bool, optional): Flag for enabling raw data in background of plot.
-            Defaults to False.
         show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
             changing slope of evaluation performance. Defaults to True.
         show_block_boundary (bool, optional): Flag for enabling block boundaries. Defaults to True.
@@ -283,9 +280,6 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
                 x = list(range(x[0], x[0] + len(y)))
 
             ax.scatter(x, y, color=task_color, marker='*', s=8, label=task)
-
-            # if show_raw_data:
-            #     ax.scatter(x, y, color=color, marker='*', s=8, alpha=0.05)
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))

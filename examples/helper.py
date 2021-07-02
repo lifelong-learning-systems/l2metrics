@@ -35,24 +35,24 @@ class TaskMetrics:
                 new_dict[(parent,k)]=v
         return new_dict
 
-    def df2dict(self,df:pd.DataFrame)->dict:
-        new_dict={}
-        for col in df.columns:
-            tmp_df = df[col]
-            newcol = [x for x in list(col) if x==x][1:]
-            for k in newcol:
-                if isinstance(tmp_df,pd.Series):
-                    new_dict[newcol] = tmp_df[0]
-                elif isinstance(tmp_df,pd.DataFrame):
-                    new_dict[newcol] = self.df2dict(tmp_df)
-        return new_dict
+    # def df2dict(self,df:pd.DataFrame)->dict:
+    #     new_dict={}
+    #     for col in df.columns:
+    #         tmp_df = df[col]
+    #         newcol = [x for x in list(col) if x==x][1:]
+    #         for k in newcol:
+    #             if isinstance(tmp_df,pd.Series):
+    #                 new_dict[newcol] = tmp_df[0]
+    #             elif isinstance(tmp_df,pd.DataFrame):
+    #                 new_dict[newcol] = self.df2dict(tmp_df)
+    #     return new_dict
     
-    def merge(self,a, b, path=None):
+    def mergedict(self,a, b, path=None):
         if path is None: path = []
         for key in b:
             if key in a:
                 if isinstance(a[key], dict) and isinstance(b[key], dict):
-                    self.merge(a[key], b[key], path + [str(key)])
+                    self.mergedict(a[key], b[key], path + [str(key)])
                 elif a[key] == b[key]:
                     pass # same leaf value
                 else:
@@ -69,14 +69,14 @@ class TaskMetrics:
             new_dict[key[0]] = self.df2dict_helper(key[1:],val)
         return new_dict
     
-    def df2dict2(self,df:pd.DataFrame)->dict:
+    def df2dict(self,df:pd.DataFrame)->dict:
         new_dict={}
         pre_new_dict = []
         for col in df.columns:
             val = df[col]
-            newcol=[x for x in list(col) if x==x][1:]
+            newcol=[x for x in list(col) if x==x][1:] if isinstance(col,tuple) else [col]
             pre_new_dict.append(self.df2dict_helper(newcol,val))
-        new_dict = reduce(self.merge,pre_new_dict)
+        new_dict = reduce(self.mergedict,pre_new_dict)
         return new_dict
     
     def getBackwardTransferRatio(self,taska:str,taskb:str=None)->dict:

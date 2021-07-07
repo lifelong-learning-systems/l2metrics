@@ -34,20 +34,9 @@ class TaskMetrics:
                 # print("3",(parent,k))
                 new_dict[(parent,k)]=v
         return new_dict
-
-    # def df2dict(self,df:pd.DataFrame)->dict:
-    #     new_dict={}
-    #     for col in df.columns:
-    #         tmp_df = df[col]
-    #         newcol = [x for x in list(col) if x==x][1:]
-    #         for k in newcol:
-    #             if isinstance(tmp_df,pd.Series):
-    #                 new_dict[newcol] = tmp_df[0]
-    #             elif isinstance(tmp_df,pd.DataFrame):
-    #                 new_dict[newcol] = self.df2dict(tmp_df)
-    #     return new_dict
     
     # sourced from stackoverflow
+    # link: https://stackoverflow.com/questions/7204805/how-to-merge-dictionaries-of-dictionaries
     def mergedict(self,a, b, path=None):
         if path is None: path = []
         for key in b:

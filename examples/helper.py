@@ -47,6 +47,7 @@ class TaskMetrics:
     #                 new_dict[newcol] = self.df2dict(tmp_df)
     #     return new_dict
     
+    # sourced from stackoverflow
     def mergedict(self,a, b, path=None):
         if path is None: path = []
         for key in b:
@@ -69,26 +70,29 @@ class TaskMetrics:
             new_dict[key[0]] = self.df2dict_helper(key[1:],val)
         return new_dict
     
-    def df2dict(self,df:pd.DataFrame)->dict:
-        new_dict={}
+    def df2dict(self,df:pd.DataFrame,parent:str="root")->dict:
         pre_new_dict = []
         for col in df.columns:
             val = df[col]
             newcol=[x for x in list(col) if x==x][1:] if isinstance(col,tuple) else [col]
             pre_new_dict.append(self.df2dict_helper(newcol,val))
-        new_dict = reduce(self.mergedict,pre_new_dict)
-        return new_dict
+
+        return {parent:reduce(self.mergedict,pre_new_dict)}
     
     def getBackwardTransferRatio(self,taska:str,taskb:str=None)->dict:
         if taskb is None:
-            new_dict = self.df2dict(self.df.root.task_metrics[taska].backward_transfer_ratio)
+            return self.df2dict(self.df.root.task_metrics[taska].backward_transfer_ratio,"backward_transfer_ratio")
         else:
-            new_dict = self.df2dict(self.df.root.task_metrics[taska].backward_transfer_ratio[taskb])
-        return new_dict
+            return self.df2dict(self.df.root.task_metrics[taska].backward_transfer_ratio[taskb],"backward_transfer_ratio")
 
     def getForwardTransferRatio(self,taska:str,taskb:str=None)->dict:
         if taskb is None:
-            new_dict = self.df2dict(self.df.root.task_metrics[taska].forward_transfer_ratio)
+            return self.df2dict(self.df.root.task_metrics[taska].forward_transfer_ratio,"forward_transfer_ratio")
         else:
-            new_dict = self.df2dict(self.df.root.task_metrics[taska].forward_transfer_ratio[taskb])
-        return new_dict
+            return self.df2dict(self.df.root.task_metrics[taska].forward_transfer_ratio[taskb],"forward_transfer_ratio")
+    
+    def getPerfRecoveryRate(self,task:str=None):
+        if task is None:
+            return self.df2dict(self.df.root.perf_recovery)
+        else:
+            return self.df2dict(self.df.root.task_metrics[task].perf_recovery,task)

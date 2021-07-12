@@ -1,4 +1,5 @@
 import json
+from typing import Tuple
 import pandas as pd
 import seaborn as sns
 from functools import reduce
@@ -70,20 +71,100 @@ class TaskMetrics:
 
         return reduce(self.mergedict,pre_new_dict)
     
-    def getBackwardTransferRatio(self,taska:str,taskb:str=None)->dict:
-        if taskb is None:
+    def getBackwardTransferRatio(self,taska:str=None,taskb:str=None)->dict:
+        if taska is None:
+            return self.df.root.backward_transfer_ratio
+        elif taskb is None:
             return self.df2dict(self.df.root.task_metrics[taska].backward_transfer_ratio)
         else:
             return self.df.root.task_metrics[taska].backward_transfer_ratio[taskb].tolist()[0]
 
-    def getForwardTransferRatio(self,taska:str,taskb:str=None)->dict:
-        if taskb is None:
+    def getForwardTransferRatio(self,taska:str=None,taskb:str=None)->dict:
+        if taska is None:
+            return self.df.root.forward_transfer_ratio
+        elif taskb is None:
             return self.df2dict(self.df.root.task_metrics[taska].forward_transfer_ratio)
         else:
             return self.df.root.task_metrics[taska].forward_transfer_ratio[taskb].tolist()[0]
     
-    def getPerfRecoveryRate(self,task:str=None):
-        if task is None:
-            return self.df2dict(self.df.root.perf_recovery)
+    def getBackwardTransferContrast(self,taska:str=None,taskb:str=None)->dict:
+        if taska is None:
+            return self.df.root.backward_transfer_contrast
+        elif taskb is None:
+            return self.df2dict(self.df.root.task_metrics[taska].backward_transfer_contrast)
         else:
-            return self.df2dict(self.df.root.task_metrics[task].perf_recovery)
+            return self.df.root.task_metrics[taska].backward_transfer_contrast[taskb].tolist()[0]
+
+    def getForwardTransferContrast(self,taska:str=None,taskb:str=None)->dict:
+        if taska is None:
+            return self.df.root.forward_transfer_contrast
+        elif taskb is None:
+            return self.df2dict(self.df.root.task_metrics[taska].forward_transfer_contrast)
+        else:
+            return self.df.root.task_metrics[taska].forward_transfer_contrast[taskb].tolist()[0]
+
+    def getMaintenanceValMRLEP(self,task:str)->list:
+        return self.df.root.task_metrics[task].maintenance_val_mrlep.tolist()[0]
+    
+    def getMaintenanceValMRTLP(self,task:str)->list:
+        return self.df.root.task_metrics[task].maintenance_val_mrtlp.tolist()[0]
+    
+    def getRecoveryTimes(self,task:str)->list:
+        return self.df.root.task_metrics[task].recovery_times.tolist()[0]
+    
+    def getPerfRecoveryRate(self,task:str=None)->int:
+        if task is None:
+            return self.df.root.perf_recovery
+        else:
+            return self.df.root.task_metrics[task].perf_recovery
+    
+    def getPerfMaintenanceMRLEP(self,task:str=None)->int:
+        if task is None:
+            return self.df.root.perf_maintenance_mrlep
+        else:
+            return self.df.root.task_metrics[task].perf_maintenance_mrlep
+    
+    def getPerfMaintenanceMRtLP(self,task:str=None)->int:
+        if task is None:
+            return self.df.root.perf_maintenance_mrtlp
+        else:
+            return self.df.root.task_metrics[task].perf_maintenance_mrtlp
+    
+    def getSteRelPerf(self, task:str=None)->int:
+        if task is None:
+            return self.df.root.ste_rel_perf
+        else:
+            return self.df.root.task_metrics[task].ste_rel_perf
+    
+    def getSampleEfficiency(self, task:str=None)->int:
+        if task is None:
+            return self.df.root.sample_efficiency
+        else:
+            return self.df.root.task_metrics[task].sample_efficiency
+    
+    def getRunID(self)->int:
+        return self.df.root.run_id
+    
+    def getComplexity(self)->int:
+        return self.df.root.complexity
+
+    def getDifficulty(self)->int:
+        return self.df.root.difficulty
+
+    def getScenarioType(self)->int:
+        return self.df.root.scenario_type
+    
+    def getMetricsColumn(self)->int:
+        return self.df.root.metrics_column
+
+    def getMinMax(self,task:str=None)->Tuple[int,int]:
+        if task is None:
+            return self.df.root.min,self.df.root.max
+        else:
+            return self.df.root.task_metrics[task].min,self.df.root.task_metrics[task].max
+    
+    def getMinMax(self,task:str=None)->Tuple[int,int]:
+        if task is None:
+            return self.df.root.min,self.df.root.max
+        else:
+            return self.df.root.task_metrics[task].min,self.df.root.task_metrics[task].max

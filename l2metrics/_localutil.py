@@ -70,6 +70,7 @@ def smooth(x: np.ndarray, window_len: int = None, window: str = 'flat') -> np.nd
     if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
         raise ValueError("Window is one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
+    # Perform reflections at both ends of signal
     s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
     s = s[~np.isnan(s)]
 

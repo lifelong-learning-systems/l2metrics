@@ -47,6 +47,7 @@ def process_evaluation(args):
     kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval/' + eval_dir + '/')
     kwargs['output_dir'] = Path('results/' + processing_mode + '/' + sg_name)
     kwargs['output'] = sg_name + '_' + processing_mode
+    kwargs['agent_config_dir'] = ''
     kwargs['ste_dir'] = ''
     kwargs['ste_averaging_method'] = 'time'
     kwargs['perf_measure'] = perf_measure[sg_name]

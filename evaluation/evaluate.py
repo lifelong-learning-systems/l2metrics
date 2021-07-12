@@ -103,6 +103,7 @@ def load_performance_thresholds(eval_dir: Path) -> pd.DataFrame:
 
     return perf_thresh_df
 
+
 def load_task_similarities(eval_dir: Path) -> pd.DataFrame:
     """Load the task similarity matrix from the given log directory.
 
@@ -127,6 +128,7 @@ def load_task_similarities(eval_dir: Path) -> pd.DataFrame:
 
     return task_similarity_df
 
+
 def unzip_logs(eval_dir: Path) -> None:
     """Walk through log directory and unzip log archives.
 
@@ -137,6 +139,7 @@ def unzip_logs(eval_dir: Path) -> None:
         for filename in fnmatch.filter(files, '*.zip'):
             print(f'Unzipping file: {filename}')
             ZipFile(os.path.join(root, filename)).extractall(root)
+
 
 def store_ste_data(log_dir: Path) -> None:
     """Save all single-task expert data in provided log directory.
@@ -192,8 +195,6 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
             changing slope of evaluation performance. Defaults to True.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to True.
         do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to True.
-        do_save_settings (bool, optional): Flag for saving L2Metrics settings to JSON file.
-            Defaults to True.
 
     Returns:
         Tuple[pd.DataFrame, dict, pd.DataFrame]: DataFrame containing lifelong metrics from scenarios and log data.
@@ -204,7 +205,6 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
     show_eval_lines = kwargs.get('show_eval_lines', True)
     do_plot = kwargs.get('do_plot', True)
     do_save_plots = kwargs.get('do_save_plots', True)
-    do_save_settings = kwargs.get('do_save_settings', True)
 
     # Initialize metrics report
     report = MetricsReport(**kwargs)
@@ -245,6 +245,8 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame]:
 
     Args:
         eval_dir (Path): Path to evaluation directory containing LL logs.
+        agent_config_dir (str): Agent configuration directory of data. A value of '' will evaluate all
+            logs in every agent configuration directory.
         ste_dir (str): Agent configuration directory of STE data. A value of '' will save all STE
             logs in every agent configuration directory.
         do_store_ste (bool, optional): Flag for enabling save of STE data. Defaults to True.
@@ -260,9 +262,10 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame]:
     """
 
     eval_dir = kwargs.get('eval_dir', Path(''))
+    agent_config_dir = kwargs.get('agent_config_dir', '')
     ste_dir = kwargs.get('ste_dir', '')
     do_store_ste = kwargs.get('do_store_ste', False)
-    
+
     # Initialize LL metric dataframe
     ll_metrics_df = pd.DataFrame()
     ll_metrics_dicts = []
@@ -275,35 +278,41 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame]:
             if ste_dir in ['', agent_config.name]:
                 store_ste_data(eval_dir / agent_config.name)
 
-        # Check for LL logs
-        ll_log_dir = agent_config / 'll_logs'
+        if agent_config.name in ['', agent_config_dir]:
+            # Check for LL logs
+            ll_log_dir = agent_config / 'll_logs'
 
-        if ll_log_dir.exists():
-            print(f'Computing metrics from LL logs for {agent_config.name}...')
+            if ll_log_dir.exists():
+                print(
+                    f'Computing metrics from LL logs for {agent_config.name}...')
 
-            # Compute and store the LL metrics for all scenarios found in the directory
-            for path in tqdm(list(ll_log_dir.iterdir()), desc=agent_config.name):
-                if path.is_dir():
-                    # Check if current path is log directory for single run
-                    if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
-                        metrics_df, metrics_dict, data_df = compute_scenario_metrics(log_dir=path, **kwargs)
-                        ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
-                        ll_metrics_dicts.append(metrics_dict)
-                        log_data_df = log_data_df.append(data_df, ignore_index=True)
-                    else:
-                        # Iterate through subdirectories containing LL logs
-                        for sub_path in tqdm(list(path.iterdir()), desc=path.name):
-                            if sub_path.is_dir():
-                                metrics_df, metrics_dict, data_df = compute_scenario_metrics(log_dir=sub_path, **kwargs)
-                                ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
-                                ll_metrics_dicts.append(metrics_dict)
-                                log_data_df = log_data_df.append(data_df, ignore_index=True)
-        else:
-            raise FileNotFoundError(f"LL logs not found in expected location!")
+                # Compute and store the LL metrics for all scenarios found in the directory
+                for path in tqdm(list(ll_log_dir.iterdir()), desc=agent_config.name):
+                    if path.is_dir():
+                        # Check if current path is log directory for single run
+                        if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
+                            metrics_df, metrics_dict, data_df = compute_scenario_metrics(
+                                log_dir=path, **kwargs)
+                            ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
+                            ll_metrics_dicts.append(metrics_dict)
+                            log_data_df = log_data_df.append(data_df, ignore_index=True)
+                        else:
+                            # Iterate through subdirectories containing LL logs
+                            for sub_path in tqdm(list(path.iterdir()), desc=path.name):
+                                if sub_path.is_dir():
+                                    metrics_df, metrics_dict, data_df = compute_scenario_metrics(
+                                        log_dir=sub_path, **kwargs)
+                                    ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
+                                    ll_metrics_dicts.append(metrics_dict)
+                                    log_data_df = log_data_df.append(data_df, ignore_index=True)
+            else:
+                raise FileNotFoundError(
+                    f"LL logs not found in expected location!")
 
-        # Sort data by scenario type, complexity, difficulty
-        if not ll_metrics_df.empty:
-            ll_metrics_df = ll_metrics_df.sort_values(by=['scenario_type', 'complexity', 'difficulty'])
+            # Sort data by scenario type, complexity, difficulty
+            if not ll_metrics_df.empty:
+                ll_metrics_df = ll_metrics_df.sort_values(
+                    by=['scenario_type', 'complexity', 'difficulty'])
 
     return ll_metrics_df, ll_metrics_dicts, log_data_df
 
@@ -321,11 +330,15 @@ def evaluate() -> None:
     parser = argparse.ArgumentParser(
         description='Run L2M evaluation from the command line')
 
-    # Evaluation directory be absolute or relative paths
+    # Evaluation directory can be absolute or relative paths
     parser.add_argument('-l', '--eval-dir', default='', type=str,
                         help='Evaluation directory containing logs. Defaults to "".')
 
-    # Evaluation directory be absolute or relative paths
+    # Specific agent configuration to evaluate
+    parser.add_argument('-f', '--agent-config-dir', default='', type=str,
+                        help='Agent configuration directory of data. Defaults to "".')
+
+    # Agent configuration directory for STE data
     parser.add_argument('-s', '--ste-dir', default='', type=str,
                         help='Agent configuration directory of STE data. Defaults to "".')
 
@@ -472,7 +485,7 @@ def evaluate() -> None:
                 json.dump(ll_metrics_dicts, metrics_file)
         if not log_data_df.empty:
             log_data_df.reset_index(drop=True).to_feather(args.output_dir / (args.output + '_data.feather'))
-    
+
     # Save settings for evaluation
     if args.do_save_settings:
         with open(args.output_dir / (args.output + '_settings.json'), 'w') as outfile:

@@ -15,15 +15,15 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 ### Command-Line Execution
 
 ```
-usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-s STE_DIR] [-v {time,metrics}]
-                   [-p PERF_MEASURE] [-a {mean,median}]
-                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
+usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-f AGENT_CONFIG_DIR] [-s STE_DIR]   
+                   [-v {time,metrics}] [-p PERF_MEASURE] [-a {mean,median}]
+                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]      
                    [-n {task,run,none}]
-                   [-g {flat,hanning,hamming,bartlett,blackman,none}]
+                   [-g {flat,hanning,hamming,bartlett,blackman,none}]      
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE]
                    [-O OUTPUT_DIR] [-o OUTPUT] [-u] [-e]
-                   [--no-show-eval-lines] [-T] [--no-store-ste] [-P]
-                   [--no-plot] [-L] [--no-save-plots] [-S] [--no-save]
+                   [--no-show-eval-lines] [-T] [--no-store-ste] [-P]       
+                   [--no-plot] [-L] [--no-save-plots] [-S] [--no-save]     
                    [-c LOAD_SETTINGS] [-C] [--no-save-settings]
 
 Run L2M evaluation from the command line
@@ -32,6 +32,8 @@ optional arguments:
   -h, --help            show this help message and exit
   -l EVAL_DIR, --eval-dir EVAL_DIR
                         Evaluation directory containing logs. Defaults to "".
+  -f AGENT_CONFIG_DIR, --agent-config-dir AGENT_CONFIG_DIR
+                        Agent configuration directory of data. Defaults to "".
   -s STE_DIR, --ste-dir STE_DIR
                         Agent configuration directory of STE data. Defaults to
                         "".

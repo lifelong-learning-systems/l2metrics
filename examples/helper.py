@@ -1,5 +1,6 @@
 import json
-from typing import Tuple
+import pprint
+from typing import Tuple, Union
 import pandas as pd
 import seaborn as sns
 from functools import reduce
@@ -8,7 +9,7 @@ class TaskMetrics:
     def __init__(self, json_file_name):
         with open(json_file_name) as file:
             data = json.load(file)
-        self.df = pd.DataFrame(self.json_refactor(data))
+        self.df = pd.DataFrame(self.json_refactor(data[0] ))
         pass
 
     def json_refactor(self,json:dict,parent:str="root")->dict:
@@ -44,13 +45,28 @@ class TaskMetrics:
             if key in a:
                 if isinstance(a[key], dict) and isinstance(b[key], dict):
                     self.mergedict(a[key], b[key], path + [str(key)])
-                elif a[key] == b[key]:
-                    pass # same leaf value
-                else:
-                    raise Exception('Conflict at %s' % '.'.join(path + [str(key)]))
+                # elif a[key] == b[key]:
+                #     pass # same leaf value
+                # else:
+
+                    # raise Exception('Conflict at %s' % '.'.join(path + [str(key)]))
             else:
                 a[key] = b[key]
         return a
+    def merge_dict(self,dict1, dict2):
+        for key, val in dict1.items():
+            if type(val) == dict:
+                if key in dict2 and type(dict2[key] == dict):
+                    self.merge_dict(dict1[key], dict2[key])
+            else:
+                if key in dict2:
+                    dict1[key] = dict2[key]
+
+        for key, val in dict2.items():
+            if not key in dict1:
+                dict1[key] = val
+
+        return dict1
     
     def df2dict_helper(self,key:list,val:any):
         new_dict={}
@@ -62,109 +78,116 @@ class TaskMetrics:
     
     def df2dict(self,df:pd.DataFrame)->dict:
         pre_new_dict = []
-        # if isinstance(df,pd.Series):
-        #     return {parent:df.tolist()[0]}
+        # print(df.columns)
         for col in df.columns:
             val = df[col]
-            newcol=[x for x in list(col) if x==x][1:] if isinstance(col,tuple) else [col]
+            newcol = [x for x in list(col) if x==x] if isinstance(col,tuple) else [col]
+            if newcol[0] == 'root':
+                newcol.pop(0)
             pre_new_dict.append(self.df2dict_helper(newcol,val))
-
-        return reduce(self.mergedict,pre_new_dict)
+        # pprint.pprint(pre_new_dict)
+        return reduce(self.mergedict,pre_new_dict,)
     
-    def getBackwardTransferRatio(self,taska:str=None,taskb:str=None)->dict:
+    def getNormalizationDataRange(self,task:str=None)->Union[dict,Tuple[int,int]]:
+        if task is None:
+            return self.df2dict(self.df.root.normalization_data_range)
+        else:
+            return self.df.root.normalization_data_range[task]["min"],self.df.root.normalization_data_range[task]["max"]
+
+    def getBackwardTransferRatio(self,taska:str=None,taskb:str=None)->Union[int,dict,list]:
         if taska is None:
-            return self.df.root.backward_transfer_ratio
+            return self.df.root.backward_transfer_ratio.iloc[0,0]
         elif taskb is None:
             return self.df2dict(self.df.root.task_metrics[taska].backward_transfer_ratio)
         else:
             return self.df.root.task_metrics[taska].backward_transfer_ratio[taskb].tolist()[0]
 
-    def getForwardTransferRatio(self,taska:str=None,taskb:str=None)->dict:
+    def getForwardTransferRatio(self,taska:str=None,taskb:str=None)->Union[int,dict,list]:
         if taska is None:
-            return self.df.root.forward_transfer_ratio
+            return self.df.root.forward_transfer_ratio.iloc[0,0]
         elif taskb is None:
             return self.df2dict(self.df.root.task_metrics[taska].forward_transfer_ratio)
         else:
             return self.df.root.task_metrics[taska].forward_transfer_ratio[taskb].tolist()[0]
     
-    def getBackwardTransferContrast(self,taska:str=None,taskb:str=None)->dict:
+    def getBackwardTransferContrast(self,taska:str=None,taskb:str=None)->Union[int,dict,list]:
         if taska is None:
-            return self.df.root.backward_transfer_contrast
+            return self.df.root.backward_transfer_contrast.iloc[0,0]
         elif taskb is None:
             return self.df2dict(self.df.root.task_metrics[taska].backward_transfer_contrast)
         else:
             return self.df.root.task_metrics[taska].backward_transfer_contrast[taskb].tolist()[0]
 
-    def getForwardTransferContrast(self,taska:str=None,taskb:str=None)->dict:
+    def getForwardTransferContrast(self,taska:str=None,taskb:str=None)->Union[int,dict,list]:
         if taska is None:
-            return self.df.root.forward_transfer_contrast
+            return self.df.root.forward_transfer_contrast.iloc[0,0]
         elif taskb is None:
             return self.df2dict(self.df.root.task_metrics[taska].forward_transfer_contrast)
         else:
             return self.df.root.task_metrics[taska].forward_transfer_contrast[taskb].tolist()[0]
 
     def getMaintenanceValMRLEP(self,task:str)->list:
-        return self.df.root.task_metrics[task].maintenance_val_mrlep.tolist()[0]
+        return self.df.root.task_metrics[task].maintenance_val_mrlep.iloc[0,0]
     
     def getMaintenanceValMRTLP(self,task:str)->list:
-        return self.df.root.task_metrics[task].maintenance_val_mrtlp.tolist()[0]
+        return self.df.root.task_metrics[task].maintenance_val_mrtlp.iloc[0,0]
     
     def getRecoveryTimes(self,task:str)->list:
-        return self.df.root.task_metrics[task].recovery_times.tolist()[0]
+        return self.df.root.task_metrics[task].recovery_times.iloc[0,0]
     
     def getPerfRecoveryRate(self,task:str=None)->int:
         if task is None:
-            return self.df.root.perf_recovery
+            return self.df.root.perf_recovery.iloc[0,0]
         else:
-            return self.df.root.task_metrics[task].perf_recovery
+            return self.df.root.task_metrics[task].perf_recovery.iloc[0,0]
     
     def getPerfMaintenanceMRLEP(self,task:str=None)->int:
         if task is None:
-            return self.df.root.perf_maintenance_mrlep
+            return self.df.root.perf_maintenance_mrlep.iloc[0,0]
         else:
-            return self.df.root.task_metrics[task].perf_maintenance_mrlep
+            return self.df.root.task_metrics[task].perf_maintenance_mrlep.iloc[0,0]
     
-    def getPerfMaintenanceMRtLP(self,task:str=None)->int:
+    def getPerfMaintenanceMRTLP(self,task:str=None)->int:
         if task is None:
-            return self.df.root.perf_maintenance_mrtlp
+            return self.df.root.perf_maintenance_mrtlp.iloc[0,0]
         else:
-            return self.df.root.task_metrics[task].perf_maintenance_mrtlp
+            return self.df.root.task_metrics[task].perf_maintenance_mrtlp.iloc[0,0]
     
-    def getSteRelPerf(self, task:str=None)->int:
+    def getSTERelPerf(self, task:str=None)->int:
         if task is None:
-            return self.df.root.ste_rel_perf
+            return self.df.root.ste_rel_perf.iloc[0,0]
         else:
-            return self.df.root.task_metrics[task].ste_rel_perf
+            return self.df.root.task_metrics[task].ste_rel_perf.iloc[0,0]
     
     def getSampleEfficiency(self, task:str=None)->int:
         if task is None:
-            return self.df.root.sample_efficiency
+            return self.df.root.sample_efficiency.iloc[0,0]
         else:
-            return self.df.root.task_metrics[task].sample_efficiency
+            return self.df.root.task_metrics[task].sample_efficiency.iloc[0,0]
     
-    def getRunID(self)->int:
-        return self.df.root.run_id
+    def getRunID(self)->str:
+        return self.df.root.run_id.iloc[0,0]
     
-    def getComplexity(self)->int:
-        return self.df.root.complexity
+    def getComplexity(self)->str:
+        return self.df.root.complexity.iloc[0,0]
 
-    def getDifficulty(self)->int:
-        return self.df.root.difficulty
+    def getDifficulty(self)->str:
+        return self.df.root.difficulty.iloc[0,0]
 
-    def getScenarioType(self)->int:
-        return self.df.root.scenario_type
+    def getScenarioType(self)->str:
+        return self.df.root.scenario_type.iloc[0,0]
     
-    def getMetricsColumn(self)->int:
-        return self.df.root.metrics_column
+    def getMetricsColumn(self)->str:
+        return self.df.root.metrics_column.iloc[0,0]
 
     def getMinMax(self,task:str=None)->Tuple[int,int]:
         if task is None:
-            return self.df.root.min,self.df.root.max
+            return self.df.root["min"].iloc[0,0],self.df.root["max"].iloc[0,0]
         else:
-            return self.df.root.task_metrics[task].min,self.df.root.task_metrics[task].max
+            return self.df.root.task_metrics[task]["min"],self.df.root.task_metrics[task]["max"]
     
-    def getMinMax(self,task:str=None)->Tuple[int,int]:
+    def getNumLXEX(self,task:str=None)->Tuple[int,int]:
         if task is None:
-            return self.df.root.min,self.df.root.max
+            return self.df.root.num_lx.iloc[0,0],self.df.root.num_ex.iloc[0,0]
         else:
-            return self.df.root.task_metrics[task].min,self.df.root.task_metrics[task].max
+            return self.df.root.task_metrics[task].num_lx.iloc[0,0],self.df.root.task_metrics[task].num_ex.iloc[0,0]

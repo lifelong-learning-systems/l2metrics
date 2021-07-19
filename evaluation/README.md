@@ -15,15 +15,15 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 ### Command-Line Execution
 
 ```
-usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-f AGENT_CONFIG_DIR] [-s STE_DIR]   
+usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-f AGENT_CONFIG_DIR] [-s STE_DIR]
                    [-v {time,metrics}] [-p PERF_MEASURE] [-a {mean,median}]
-                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]      
+                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
                    [-n {task,run,none}]
-                   [-g {flat,hanning,hamming,bartlett,blackman,none}]      
+                   [-g {flat,hanning,hamming,bartlett,blackman,none}] [-G]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE]
                    [-O OUTPUT_DIR] [-o OUTPUT] [-u] [-e]
-                   [--no-show-eval-lines] [-T] [--no-store-ste] [-P]       
-                   [--no-plot] [-L] [--no-save-plots] [-S] [--no-save]     
+                   [--no-show-eval-lines] [-T] [--no-store-ste] [-P]
+                   [--no-plot] [-L] [--no-save-plots] [-S] [--no-save]
                    [-c LOAD_SETTINGS] [-C] [--no-save-settings]
 
 Run L2M evaluation from the command line
@@ -58,6 +58,8 @@ optional arguments:
   -g {flat,hanning,hamming,bartlett,blackman,none}, --smoothing-method {flat,hanning,hamming,bartlett,blackman,none}
                         Method for smoothing data, window type. Defaults to
                         flat.
+  -G, --smooth-eval-data
+                        Smooth evaluation block data. Defaults to false.
   -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
                         Window length for smoothing data. Defaults to None.
   -x, --clamp-outliers  Remove outliers in data for metrics by clamping to

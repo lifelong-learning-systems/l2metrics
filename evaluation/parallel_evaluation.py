@@ -81,6 +81,7 @@ def process_evaluation(args):
         'normalized', 'normalized_no_outliers'] else 'none'
     kwargs['smoothing_method'] = 'flat' if processing_mode in [
         'smoothed', 'normalized', 'normalized_no_outliers'] else 'none'
+    kwargs['do_smooth_eval_data'] = True
     kwargs['clamp_outliers'] = processing_mode in ['normalized_no_outliers']
 
     ll_metrics_df, ll_metrics_dicts, log_data_df = compute_eval_metrics(**kwargs)

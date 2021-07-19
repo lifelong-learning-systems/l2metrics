@@ -58,6 +58,7 @@ class MetricsReport():
         self.transfer_method = kwargs.get('transfer_method', 'ratio')
         self.normalization_method = kwargs.get('normalization_method', 'task')
         self.smoothing_method = kwargs.get('smoothing_method', 'flat')
+        self.do_smooth_eval_data = kwargs.get('do_smooth_eval_data', False)
         self.window_length = kwargs.get('window_length', None)
         self.clamp_outliers = kwargs.get('clamp_outliers', False)
         self.data_range = kwargs.get('data_range', None)
@@ -237,7 +238,7 @@ class MetricsReport():
     def smooth_data(self) -> None:
         # Smooth LX data
         for regime_num in self.block_info['regime_num'].unique():
-            if self.block_info.iloc[regime_num].block_type == 'train':
+            if self.block_info.iloc[regime_num].block_type == 'train' or self.do_smooth_eval_data:
                 x = self._log_data[self._log_data['regime_num']
                                    == regime_num][self.perf_measure].to_numpy()
                 self._log_data.loc[self._log_data['regime_num'] == regime_num,

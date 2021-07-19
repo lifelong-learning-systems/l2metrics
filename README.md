@@ -121,7 +121,7 @@ usage: python -m l2metrics [-h] [-l LOG_DIR] [-R] [-s {w,a}] [-v {time,metrics}]
                    [-p PERF_MEASURE] [-a {mean,median}]
                    [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
                    [-n {task,run,none}]
-                   [-g {flat,hanning,hamming,bartlett,blackman,none}]
+                   [-g {flat,hanning,hamming,bartlett,blackman,none}] [-G]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
                    [-O OUTPUT_DIR] [-o OUTPUT] [-e] [--no-show-eval-lines]
                    [-P] [--no-plot] [-S] [--no-save] [-c LOAD_SETTINGS] [-C]
@@ -159,6 +159,8 @@ optional arguments:
   -g {flat,hanning,hamming,bartlett,blackman,none}, --smoothing-method {flat,hanning,hamming,bartlett,blackman,none}
                         Method for smoothing data, window type. Defaults to
                         flat.
+  -G, --smooth-eval-data
+                        Smooth evaluation block data. Defaults to false.
   -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
                         Window length for smoothing data. Defaults to None.
   -x, --clamp-outliers  Remove outliers in data for metrics by clamping to

@@ -159,10 +159,8 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
         plot_filename (str, optional): The filename to use for saving. Defaults to 'block_plot'.
     """
 
-    if reward + '_normalized' in dataframe.columns:
-        reward_col = reward + '_normalized'
-    else:
-        reward_col = reward + '_raw'
+    reward_col = reward + '_raw'
+
     if reward + '_smoothed' in dataframe.columns:
         reward_col_smooth = reward + '_smoothed'
     else:

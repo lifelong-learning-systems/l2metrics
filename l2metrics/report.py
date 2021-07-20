@@ -129,6 +129,10 @@ class MetricsReport():
         # Load all STE data for tasks in log data
         self.load_ste_data()
 
+        # Smooth LL and STE data
+        if self.smoothing_method != 'none':
+            self.smooth_data()
+
         # Remove outliers
         if self.clamp_outliers:
             self.filter_outliers(quantiles=(0.1, 0.9))
@@ -138,10 +142,6 @@ class MetricsReport():
             self.normalize_data()
         else:
             self.normalizer = None
-
-        # Smooth LL and STE data
-        if self.smoothing_method != 'none':
-            self.smooth_data()
 
         # Adds default metrics
         self._add_default_metrics()

@@ -292,7 +292,7 @@ The `multi_task_data.feather` file contains the following columns:
 - `performance_normalized`: Normalized application-specific measure of performance
 - `performance_smoothed`: Smoothed and normalized application-specific measure of performance
 
-As alluded to above, the Metrics Framework stores all intermediate values of the performance measure during pre-processing, following the order of operations (clamp outliers -> normalize -> smooth). The original column (e.g., `performance`) is overwritten after each step in the data pre-processing and is used by the framework to compute metrics.
+As alluded to above, the Metrics Framework stores all intermediate values of the performance measure during pre-processing, following the order of operations (smooth -> clamp outliers -> normalize). The original column (e.g., `performance`) is overwritten after each step in the data pre-processing and is used by the framework to compute metrics.
 
 ### Output Settings File
 

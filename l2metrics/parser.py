@@ -66,6 +66,10 @@ def init_parser():
     parser.add_argument('-g', '--smoothing-method', default='flat', type=str, choices=['flat', 'hanning', 'hamming', 'bartlett', 'blackman', 'none'],
                         help='Method for smoothing data, window type. Defaults to flat.')
 
+    # Flag for smoothing evaluation block data
+    parser.add_argument('-G', '--smooth-eval-data', dest='do_smooth_eval_data', default=False, action='store_true',
+                        help='Smooth evaluation block data. Defaults to false.')
+
     # Window length for smoothing
     parser.add_argument('-w', '--window-length', default=None, type=int,
                         help='Window length for smoothing data. Defaults to None.')

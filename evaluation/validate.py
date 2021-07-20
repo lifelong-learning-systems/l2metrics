@@ -35,29 +35,44 @@ def main() -> None:
     # Generate path from evaluation directory input
     eval_dir = Path(args.eval_dir)
 
-    required_files = (
-        (eval_dir / 'docs/eval_protocol.docx', eval_dir / 'docs/eval_protocol.pdf'),
-        (eval_dir / 'docs/system_architecture.pptx', eval_dir / 'docs/system_architecture.pdf'),
-        eval_dir / 'docs/task_relationships.csv',
-        eval_dir / 'agent_config/docs/computation_ste.csv',
-        eval_dir / 'agent_config/docs/computation_scenario_2-intermediate_permuted.csv',
-        eval_dir / 'agent_config/docs/computation_scenario_2-intermediate_alternating.csv',
-        eval_dir / 'agent_config/ll_logs/2-intermediate_permuted_logs.zip',
-        eval_dir / 'agent_config/ll_logs/2-intermediate_alternating_logs.zip',
-        eval_dir / 'agent_config/ste_logs/ste_logs.zip',
-    )
+    required_files = ()
+
+    if 'm12' in str(eval_dir):
+        required_files = (
+            (eval_dir / 'docs/eval_protocol.docx', eval_dir / 'docs/eval_protocol.pdf'),
+            (eval_dir / 'docs/system_architecture.pptx', eval_dir / 'docs/system_architecture.pdf'),
+            eval_dir / 'docs/task_relationships.csv',
+            eval_dir / 'agent_config/docs/computation_ste.csv',
+            eval_dir / 'agent_config/docs/computation_scenario_2-intermediate_permuted.csv',
+            eval_dir / 'agent_config/docs/computation_scenario_2-intermediate_alternating.csv',
+            eval_dir / 'agent_config/ll_logs/2-intermediate_permuted_logs.zip',
+            eval_dir / 'agent_config/ll_logs/2-intermediate_alternating_logs.zip',
+            eval_dir / 'agent_config/ste_logs/ste_logs.zip',
+        )
+    elif 'm15' in str(eval_dir):
+        required_files = (
+            (eval_dir / 'docs/eval_protocol.docx', eval_dir / 'docs/eval_protocol.pdf'),
+            (eval_dir / 'docs/system_architecture.pptx', eval_dir / 'docs/system_architecture.pdf'),
+            eval_dir / 'docs/task_variant_relationships.csv',
+            eval_dir / 'agent_config/docs/computation_ste.csv',
+            eval_dir / 'agent_config/docs/computation_scenario_3-high_condensed.csv',
+            eval_dir / 'agent_config/docs/computation_scenario_3-high_dispersed.csv',
+            eval_dir / 'agent_config/ll_logs/3-high_condensed.zip',
+            eval_dir / 'agent_config/ll_logs/3-high_dispersed.zip',
+            eval_dir / 'agent_config/ste_logs/ste_logs.zip',
+        )
 
     num_required_files = len(required_files)
     num_files_found = 0
 
-    for f in required_files:
-        if hasattr(f, '__iter__'):
-            if not (f[0].exists() or f[1].exists()):
-                print(f'Missing file: {f[0].with_suffix("")}')
-            else:
+    for required_file in required_files:
+        if hasattr(required_file, '__iter__'):
+            if any(filepath.exists() for filepath in required_file):
                 num_files_found = num_files_found + 1
-        elif not f.exists():
-            print(f'Missing file: {f}')
+            else:
+                print(f'Missing file: {required_file[0].with_suffix("")}')
+        elif not required_file.exists():
+            print(f'Missing file: {required_file}')
         else:
             num_files_found = num_files_found + 1
 

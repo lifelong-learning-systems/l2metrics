@@ -58,6 +58,7 @@ class MetricsReport():
         self.transfer_method = kwargs.get('transfer_method', 'ratio')
         self.normalization_method = kwargs.get('normalization_method', 'task')
         self.smoothing_method = kwargs.get('smoothing_method', 'flat')
+        self.do_smooth_eval_data = kwargs.get('do_smooth_eval_data', False)
         self.window_length = kwargs.get('window_length', None)
         self.clamp_outliers = kwargs.get('clamp_outliers', False)
         self.data_range = kwargs.get('data_range', None)
@@ -100,6 +101,9 @@ class MetricsReport():
 
         # Drop all rows with NaN values
         self._log_data = self._log_data[self._log_data[self.perf_measure].notna()]
+
+        if self._log_data.empty:
+            raise Exception(f'Logs do not contain any valid data for: {self.perf_measure}')
 
         # Fill in regime number and sort
         self._log_data = l2l.fill_regime_num(self._log_data)
@@ -171,7 +175,13 @@ class MetricsReport():
         self.ste_data = {}
 
         for task in self._unique_tasks:
-            self.ste_data[task] = load_ste_data(task)
+            ste_data = load_ste_data(task)
+
+            # Drop all rows with NaN values
+            for idx, ste_data_df in enumerate(ste_data):
+                ste_data[idx] = ste_data_df[ste_data_df[self.perf_measure].notna()]
+
+            self.ste_data[task] = ste_data
 
     def filter_outliers(self, quantiles: Tuple[float, float] = (0.1, 0.9)) -> None:
         # Filter outliers per-task
@@ -228,7 +238,7 @@ class MetricsReport():
     def smooth_data(self) -> None:
         # Smooth LX data
         for regime_num in self.block_info['regime_num'].unique():
-            if self.block_info.iloc[regime_num].block_type == 'train':
+            if self.block_info.iloc[regime_num].block_type == 'train' or self.do_smooth_eval_data:
                 x = self._log_data[self._log_data['regime_num']
                                    == regime_num][self.perf_measure].to_numpy()
                 self._log_data.loc[self._log_data['regime_num'] == regime_num,

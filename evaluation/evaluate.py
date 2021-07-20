@@ -26,6 +26,7 @@ evaluation.ipynb.
 
 import argparse
 import fnmatch
+import inspect
 import json
 import os
 import traceback
@@ -36,7 +37,6 @@ from zipfile import ZipFile
 
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import scipy
 import seaborn as sns
@@ -50,6 +50,15 @@ sns.set_context("paper")
 
 if get_ipython() is None:
     from tqdm import tqdm
+    old_print = print
+
+    def new_print(*args, **kwargs):
+        try:
+            tqdm.write(*args, **kwargs)
+        except:
+            old_print(*args, ** kwargs)
+
+    inspect.builtins.print = new_print
 else:
     from tqdm.notebook import tqdm
 

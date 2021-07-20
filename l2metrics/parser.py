@@ -43,9 +43,9 @@ def init_parser():
                             Defaults to None.')
 
     # Method for handling multiple STE runs
-    parser.add_argument('-v', '--ste-averaging-method', default='time', choices=['time', 'metrics'],
-                        help='Method for handling STE runs, time-series averaging (time) or LL \
-                            metric averaging (metrics). Defaults to time.')
+    parser.add_argument('-v', '--ste-averaging-method', default='metrics', choices=['metrics', 'time'],
+                        help='Method for handling STE runs, LL metric averaging (metrics) or ' \
+                            'time-series averaging (time). Defaults to metrics.')
 
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf-measure', default='reward', type=str,

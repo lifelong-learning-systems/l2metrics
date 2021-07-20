@@ -49,7 +49,7 @@ def process_evaluation(args):
     kwargs['output'] = sg_name + '_' + processing_mode
     kwargs['agent_config_dir'] = ''
     kwargs['ste_dir'] = ''
-    kwargs['ste_averaging_method'] = 'time'
+    # kwargs['ste_averaging_method'] = 'metrics'
     kwargs['perf_measure'] = perf_measure[sg_name]
     kwargs['aggregation_method'] = 'mean'
     kwargs['maintenance_method'] = 'both'

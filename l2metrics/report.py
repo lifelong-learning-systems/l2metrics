@@ -53,7 +53,7 @@ class MetricsReport():
         self.log_dir = Path(kwargs.get('log_dir', ''))
         self.perf_measure = kwargs.get('perf_measure', 'reward')
         self.variant_mode = kwargs.get('variant_mode', 'aware')
-        self.ste_averaging_method = kwargs.get('ste_averaging_method', 'time')
+        self.ste_averaging_method = kwargs.get('ste_averaging_method', 'metrics')
         self.aggregation_method = kwargs.get('aggregation_method', 'mean')
         self.maintenance_method = kwargs.get('maintenance_method', 'mrlep')
         self.transfer_method = kwargs.get('transfer_method', 'ratio')

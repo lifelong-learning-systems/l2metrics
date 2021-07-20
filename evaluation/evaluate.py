@@ -278,7 +278,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame]:
             if ste_dir in ['', agent_config.name]:
                 store_ste_data(eval_dir / agent_config.name)
 
-        if agent_config.name in ['', agent_config_dir]:
+        if agent_config_dir in ['', agent_config.name]:
             # Check for LL logs
             ll_log_dir = agent_config / 'll_logs'
 

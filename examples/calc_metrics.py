@@ -21,7 +21,7 @@ This script illustrates how to produce a lifelong learning metrics report with a
 custom metric.
 """
 
-import argparse
+import inspect
 import json
 import traceback
 from pathlib import Path
@@ -93,6 +93,16 @@ def run() -> None:
         ll_metrics_df = pd.DataFrame()
         ll_metrics_dicts = []
         log_data_df = pd.DataFrame()
+
+        old_print = print
+
+        def new_print(*args, **kwargs):
+            try:
+                tqdm.write(*args, **kwargs)
+            except:
+                old_print(*args, ** kwargs)
+
+        inspect.builtins.print = new_print
 
         # Iterate over all runs found in the directory
         dirs = [p for p in Path(args.log_dir).rglob("*") if p.is_dir()]

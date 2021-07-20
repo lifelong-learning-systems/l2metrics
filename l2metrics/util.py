@@ -21,7 +21,7 @@ import pickle
 from collections import OrderedDict
 from math import ceil
 from pathlib import Path
-from typing import List, Union
+from typing import List
 
 import l2logger.util as l2l
 import matplotlib.pyplot as plt
@@ -58,11 +58,30 @@ def load_ste_data(task_name: str) -> List[pd.DataFrame]:
         List[pd.DataFrame]: The STE data if found, else empty list.
     """
 
-    if task_name in get_ste_data_names():
+    # Variant-aware STE task names
+    ste_task_variant_names = get_ste_data_names()
+
+    # Variant-agnostic STE task names
+    ste_task_base_names = set([task_name.split('_')[0] for task_name in ste_task_variant_names])
+
+    if task_name in ste_task_variant_names:
+        # Load variant-aware STE data
         ste_file_name = l2l.get_l2root_base_dirs('taskinfo', task_name + '.pickle')
         with open(ste_file_name, 'rb') as ste_file:
             ste_data = pickle.load(ste_file)
             return ste_data
+    elif task_name in ste_task_base_names:
+        ste_data = []
+        # Load variant-agnostic STE data
+        for ste_variant_file in l2l.get_l2root_base_dirs('taskinfo').glob(task_name + '*.pickle'):
+            with open(ste_variant_file, 'rb') as ste_file:
+                ste_data.extend(pickle.load(ste_file))
+        
+        # Remove variant label from task names
+        for idx, ste_data_df in enumerate(ste_data):
+                ste_data[idx]['task_name'] = ste_data_df['task_name'].apply(lambda x: x.split('_')[0])
+
+        return ste_data
     else:
         return []
 

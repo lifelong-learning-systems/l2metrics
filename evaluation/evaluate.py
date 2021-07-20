@@ -183,6 +183,8 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
 
     Args:
         log_dir (Path): Path to scenario directory.
+        variant_mode (str, optional): Mode for computing metrics with respect to task variants.
+            Defaults to 'aware'.
         ste_averaging_method (str, optional): Method for averaging multiple runs of STE data.
             Valid values are 'time' and 'metrics'. Defaults to 'time'.
         perf_measure (str, optional): Name of column to use for metrics calculations.
@@ -350,6 +352,11 @@ def evaluate() -> None:
     # Agent configuration directory for STE data
     parser.add_argument('-s', '--ste-dir', default='', type=str,
                         help='Agent configuration directory of STE data. Defaults to "".')
+
+    # Method for handling task variants
+    parser.add_argument('-r', '--variant-mode', default='aware', type=str, choices=['aware', 'agnostic'],
+                        help='Mode for computing metrics with respect to task variants. \
+                            Defaults to aware.')
 
     # Method for handling multiple STE runs
     parser.add_argument('-v', '--ste-averaging-method', default='time', choices=['time', 'metrics'],

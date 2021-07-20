@@ -32,6 +32,11 @@ def init_parser():
                         help='Recursively compute metrics on logs found in specified directory. \
                             Defaults to false.')
 
+    # Method for handling task variants
+    parser.add_argument('-r', '--variant-mode', default='aware', type=str, choices=['aware', 'agnostic'],
+                        help='Mode for computing metrics with respect to task variants. \
+                            Defaults to aware.')
+
     # Mode for storing log data as STE data
     parser.add_argument('-s', '--ste-store-mode', default=None, choices=['w', 'a'],
                         help='Mode for storing log data as STE, overwrite (w) or append (a). \

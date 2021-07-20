@@ -16,9 +16,9 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 
 ```
 usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-f AGENT_CONFIG_DIR] [-s STE_DIR]
-                   [-v {time,metrics}] [-p PERF_MEASURE] [-a {mean,median}]
-                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
-                   [-n {task,run,none}]
+                   [-r {aware,agnostic}] [-v {time,metrics}] [-p PERF_MEASURE]
+                   [-a {mean,median}] [-m {mrlep,mrtlp,both}]
+                   [-t {ratio,contrast,both}] [-n {task,run,none}]
                    [-g {flat,hanning,hamming,bartlett,blackman,none}] [-G]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE]
                    [-O OUTPUT_DIR] [-o OUTPUT] [-u] [-e]
@@ -37,6 +37,9 @@ optional arguments:
   -s STE_DIR, --ste-dir STE_DIR
                         Agent configuration directory of STE data. Defaults to
                         "".
+  -r {aware,agnostic}, --variant-mode {aware,agnostic}
+                        Mode for computing metrics with respect to task
+                        variants. Defaults to aware.
   -v {time,metrics}, --ste-averaging-method {time,metrics}
                         Method for handling STE runs, time-series averaging
                         (time) or LL metric averaging (metrics). Defaults to

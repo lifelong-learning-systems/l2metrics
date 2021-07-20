@@ -117,8 +117,8 @@ Once these logs are generated, you'll need to store Single-Task Expert (STE) dat
 This section describes how to run L2Metrics from the command line.
 
 ```
-usage: python -m l2metrics [-h] [-l LOG_DIR] [-R] [-s {w,a}] [-v {time,metrics}]
-                   [-p PERF_MEASURE] [-a {mean,median}]
+usage: python -m l2metrics [-h] [-l LOG_DIR] [-R] [-r {aware,agnostic}] [-s {w,a}]
+                   [-v {time,metrics}] [-p PERF_MEASURE] [-a {mean,median}]
                    [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
                    [-n {task,run,none}]
                    [-g {flat,hanning,hamming,bartlett,blackman,none}] [-G]
@@ -135,6 +135,9 @@ optional arguments:
                         Log directory of scenario. Defaults to None.
   -R, --recursive       Recursively compute metrics on logs found in specified
                         directory. Defaults to false.
+  -r {aware,agnostic}, --variant-mode {aware,agnostic}
+                        Mode for computing metrics with respect to task
+                        variants. Defaults to aware.
   -s {w,a}, --ste-store-mode {w,a}
                         Mode for storing log data as STE, overwrite (w) or
                         append (a). Defaults to None.

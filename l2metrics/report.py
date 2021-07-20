@@ -52,6 +52,7 @@ class MetricsReport():
 
         self.log_dir = Path(kwargs.get('log_dir', ''))
         self.perf_measure = kwargs.get('perf_measure', 'reward')
+        self.variant_mode = kwargs.get('variant_mode', 'aware')
         self.ste_averaging_method = kwargs.get('ste_averaging_method', 'time')
         self.aggregation_method = kwargs.get('aggregation_method', 'mean')
         self.maintenance_method = kwargs.get('maintenance_method', 'mrlep')
@@ -101,6 +102,11 @@ class MetricsReport():
 
         # Drop all rows with NaN values
         self._log_data = self._log_data[self._log_data[self.perf_measure].notna()]
+
+        # Modify logs for variant-aware or variant-agnostic calculations
+        if self.variant_mode == 'agnostic':
+            # Remove variant label from task names
+            self._log_data.task_name = self._log_data.task_name.apply(lambda x: x.split('_')[0])
 
         if self._log_data.empty:
             raise Exception(f'Logs do not contain any valid data for: {self.perf_measure}')

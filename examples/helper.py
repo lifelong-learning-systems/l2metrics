@@ -5,17 +5,16 @@ import pandas as pd
 import seaborn as sns
 from functools import reduce
 
-'''
-TODOS:
-    [ ] refactor to 
-'''
-
 class TaskMetrics:
     def __init__(self, json_file_name):
         with open(json_file_name) as file:
             self.data = json.load(file)
         self.dfs = [pd.DataFrame(self.json_refactor(run_num)) for run_num in self.data]
         # pass
+    
+    def toXL(self,):
+        for idx,df in enumerate(self.dfs):
+            df.to_excel(r'C:\\Users\balamb1\Documents\Darpa L2M\\l2metrics\\examples\dfout\\'+str(idx)+'.xlsx', header=True)
 
     def json_refactor(self,json:dict,parent:str="root")->dict:
         new_dict={}
@@ -100,7 +99,7 @@ class TaskMetrics:
                 return self.df2dict(df.root.normalization_data_range)
             else:
                 return df.root.normalization_data_range[task]["min"].iloc[0,0],df.root.normalization_data_range[task]["max"].iloc[0,0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
 
     def getNormalizationDataRange(self,task:str=None)->List[Union[dict,Tuple[int,int]]]:
@@ -114,7 +113,7 @@ class TaskMetrics:
                 return self.df2dict(df.root.task_metrics[taska].backward_transfer_ratio)
             else:
                 return df.root.task_metrics[taska].backward_transfer_ratio[taskb].tolist()[0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
 
     def getBackwardTransferRatio(self,taska:str=None,taskb:str=None)->List[Union[int,dict,list]]:
@@ -128,7 +127,7 @@ class TaskMetrics:
                 return self.df2dict(df.root.task_metrics[taska].forward_transfer_ratio)
             else:
                 return df.root.task_metrics[taska].forward_transfer_ratio[taskb].tolist()[0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
 
     def getForwardTransferRatio(self,taska:str=None,taskb:str=None)->List[Union[int,dict,list]]:
@@ -142,7 +141,7 @@ class TaskMetrics:
                 return self.df2dict(df.root.task_metrics[taska].backward_transfer_contrast)
             else:
                 return df.root.task_metrics[taska].backward_transfer_contrast[taskb].tolist()[0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
 
     def getBackwardTransferContrast(self,taska:str=None,taskb:str=None)->List[Union[int,dict,list]]:
@@ -156,7 +155,7 @@ class TaskMetrics:
                 return self.df2dict(df.root.task_metrics[taska].forward_transfer_contrast)
             else:
                 return df.root.task_metrics[taska].forward_transfer_contrast[taskb].tolist()[0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
     def getForwardTransferContrast(self,taska:str=None,taskb:str=None)->List[Union[int,dict,list]]:
         return [self.getForwardTransferContrast_helper(run,taska,taskb) for run in self.dfs]
@@ -164,7 +163,7 @@ class TaskMetrics:
     def getMaintenanceValMRLEP_helper(self,df:pd.DataFrame,task:str)->list:
         try:
             return df.root.task_metrics[task].maintenance_val_mrlep.iloc[0,0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
     
     def getMaintenanceValMRLEP(self,task:str)->List[list]:
@@ -173,7 +172,7 @@ class TaskMetrics:
     def getMaintenanceValMRTLP_helper(self,df:pd.DataFrame,task:str)->list:
         try:
             return df.root.task_metrics[task].maintenance_val_mrtlp.iloc[0,0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
     
     def getMaintenanceValMRTLP(self,task:str)->List[list]:
@@ -182,7 +181,7 @@ class TaskMetrics:
     def getRecoveryTimes_helper(self,df:pd.DataFrame,task:str)->list:
         try:
             return df.root.task_metrics[task].recovery_times.iloc[0,0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
     
     def getRecoveryTimes(self,task:str=None)->List[list]:
@@ -194,7 +193,7 @@ class TaskMetrics:
                 return df.root.perf_recovery.iloc[0,0]
             else:
                 return df.root.task_metrics[task].perf_recovery.iloc[0,0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
     
     def getPerfRecoveryRate(self,task:str=None)->List[int]:
@@ -206,7 +205,7 @@ class TaskMetrics:
                 return df.root.perf_maintenance_mrlep.iloc[0,0]
             else:
                 return df.root.task_metrics[task].perf_maintenance_mrlep.iloc[0,0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
     
     def getPerfMaintenanceMRLEP(self,task:str=None)->List[int]:
@@ -218,7 +217,7 @@ class TaskMetrics:
                 return df.root.perf_maintenance_mrtlp.iloc[0,0]
             else:
                 return df.root.task_metrics[task].perf_maintenance_mrtlp.iloc[0,0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
     
     def getPerfMaintenanceMRTLP(self,task:str=None)->List[int]:
@@ -230,7 +229,7 @@ class TaskMetrics:
                 return df.root.ste_rel_perf.iloc[0,0]
             else:
                 return df.root.task_metrics[task].ste_rel_perf.iloc[0,0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
 
     def getSTERelPerf(self,task:str=None)->List[int]:
@@ -243,7 +242,7 @@ class TaskMetrics:
                 return df.root.sample_efficiency.iloc[0,0]
             else:
                 return df.root.task_metrics[task].sample_efficiency.iloc[0,0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
     
     def getSampleEfficiency(self,task:str=None)->List[int]:
@@ -285,7 +284,7 @@ class TaskMetrics:
                 return df.root["min"].iloc[0,0],df.root["max"].iloc[0,0]
             else:
                 return df.root.task_metrics[task]["min"],df.root.task_metrics[task]["max"]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
     
     def getMinMax(self,task:str=None)->List[Tuple[int,int]]:
@@ -297,7 +296,7 @@ class TaskMetrics:
                 return df.root.num_lx.iloc[0,0],df.root.num_ex.iloc[0,0]
             else:
                 return df.root.task_metrics[task].num_lx.iloc[0,0],df.root.task_metrics[task].num_ex.iloc[0,0]
-        except KeyError:
+        except (KeyError,AttributeError) as e:
             pass
 
     def getNumLXEX(self,task:str=None)->List[Tuple[int,int]]:

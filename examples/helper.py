@@ -57,20 +57,12 @@ class TaskMetrics:
             else:
                 a[key] = b[key]
         return a
-    # def merge_dict(self,dict1, dict2):
-    #     for key, val in dict1.items():
-    #         if type(val) == dict:
-    #             if key in dict2 and type(dict2[key] == dict):
-    #                 self.merge_dict(dict1[key], dict2[key])
-    #         else:
-    #             if key in dict2:
-    #                 dict1[key] = dict2[key]
 
-    #     for key, val in dict2.items():
-    #         if not key in dict1:
-    #             dict1[key] = val
-
-    #     return dict1
+    def plotLine(self,data:list): 
+        sns.lineplot(x=range(len(data)),y=data)
+    
+    def plotHist(self,data:list): 
+        sns.histplot(data)
     
     def df2dict_helper(self,key:list,val:any):
         new_dict={}

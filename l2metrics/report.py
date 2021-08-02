@@ -321,7 +321,7 @@ class MetricsReport():
     def calculate_regime_metrics(self) -> None:
         # Create dataframe for regime-level metrics
         regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
-        self.regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'task_params']]
+        self.regime_metrics_df = self.block_info[['block_num', 'block_type', 'block_subtype', 'task_name', 'task_params']]
 
         # Fill regime metrics dataframe
         self.regime_metrics_df = pd.concat(

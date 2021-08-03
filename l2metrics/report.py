@@ -486,6 +486,7 @@ class MetricsReport():
         settings_json = {}
         settings_json['log_dir'] = str(self.log_dir)
         settings_json['perf_measure'] = self.perf_measure
+        settings_json['variant_mode'] = self.variant_mode
         settings_json['ste_averaging_method'] = self.ste_averaging_method
         settings_json['aggregation_method'] = self.aggregation_method
         settings_json['maintenance_method'] = self.maintenance_method

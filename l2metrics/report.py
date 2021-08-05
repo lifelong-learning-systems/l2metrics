@@ -64,6 +64,16 @@ class MetricsReport():
         self.clamp_outliers = kwargs.get('clamp_outliers', False)
         self.data_range = kwargs.get('data_range', None)
 
+        # Modify data range based on variant mode
+        if self.variant_mode == 'agnostic' and self.data_range is not None:
+            temp_data_range = {}
+            for task_name in set([variant_name.split('_')[0] for variant_name in self.data_range.keys()]):
+                task_ranges = [data_range for variant_name, data_range in self.data_range.items(
+                ) if task_name in variant_name]
+                temp_data_range[task_name] = {'min': np.min(
+                    [d['min'] for d in task_ranges]), 'max': np.max([d['max'] for d in task_ranges])}
+            self.data_range = temp_data_range
+
         # Initialize list of LL metrics
         self.task_metrics = ['perf_recovery']
         if self.maintenance_method in ['mrlep', 'both']:
@@ -122,6 +132,11 @@ class MetricsReport():
         # Get block summary
         self.block_info = l2l.parse_blocks(self._log_data)
 
+        # Modify block summary for variant-aware or variant-agnostic calculations
+        if self.variant_mode == 'agnostic':
+            # Remove task parameter column which affects block table
+            self.block_info = self.block_info.drop(columns=['task_params']).drop_duplicates()
+
         # Store unique task names by order of training
         self._unique_tasks = list(self.block_info.sort_values(
             ['block_type', 'block_num'], ascending=[False, True])['task_name'].unique())
@@ -148,11 +163,12 @@ class MetricsReport():
 
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
-        block_info_keys_to_include = ['block_num', 'block_type', 'block_subtype', 'task_name', 'regime_num']
-        if len(self.block_info.task_params.unique()) > 1:
-            block_info_keys_to_include.append('task_params')
+        self.block_info_keys_to_include = ['block_num', 'block_type', 'block_subtype', 'task_name', 'regime_num']
+        if 'task_params' in self.block_info.columns:
+            if len(self.block_info.task_params.unique()) > 1:
+                self.block_info_keys_to_include.append('task_params')
 
-        self._metrics_df = self.block_info[block_info_keys_to_include].copy()
+        self._metrics_df = self.block_info[self.block_info_keys_to_include].copy()
 
     def add(self, metrics_list: Union[Metric, List[Metric]]) -> None:
         if isinstance(metrics_list, list):
@@ -321,16 +337,17 @@ class MetricsReport():
     def calculate_regime_metrics(self) -> None:
         # Create dataframe for regime-level metrics
         regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
-        self.regime_metrics_df = self.block_info[['block_num', 'block_type', 'block_subtype', 'task_name', 'task_params']]
+        self.regime_metrics_df = self.block_info[self.block_info_keys_to_include]
 
         # Fill regime metrics dataframe
         self.regime_metrics_df = pd.concat(
             [self.regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
-        if self.regime_metrics_df['task_params'].size:
-            self.regime_metrics_df['task_params'] = self.regime_metrics_df['task_params'].dropna().apply(
-                lambda x: x[:25] + '...' if len(x) > 25 else x)
-        else:
-            self.regime_metrics_df = self.regime_metrics_df.dropna(axis=1)
+        if 'task_params' in self.block_info_keys_to_include:
+            if self.regime_metrics_df['task_params'].size:
+                self.regime_metrics_df['task_params'] = self.regime_metrics_df['task_params'].dropna().apply(
+                    lambda x: x[:25] + '...' if len(x) > 25 else x)
+            else:
+                self.regime_metrics_df = self.regime_metrics_df.dropna(axis=1)
 
     def calculate_task_metrics(self) -> None:
         # Initialize task metrics dataframe

@@ -130,12 +130,8 @@ class MetricsReport():
         self._log_data[self.perf_measure + '_raw'] = self._log_data[self.perf_measure].to_numpy()
 
         # Get block summary
-        self.block_info = l2l.parse_blocks(self._log_data)
-
-        # Modify block summary for variant-aware or variant-agnostic calculations
-        if self.variant_mode == 'agnostic':
-            # Remove task parameter column which affects block table
-            self.block_info = self.block_info.drop(columns=['task_params']).drop_duplicates()
+        self.block_info = l2l.parse_blocks(
+            self._log_data, include_task_params=self.variant_mode == 'aware')
 
         # Store unique task names by order of training
         self._unique_tasks = list(self.block_info.sort_values(

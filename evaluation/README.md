@@ -16,9 +16,9 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 
 ```
 usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-f AGENT_CONFIG_DIR] [-s STE_DIR]
-                   [-v {time,metrics}] [-p PERF_MEASURE] [-a {mean,median}]
-                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
-                   [-n {task,run,none}]
+                   [-r {aware,agnostic}] [-v {time,metrics}] [-p PERF_MEASURE]
+                   [-a {mean,median}] [-m {mrlep,mrtlp,both}]
+                   [-t {ratio,contrast,both}] [-n {task,run,none}]
                    [-g {flat,hanning,hamming,bartlett,blackman,none}] [-G]
                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE]
                    [-O OUTPUT_DIR] [-o OUTPUT] [-u] [-e]
@@ -37,6 +37,9 @@ optional arguments:
   -s STE_DIR, --ste-dir STE_DIR
                         Agent configuration directory of STE data. Defaults to
                         "".
+  -r {aware,agnostic}, --variant-mode {aware,agnostic}
+                        Mode for computing metrics with respect to task
+                        variants. Defaults to aware.
   -v {time,metrics}, --ste-averaging-method {time,metrics}
                         Method for handling STE runs, time-series averaging
                         (time) or LL metric averaging (metrics). Defaults to
@@ -116,7 +119,7 @@ optional arguments:
 This directory also contains the outputs of an example evaluation produced by running the following command:
 
 ```bash
-python -m evaluation.evaluate -l ../../example_eval/m12_eval/ -O ./example_results/ -o example_metrics
+python -m evaluation.evaluate -l ../../example_eval/m12_eval/ -O ./example_results/ -o example_metrics -p performance
 ```
 
 Similarly to the `l2metrics` package, you may also specify a JSON file containing the desired evaluation settings instead of using the command-line arguments. The settings loaded from the JSON file will take precedence over any arguments specified on the command line.
@@ -149,6 +152,7 @@ The TSV file lists all the computed LL metrics from the scenarios found in the s
 - `max`: Maximum value of data in scenario
 - `num_lx`: Total number of LXs in scenario
 - `num_ex`: Total number of EXs in scenario
+- `runtime`: Total runtime, in seconds, calculated as difference between max and min timestamps in log data
 
 ### Metrics JSON File
 
@@ -172,3 +176,5 @@ The JSON file lists all the task-level metrics in addition to all the computed L
 - `max`: Minimum value of task data in scenario
 - `num_lx`: Total number of task LXs in scenario
 - `num_ex`: Total number of task EXs in scenario
+- `runtime`: Total runtime, in seconds, calculated as difference between max and min timestamps in log data
+- `normalization_data_range`: Task data ranges used for normalization

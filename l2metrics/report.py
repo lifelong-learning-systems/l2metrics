@@ -18,6 +18,7 @@
 
 import json
 from collections import defaultdict
+from datetime import datetime as dt
 from pathlib import Path
 from typing import List, Tuple, Union
 
@@ -52,7 +53,8 @@ class MetricsReport():
 
         self.log_dir = Path(kwargs.get('log_dir', ''))
         self.perf_measure = kwargs.get('perf_measure', 'reward')
-        self.ste_averaging_method = kwargs.get('ste_averaging_method', 'time')
+        self.variant_mode = kwargs.get('variant_mode', 'aware')
+        self.ste_averaging_method = kwargs.get('ste_averaging_method', 'metrics')
         self.aggregation_method = kwargs.get('aggregation_method', 'mean')
         self.maintenance_method = kwargs.get('maintenance_method', 'mrlep')
         self.transfer_method = kwargs.get('transfer_method', 'ratio')
@@ -62,6 +64,16 @@ class MetricsReport():
         self.window_length = kwargs.get('window_length', None)
         self.clamp_outliers = kwargs.get('clamp_outliers', False)
         self.data_range = kwargs.get('data_range', None)
+
+        # Modify data range based on variant mode
+        if self.variant_mode == 'agnostic' and self.data_range is not None:
+            temp_data_range = {}
+            for task_name in set([variant_name.split('_')[0] for variant_name in self.data_range.keys()]):
+                task_ranges = [data_range for variant_name, data_range in self.data_range.items(
+                ) if task_name in variant_name]
+                temp_data_range[task_name] = {'min': np.min(
+                    [d['min'] for d in task_ranges]), 'max': np.max([d['max'] for d in task_ranges])}
+            self.data_range = temp_data_range
 
         # Initialize list of LL metrics
         self.task_metrics = ['perf_recovery']
@@ -102,6 +114,11 @@ class MetricsReport():
         # Drop all rows with NaN values
         self._log_data = self._log_data[self._log_data[self.perf_measure].notna()]
 
+        # Modify logs for variant-aware or variant-agnostic calculations
+        if self.variant_mode == 'agnostic':
+            # Remove variant label from task names
+            self._log_data.task_name = self._log_data.task_name.apply(lambda x: x.split('_')[0])
+
         if self._log_data.empty:
             raise Exception(f'Logs do not contain any valid data for: {self.perf_measure}')
 
@@ -114,7 +131,8 @@ class MetricsReport():
         self._log_data[self.perf_measure + '_raw'] = self._log_data[self.perf_measure].to_numpy()
 
         # Get block summary
-        self.block_info = l2l.parse_blocks(self._log_data)
+        self.block_info = l2l.parse_blocks(
+            self._log_data, include_task_params=self.variant_mode == 'aware')
 
         # Store unique task names by order of training
         self._unique_tasks = list(self.block_info.sort_values(
@@ -122,6 +140,10 @@ class MetricsReport():
 
         # Load all STE data for tasks in log data
         self.load_ste_data()
+
+        # Smooth LL and STE data
+        if self.smoothing_method != 'none':
+            self.smooth_data()
 
         # Remove outliers
         if self.clamp_outliers:
@@ -133,20 +155,17 @@ class MetricsReport():
         else:
             self.normalizer = None
 
-        # Smooth LL and STE data
-        if self.smoothing_method != 'none':
-            self.smooth_data()
-
         # Adds default metrics
         self._add_default_metrics()
 
         # Initialize a results dictionary that can be returned at the end of the calculation step and an internal
         # dictionary that can be passed around for internal calculations
-        block_info_keys_to_include = ['block_num', 'block_type', 'block_subtype', 'task_name', 'regime_num']
-        if len(self.block_info.task_params.unique()) > 1:
-            block_info_keys_to_include.append('task_params')
+        self.block_info_keys_to_include = ['block_num', 'block_type', 'block_subtype', 'task_name', 'regime_num']
+        if 'task_params' in self.block_info.columns:
+            if len(self.block_info.task_params.unique()) > 1:
+                self.block_info_keys_to_include.append('task_params')
 
-        self._metrics_df = self.block_info[block_info_keys_to_include].copy()
+        self._metrics_df = self.block_info[self.block_info_keys_to_include].copy()
 
     def add(self, metrics_list: Union[Metric, List[Metric]]) -> None:
         if isinstance(metrics_list, list):
@@ -229,11 +248,14 @@ class MetricsReport():
         self._log_data[self.perf_measure + '_normalized'] = self._log_data[self.perf_measure].to_numpy()
 
         # Normalize STE data
-        # TODO: Handle unprovided data range when STE data contains task not in LL logs
-        for task, ste_data in self.ste_data.items():
-            if ste_data is not None:
-                for idx, ste_data_df in enumerate(ste_data):
-                    self.ste_data[task][idx] = self.normalizer.normalize(ste_data_df)
+        try:
+            for task, ste_data in self.ste_data.items():
+                if ste_data is not None:
+                    for idx, ste_data_df in enumerate(ste_data):
+                        self.ste_data[task][idx] = self.normalizer.normalize(ste_data_df)
+        except Exception as e:
+            print(f'Error: {e}')
+
 
     def smooth_data(self) -> None:
         # Smooth LX data
@@ -299,6 +321,11 @@ class MetricsReport():
         self.ll_metrics_df['num_lx'] = num_lx
         self.ll_metrics_df['num_ex'] = num_ex
 
+        timestamps = self._log_data.timestamp.dropna().astype(str)
+        max_time = dt.strptime(np.nanmax(timestamps), '%Y%m%dT%H%M%S.%f')
+        min_time = dt.strptime(np.nanmin(timestamps), '%Y%m%dT%H%M%S.%f')
+        self.ll_metrics_df['runtime'] = (max_time - min_time).total_seconds()
+
         # Build JSON
         self.ll_metrics_dict = json.loads(self.ll_metrics_df.loc[0].T.to_json())
         self.ll_metrics_dict['normalization_data_range'] = self.normalizer.data_range if self.normalizer else None
@@ -315,16 +342,17 @@ class MetricsReport():
     def calculate_regime_metrics(self) -> None:
         # Create dataframe for regime-level metrics
         regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
-        self.regime_metrics_df = self.block_info[['block_num', 'block_type', 'task_name', 'task_params']]
+        self.regime_metrics_df = self.block_info[self.block_info_keys_to_include]
 
         # Fill regime metrics dataframe
         self.regime_metrics_df = pd.concat(
             [self.regime_metrics_df, self._metrics_df[regime_metrics]], axis=1)
-        if self.regime_metrics_df['task_params'].size:
-            self.regime_metrics_df['task_params'] = self.regime_metrics_df['task_params'].dropna().apply(
-                lambda x: x[:25] + '...' if len(x) > 25 else x)
-        else:
-            self.regime_metrics_df = self.regime_metrics_df.dropna(axis=1)
+        if 'task_params' in self.block_info_keys_to_include:
+            if self.regime_metrics_df['task_params'].size:
+                self.regime_metrics_df['task_params'] = self.regime_metrics_df['task_params'].dropna().apply(
+                    lambda x: x[:25] + '...' if len(x) > 25 else x)
+            else:
+                self.regime_metrics_df = self.regime_metrics_df.dropna(axis=1)
 
     def calculate_task_metrics(self) -> None:
         # Initialize task metrics dataframe
@@ -480,6 +508,7 @@ class MetricsReport():
         settings_json = {}
         settings_json['log_dir'] = str(self.log_dir)
         settings_json['perf_measure'] = self.perf_measure
+        settings_json['variant_mode'] = self.variant_mode
         settings_json['ste_averaging_method'] = self.ste_averaging_method
         settings_json['aggregation_method'] = self.aggregation_method
         settings_json['maintenance_method'] = self.maintenance_method
@@ -516,5 +545,6 @@ class MetricsReport():
         plot_filename = Path(self.log_dir).name + '_ste'
 
         plot_ste_data(self._log_data, self.ste_data, self.block_info, self._unique_tasks,
-                      perf_measure=self.perf_measure, input_title=input_title,
-                      output_dir=output_dir, do_save=save, plot_filename=plot_filename)
+                      perf_measure=self.perf_measure, ste_averaging_method=self.ste_averaging_method,
+                      input_title=input_title, output_dir=output_dir, do_save=save,
+                      plot_filename=plot_filename)

@@ -183,8 +183,10 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
 
     Args:
         log_dir (Path): Path to scenario directory.
+        variant_mode (str, optional): Mode for computing metrics with respect to task variants.
+            Defaults to 'aware'.
         ste_averaging_method (str, optional): Method for averaging multiple runs of STE data.
-            Valid values are 'time' and 'metrics'. Defaults to 'time'.
+            Valid values are 'metrics' and 'time'. Defaults to 'metrics'.
         perf_measure (str, optional): Name of column to use for metrics calculations.
         aggregation_method (str, optional): Method for aggregating within-lifetime metrics.
             Valid values are 'mean' and 'median'. Defaults to 'mean'.
@@ -351,10 +353,15 @@ def evaluate() -> None:
     parser.add_argument('-s', '--ste-dir', default='', type=str,
                         help='Agent configuration directory of STE data. Defaults to "".')
 
+    # Method for handling task variants
+    parser.add_argument('-r', '--variant-mode', default='aware', type=str, choices=['aware', 'agnostic'],
+                        help='Mode for computing metrics with respect to task variants. \
+                            Defaults to aware.')
+
     # Method for handling multiple STE runs
-    parser.add_argument('-v', '--ste-averaging-method', default='time', choices=['time', 'metrics'],
-                        help='Method for handling STE runs, time-series averaging (time) or LL \
-                            metric averaging (metrics). Defaults to time.')
+    parser.add_argument('-v', '--ste-averaging-method', default='metrics', choices=['metrics', 'time'],
+                        help='Method for handling STE runs, LL metric averaging (metrics) or ' \
+                            'time-series averaging (time). Defaults to metrics.')
 
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf-measure', default='reward', type=str,

@@ -76,10 +76,10 @@ def load_ste_data(task_name: str) -> List[pd.DataFrame]:
         for ste_variant_file in l2l.get_l2root_base_dirs('taskinfo').glob(task_name + '*.pickle'):
             with open(ste_variant_file, 'rb') as ste_file:
                 ste_data.extend(pickle.load(ste_file))
-        
+
         # Remove variant label from task names
         for idx, ste_data_df in enumerate(ste_data):
-                ste_data[idx]['task_name'] = ste_data_df['task_name'].apply(lambda x: x.split('_')[0])
+            ste_data[idx]['task_name'] = ste_data_df['task_name'].apply(lambda x: x.split('_')[0])
 
         return ste_data
     else:
@@ -130,7 +130,7 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
     # Get base directory to store ste data
     filename = task_info_dir / (task_name[0] + '.pickle')
 
-    # Store ste data in task info directory        
+    # Store ste data in task info directory
     if mode == 'a':
         # Load existing STE data and append
         if filename.exists():
@@ -256,7 +256,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
     # Initialize figure
     fig = plt.figure(figsize=(12, 6))
     ax = fig.add_subplot(111)
-  
+
     if len(unique_tasks) < len(color_selection):
         task_colors = color_selection[:len(unique_tasks)]
     else:
@@ -356,8 +356,9 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
         task_blocks = block_info[(block_info['task_name'] == task_name) & (
             block_info['block_type'] == 'train') & (block_info['block_subtype'] == 'wake')]
 
-        # Get data concatenated data for task
-        task_data = dataframe[dataframe['regime_num'].isin(task_blocks['regime_num'])]
+        # Get concatenated data for task
+        task_data = dataframe[dataframe['regime_num'].isin(
+            task_blocks['regime_num'])].reset_index(drop=True)
 
         if len(task_data):
             # Load STE data
@@ -367,7 +368,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
 
                 # Average all the STE data together after truncating to same length
                 y1 = [ste_data_df[ste_data_df['block_type'] == 'train']
-                            [perf_measure].to_numpy() for ste_data_df in ste_data.get(task_name)]
+                      [perf_measure].to_numpy() for ste_data_df in ste_data.get(task_name)]
                 y1 = np.array([x[:min(map(len, y1))] for x in y1]).mean(0)
                 y2 = task_data[perf_measure].to_numpy()
                 y_limit = (np.nanmin([y_limit[0], np.nanmin(y1), np.nanmin(y2)]),
@@ -379,6 +380,11 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
 
                 ax.scatter(x1, y1, color='orange', marker='*', s=8, linestyle='None', label='STE')
                 ax.scatter(x2, y2, color=task_color, marker='*', s=8, linestyle='None', label=task_name)
+
+                # Draw line at block boundaries of task data
+                for x_val in task_data[task_data.regime_num.diff() != 0].index.tolist():
+                    ax.axes.axvline(x=x_val, color='black', linestyle='--')
+
                 ax.set(xlabel=input_xlabel, ylabel=input_ylabel)
                 ax.grid()
                 plt.legend()

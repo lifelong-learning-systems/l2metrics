@@ -251,11 +251,14 @@ class MetricsReport():
         self._log_data[self.perf_measure + '_normalized'] = self._log_data[self.perf_measure].to_numpy()
 
         # Normalize STE data
-        # TODO: Handle unprovided data range when STE data contains task not in LL logs
-        for task, ste_data in self.ste_data.items():
-            if ste_data is not None:
-                for idx, ste_data_df in enumerate(ste_data):
-                    self.ste_data[task][idx] = self.normalizer.normalize(ste_data_df)
+        try:
+            for task, ste_data in self.ste_data.items():
+                if ste_data is not None:
+                    for idx, ste_data_df in enumerate(ste_data):
+                        self.ste_data[task][idx] = self.normalizer.normalize(ste_data_df)
+        except Exception as e:
+            print(f'Error: {e}')
+
 
     def smooth_data(self) -> None:
         # Smooth LX data

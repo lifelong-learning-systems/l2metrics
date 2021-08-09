@@ -152,6 +152,7 @@ The TSV file lists all the computed LL metrics from the scenarios found in the s
 - `max`: Maximum value of data in scenario
 - `num_lx`: Total number of LXs in scenario
 - `num_ex`: Total number of EXs in scenario
+- `runtime`: Total runtime, in seconds, calculated as difference between max and min timestamps in log data
 
 ### Metrics JSON File
 
@@ -175,3 +176,5 @@ The JSON file lists all the task-level metrics in addition to all the computed L
 - `max`: Minimum value of task data in scenario
 - `num_lx`: Total number of task LXs in scenario
 - `num_ex`: Total number of task EXs in scenario
+- `runtime`: Total runtime, in seconds, calculated as difference between max and min timestamps in log data
+- `normalization_data_range`: Task data ranges used for normalization

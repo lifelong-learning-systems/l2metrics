@@ -18,6 +18,7 @@
 
 import json
 from collections import defaultdict
+from datetime import datetime as dt
 from pathlib import Path
 from typing import List, Tuple, Union
 
@@ -319,6 +320,11 @@ class MetricsReport():
         self.ll_metrics_df['max'] = data_max
         self.ll_metrics_df['num_lx'] = num_lx
         self.ll_metrics_df['num_ex'] = num_ex
+
+        timestamps = self._log_data.timestamp.dropna().astype(str)
+        max_time = dt.strptime(np.nanmax(timestamps), '%Y%m%dT%H%M%S.%f')
+        min_time = dt.strptime(np.nanmin(timestamps), '%Y%m%dT%H%M%S.%f')
+        self.ll_metrics_df['runtime'] = (max_time - min_time).total_seconds()
 
         # Build JSON
         self.ll_metrics_dict = json.loads(self.ll_metrics_df.loc[0].T.to_json())

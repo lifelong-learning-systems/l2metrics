@@ -2,6 +2,18 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.11.0 - 2021-08-09
+
+- Implemented variant-aware and variant-agnostic metric calculations
+- Changed default STE averaging method to metrics
+- Changed order of pre-processing to smooth then clamp then normalize
+- Included block subtype in regime metrics dataframe
+- Handled exception occurring with tasks in STE data without normalization ranges
+- Added dashed line on STE plots where performance curves are stitched together
+- Added feature to plot all STE runs when averaging with metrics method
+- Added feature to calculate runtime from log timestamps
+- Updated README and example output files
+
 ## 2.10.0 - 2021-07-20
 
 - Added option to evaluate a single agent configuration directory

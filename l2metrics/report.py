@@ -539,5 +539,6 @@ class MetricsReport():
         plot_filename = Path(self.log_dir).name + '_ste'
 
         plot_ste_data(self._log_data, self.ste_data, self.block_info, self._unique_tasks,
-                      perf_measure=self.perf_measure, input_title=input_title,
-                      output_dir=output_dir, do_save=save, plot_filename=plot_filename)
+                      perf_measure=self.perf_measure, ste_averaging_method=self.ste_averaging_method,
+                      input_title=input_title, output_dir=output_dir, do_save=save,
+                      plot_filename=plot_filename)

@@ -32,15 +32,20 @@ def init_parser():
                         help='Recursively compute metrics on logs found in specified directory. \
                             Defaults to false.')
 
+    # Method for handling task variants
+    parser.add_argument('-r', '--variant-mode', default='aware', type=str, choices=['aware', 'agnostic'],
+                        help='Mode for computing metrics with respect to task variants. \
+                            Defaults to aware.')
+
     # Mode for storing log data as STE data
     parser.add_argument('-s', '--ste-store-mode', default=None, choices=['w', 'a'],
                         help='Mode for storing log data as STE, overwrite (w) or append (a). \
                             Defaults to None.')
 
     # Method for handling multiple STE runs
-    parser.add_argument('-v', '--ste-averaging-method', default='time', choices=['time', 'metrics'],
-                        help='Method for handling STE runs, time-series averaging (time) or LL \
-                            metric averaging (metrics). Defaults to time.')
+    parser.add_argument('-v', '--ste-averaging-method', default='metrics', choices=['metrics', 'time'],
+                        help='Method for handling STE runs, LL metric averaging (metrics) or ' \
+                            'time-series averaging (time). Defaults to metrics.')
 
     # Choose application measure to use as performance column
     parser.add_argument('-p', '--perf-measure', default='reward', type=str,
@@ -65,6 +70,10 @@ def init_parser():
     # Method for smoothing
     parser.add_argument('-g', '--smoothing-method', default='flat', type=str, choices=['flat', 'hanning', 'hamming', 'bartlett', 'blackman', 'none'],
                         help='Method for smoothing data, window type. Defaults to flat.')
+
+    # Flag for smoothing evaluation block data
+    parser.add_argument('-G', '--smooth-eval-data', dest='do_smooth_eval_data', default=False, action='store_true',
+                        help='Smooth evaluation block data. Defaults to false.')
 
     # Window length for smoothing
     parser.add_argument('-w', '--window-length', default=None, type=int,

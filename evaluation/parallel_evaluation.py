@@ -47,8 +47,9 @@ def process_evaluation(args):
     kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval/' + eval_dir + '/')
     kwargs['output_dir'] = Path('results/' + processing_mode + '/' + sg_name)
     kwargs['output'] = sg_name + '_' + processing_mode
+    kwargs['agent_config_dir'] = ''
     kwargs['ste_dir'] = ''
-    kwargs['ste_averaging_method'] = 'time'
+    # kwargs['ste_averaging_method'] = 'metrics'
     kwargs['perf_measure'] = perf_measure[sg_name]
     kwargs['aggregation_method'] = 'mean'
     kwargs['maintenance_method'] = 'both'
@@ -80,6 +81,7 @@ def process_evaluation(args):
         'normalized', 'normalized_no_outliers'] else 'none'
     kwargs['smoothing_method'] = 'flat' if processing_mode in [
         'smoothed', 'normalized', 'normalized_no_outliers'] else 'none'
+    kwargs['do_smooth_eval_data'] = True
     kwargs['clamp_outliers'] = processing_mode in ['normalized_no_outliers']
 
     ll_metrics_df, ll_metrics_dicts, log_data_df = compute_eval_metrics(**kwargs)

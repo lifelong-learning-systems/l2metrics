@@ -1,7 +1,8 @@
 {
     "log_dir": "multi_task",
+    "variant_mode": "aware",
     "ste_store_mode": null,
-    "ste_averaging_method": "time",
+    "ste_averaging_method": "metrics",
     "perf_measure": "performance",
     "aggregation_method": "mean",
     "maintenance_method": "both",

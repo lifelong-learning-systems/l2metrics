@@ -31,7 +31,7 @@ class SampleEfficiency(Metric):
     requires = {'syllabus_type': 'agent'}
     description = "Calculates the sample efficiency relative to the single-task expert"
 
-    def __init__(self, perf_measure: str, ste_data: dict, ste_averaging_method: str = 'time') -> None:
+    def __init__(self, perf_measure: str, ste_data: dict, ste_averaging_method: str = 'metrics') -> None:
 
         super().__init__()
         self.perf_measure = perf_measure

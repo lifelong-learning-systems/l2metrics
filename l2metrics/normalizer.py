@@ -173,6 +173,10 @@ class Normalizer():
                     task_min = self.data_range[task]['min']
                     task_max = self.data_range[task]['max']
 
+                    if task_min == task_max:
+                        raise Exception(f"Cannot normalize performance for task ({task}) - " \
+                            "Performance is constant")
+
                     data.loc[data.task_name == task, self.perf_measure] = \
                         ((data[data['task_name'] == task][self.perf_measure].to_numpy() - task_min) / \
                         (task_max - task_min) * self.scale) + 1

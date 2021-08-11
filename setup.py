@@ -24,7 +24,7 @@ HERE = pathlib.Path(__file__).parent
 
 setup(
     name='l2metrics',
-    version='2.9.0',
+    version='2.11.0',
     description='Metrics for Lifelong Learning',
     long_description=(HERE / 'README.md').read_text(),
     long_description_content_type='text/markdown',

@@ -155,7 +155,7 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
         mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
         mean_data = np.ravel(mean_reward_per_episode.to_numpy())
     else:
-        mean_data = np.ravel(data[col_to_use].to_numpy(np.float))
+        mean_data = np.ravel(data[col_to_use].to_numpy(dtype=float))
 
     mean_data = mean_data[~np.isnan(mean_data)]
 
@@ -199,9 +199,9 @@ def fill_metrics_df(data: dict, metric_string_name: str, metrics_df: pd.DataFram
     """
 
     if not dict_key:
-        metrics_df[metric_string_name] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+        metrics_df[metric_string_name] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.object)
         for idx in data.keys():
-            metrics_df.loc[idx, metric_string_name] = data[idx]
+            metrics_df.at[idx, metric_string_name] = data[idx]
     else:
         metrics_df[dict_key][metric_string_name] = np.full_like(metrics_df[dict_key]['regime_num'], np.nan, dtype=np.double)
         for idx in data.keys():

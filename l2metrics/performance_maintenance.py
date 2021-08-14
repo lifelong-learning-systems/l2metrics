@@ -120,7 +120,7 @@ class PerformanceMaintenance(Metric):
                 # Iterate over task performance differences for performance maintenance
                 for task in unique_tasks:
                     # Get the task maintenance values
-                    m = metrics_df[metrics_df['task_name'] == task]['maintenance_val_mrtlp'].to_numpy()
+                    m = metrics_df[metrics_df['task_name'] == task]['maintenance_val_mrtlp'].to_numpy(dtype=float)
 
                     # Remove NaNs
                     m = m[~np.isnan(m)]
@@ -138,7 +138,7 @@ class PerformanceMaintenance(Metric):
                 # Iterate over task performance differences for performance maintenance
                 for task in unique_tasks:
                     # Get the task maintenance values
-                    m = metrics_df[metrics_df['task_name'] == task]['maintenance_val_mrlep'].to_numpy()
+                    m = metrics_df[metrics_df['task_name'] == task]['maintenance_val_mrlep'].to_numpy(dtype=float)
 
                     # Remove NaNs
                     m = m[~np.isnan(m)]

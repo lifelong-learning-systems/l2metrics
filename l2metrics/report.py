@@ -311,6 +311,7 @@ class MetricsReport():
         self.ll_metrics_df = self.lifetime_metrics_df.copy()
         if self.ll_metrics_df.empty:
             self.ll_metrics_df = self.ll_metrics_df.append(pd.Series([np.nan]), ignore_index=True)
+        self.regime_metrics_df['run_id'] = Path(self.log_dir).name
         self.ll_metrics_df['run_id'] = Path(self.log_dir).name
         self.ll_metrics_df['complexity'] = self.scenario_info['complexity']
         self.ll_metrics_df['difficulty'] = self.scenario_info['difficulty']
@@ -517,6 +518,7 @@ class MetricsReport():
         # Save metrics to file
         with open(Path(output_dir) / (filename + '_metrics.json'), 'w', newline='\n') as metrics_file:
             json.dump(self.ll_metrics_dict, metrics_file)
+        self.regime_metrics_df.to_csv(Path(output_dir) / (filename + '_regime_metrics.tsv'), sep='\t')
 
     def save_data(self, output_dir: str = '', filename: str = None) -> None:
         """Save out raw and processed data.

@@ -329,8 +329,11 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame, pd
 
             # Sort data by scenario type, complexity, difficulty
             if not ll_metrics_df.empty:
-                ll_metrics_df = ll_metrics_df.sort_values(
-                    by=['scenario_type', 'complexity', 'difficulty'])
+                try:
+                    ll_metrics_df = ll_metrics_df.sort_values(
+                        by=['scenario_type', 'complexity', 'difficulty'])
+                except Exception as e:
+                    print(e)
 
     return ll_metrics_df, ll_metrics_dicts, regime_metrics_df, log_data_df
 

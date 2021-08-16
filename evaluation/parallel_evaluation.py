@@ -44,8 +44,8 @@ def process_evaluation(args):
 
     # Build file and directory strings
     kwargs = {}
-    kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval/' + eval_dir + '/')
-    kwargs['output_dir'] = Path('results/' + processing_mode + '/' + sg_name)
+    kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval') / eval_dir
+    kwargs['output_dir'] = Path('results') / processing_mode / sg_name / eval_dir
     kwargs['output'] = sg_name + '_' + processing_mode
     kwargs['agent_config_dir'] = ''
     kwargs['ste_dir'] = ''
@@ -84,7 +84,7 @@ def process_evaluation(args):
     kwargs['do_smooth_eval_data'] = True
     kwargs['clamp_outliers'] = processing_mode in ['normalized_no_outliers']
 
-    ll_metrics_df, ll_metrics_dicts, log_data_df = compute_eval_metrics(**kwargs)
+    ll_metrics_df, ll_metrics_dicts, regime_metrics_df, log_data_df = compute_eval_metrics(**kwargs)
 
     # Save the lifelong learning metrics DataFrame
     if kwargs['do_save']:
@@ -95,6 +95,10 @@ def process_evaluation(args):
         if ll_metrics_dicts:
             with open(kwargs['output_dir'] / (kwargs['output'] + '.json'), 'w', newline='\n') as metrics_file:
                 json.dump(ll_metrics_dicts, metrics_file)
+        if not regime_metrics_df.empty:
+            with open(kwargs['output_dir'] / (kwargs['output'] + '_regime.tsv'), 'w', newline='\n') as metrics_file:
+                regime_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
+                    ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
         if not log_data_df.empty:
             log_data_df.reset_index(drop=True).to_feather(kwargs['output_dir'] / (kwargs['output'] + '_data.feather'))
     
@@ -108,7 +112,7 @@ def process_evaluation(args):
 
 def run():
     # Configure metrics report
-    eval_dirs = ['m12_eval']
+    eval_dirs = ['m15_eval']
     sg_names = ['argonne', 'hrl', 'sri', 'teledyne', 'upenn']
     processing_modes = ['raw', 'smoothed', 'normalized', 'normalized_no_outliers']
 

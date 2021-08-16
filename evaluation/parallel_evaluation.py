@@ -34,7 +34,7 @@ perf_measure = {
     'argonne': 'score',
     'hrl': 'reward',
     'sri': 'reward',
-    'teledyne': 'object_id_accuracy',
+    'teledyne': 'object_id_prec',
     'upenn': 'performance'
 }
 
@@ -47,15 +47,16 @@ def process_evaluation(args):
     kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval') / eval_dir
     kwargs['output_dir'] = Path('results') / processing_mode / sg_name / eval_dir
     kwargs['output'] = sg_name + '_' + processing_mode
-    kwargs['agent_config_dir'] = ''
-    kwargs['ste_dir'] = ''
+    kwargs['agent_config_dir'] = 'agent_config'
+    # kwargs['ste_dir'] = ''
     # kwargs['ste_averaging_method'] = 'metrics'
     kwargs['perf_measure'] = perf_measure[sg_name]
-    kwargs['aggregation_method'] = 'mean'
+    # kwargs['aggregation_method'] = 'mean'
     kwargs['maintenance_method'] = 'both'
     kwargs['transfer_method'] = 'both'
-    kwargs['window_length'] = None
-    kwargs['show_eval_lines'] = True
+    # kwargs['window_length'] = None
+    # kwargs['show_eval_lines'] = True
+    # kwargs['do_smooth_eval_data'] = False
     kwargs['do_store_ste'] = False
     kwargs['do_plot'] = True
     kwargs['do_save_plots'] = True
@@ -81,7 +82,6 @@ def process_evaluation(args):
         'normalized', 'normalized_no_outliers'] else 'none'
     kwargs['smoothing_method'] = 'flat' if processing_mode in [
         'smoothed', 'normalized', 'normalized_no_outliers'] else 'none'
-    kwargs['do_smooth_eval_data'] = True
     kwargs['clamp_outliers'] = processing_mode in ['normalized_no_outliers']
 
     ll_metrics_df, ll_metrics_dicts, regime_metrics_df, log_data_df = compute_eval_metrics(**kwargs)
@@ -119,7 +119,7 @@ def run():
     # Parallel processing
     sg_configs = list(product(eval_dirs, sg_names, processing_modes))
 
-    with Pool(psutil.cpu_count(logical=False)) as p:
+    with Pool(psutil.cpu_count(logical=True)) as p:
         list(tqdm(p.imap(process_evaluation, sg_configs), total=len(sg_configs)))
 
 

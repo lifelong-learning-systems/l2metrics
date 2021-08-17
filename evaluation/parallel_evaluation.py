@@ -34,7 +34,6 @@ perf_measure = {
     'argonne': 'score',
     'hrl': 'reward',
     'sri': 'reward',
-    'teledyne': 'object_id_accuracy',
     'upenn': 'performance'
 }
 
@@ -44,18 +43,19 @@ def process_evaluation(args):
 
     # Build file and directory strings
     kwargs = {}
-    kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval/' + eval_dir + '/')
-    kwargs['output_dir'] = Path('results/' + processing_mode + '/' + sg_name)
+    kwargs['eval_dir'] = Path('../../sg_' + sg_name + '_eval') / eval_dir
+    kwargs['output_dir'] = Path('results') / processing_mode / sg_name / eval_dir
     kwargs['output'] = sg_name + '_' + processing_mode
-    kwargs['agent_config_dir'] = ''
-    kwargs['ste_dir'] = ''
+    kwargs['agent_config_dir'] = 'agent_config'
+    # kwargs['ste_dir'] = ''
     # kwargs['ste_averaging_method'] = 'metrics'
     kwargs['perf_measure'] = perf_measure[sg_name]
-    kwargs['aggregation_method'] = 'mean'
+    # kwargs['aggregation_method'] = 'mean'
     kwargs['maintenance_method'] = 'both'
     kwargs['transfer_method'] = 'both'
-    kwargs['window_length'] = None
-    kwargs['show_eval_lines'] = True
+    # kwargs['window_length'] = None
+    # kwargs['show_eval_lines'] = True
+    # kwargs['do_smooth_eval_data'] = False
     kwargs['do_store_ste'] = False
     kwargs['do_plot'] = True
     kwargs['do_save_plots'] = True
@@ -81,10 +81,9 @@ def process_evaluation(args):
         'normalized', 'normalized_no_outliers'] else 'none'
     kwargs['smoothing_method'] = 'flat' if processing_mode in [
         'smoothed', 'normalized', 'normalized_no_outliers'] else 'none'
-    kwargs['do_smooth_eval_data'] = True
     kwargs['clamp_outliers'] = processing_mode in ['normalized_no_outliers']
 
-    ll_metrics_df, ll_metrics_dicts, log_data_df = compute_eval_metrics(**kwargs)
+    ll_metrics_df, ll_metrics_dicts, regime_metrics_df, log_data_df = compute_eval_metrics(**kwargs)
 
     # Save the lifelong learning metrics DataFrame
     if kwargs['do_save']:
@@ -95,6 +94,10 @@ def process_evaluation(args):
         if ll_metrics_dicts:
             with open(kwargs['output_dir'] / (kwargs['output'] + '.json'), 'w', newline='\n') as metrics_file:
                 json.dump(ll_metrics_dicts, metrics_file)
+        if not regime_metrics_df.empty:
+            with open(kwargs['output_dir'] / (kwargs['output'] + '_regime.tsv'), 'w', newline='\n') as metrics_file:
+                regime_metrics_df.set_index(['sg_name', 'agent_config', 'run_id']).sort_values(
+                    ['agent_config', 'run_id']).to_csv(metrics_file, sep='\t')
         if not log_data_df.empty:
             log_data_df.reset_index(drop=True).to_feather(kwargs['output_dir'] / (kwargs['output'] + '_data.feather'))
     
@@ -108,14 +111,14 @@ def process_evaluation(args):
 
 def run():
     # Configure metrics report
-    eval_dirs = ['m12_eval']
+    eval_dirs = ['m15_eval']
     sg_names = ['argonne', 'hrl', 'sri', 'teledyne', 'upenn']
     processing_modes = ['raw', 'smoothed', 'normalized', 'normalized_no_outliers']
 
     # Parallel processing
     sg_configs = list(product(eval_dirs, sg_names, processing_modes))
 
-    with Pool(psutil.cpu_count(logical=False)) as p:
+    with Pool(psutil.cpu_count(logical=True)) as p:
         list(tqdm(p.imap(process_evaluation, sg_configs), total=len(sg_configs)))
 
 

@@ -114,23 +114,23 @@ def get_block_saturation_perf(data: Union[pd.DataFrame, List], col_to_use: str =
     smoothed_data = smoothed_data[~np.isnan(smoothed_data)]
 
     if len(smoothed_data):
-        saturation_value = np.max(smoothed_data)
+        sat_val = np.max(smoothed_data)
 
         # Calculate the number of episodes to "saturation", which we define as the max of the moving average
-        indices = np.where(smoothed_data == saturation_value)
-        episodes_to_saturation = indices[0][0]
-        episodes_to_recovery = len(data) + 1
+        indices = np.where(smoothed_data == sat_val)
+        eps_to_sat = int(indices[0][0])
+        eps_to_rec = len(data) + 1
 
         if prev_sat_val:
             indices = np.where(smoothed_data >= prev_sat_val)
             if len(indices[0]):
-                episodes_to_recovery = indices[0][0]
+                eps_to_rec = indices[0][0]
     else:
-        saturation_value = np.nan
-        episodes_to_saturation = np.nan
-        episodes_to_recovery = np.nan
+        sat_val = np.nan
+        eps_to_sat = np.nan
+        eps_to_rec = np.nan
 
-    return saturation_value, episodes_to_saturation, episodes_to_recovery
+    return sat_val, eps_to_sat, eps_to_rec
 
 
 def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = None,
@@ -155,7 +155,7 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
         mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
         mean_data = np.ravel(mean_reward_per_episode.to_numpy())
     else:
-        mean_data = np.ravel(data[col_to_use].to_numpy(np.float))
+        mean_data = np.ravel(data[col_to_use].to_numpy(dtype=float))
 
     mean_data = mean_data[~np.isnan(mean_data)]
 
@@ -199,9 +199,9 @@ def fill_metrics_df(data: dict, metric_string_name: str, metrics_df: pd.DataFram
     """
 
     if not dict_key:
-        metrics_df[metric_string_name] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.double)
+        metrics_df[metric_string_name] = np.full_like(metrics_df['regime_num'], np.nan, dtype=np.object)
         for idx in data.keys():
-            metrics_df.loc[idx, metric_string_name] = data[idx]
+            metrics_df.at[idx, metric_string_name] = data[idx]
     else:
         metrics_df[dict_key][metric_string_name] = np.full_like(metrics_df[dict_key]['regime_num'], np.nan, dtype=np.double)
         for idx in data.keys():

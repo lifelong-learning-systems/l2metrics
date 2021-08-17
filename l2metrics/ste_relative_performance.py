@@ -88,7 +88,7 @@ class STERelativePerf(Metric):
                                 min_exp)[self.perf_measure].to_numpy())
                             ste_perf = np.nansum(x_ste[:min_exp])
                             rel_perf = task_perf / ste_perf
-                            ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf
+                            ste_rel_perf[task_data['regime_num'].iloc[-1]] = [rel_perf]
                         elif self.ste_averaging_method == 'metrics':
                             rel_perf_vals = []
 
@@ -103,7 +103,7 @@ class STERelativePerf(Metric):
                                     min_exp)[self.perf_measure].to_numpy())
                                 rel_perf_vals.append(task_perf / ste_perf)
 
-                            ste_rel_perf[task_data['regime_num'].iloc[-1]] = np.mean(rel_perf_vals)
+                            ste_rel_perf[task_data['regime_num'].iloc[-1]] = rel_perf_vals
                     else:
                         print(f"Cannot compute {self.name} for task {task} - No STE data available")
 

@@ -60,6 +60,7 @@ def run() -> None:
     if args.recursive:
         ll_metrics_df = pd.DataFrame()
         ll_metrics_dicts = []
+        regime_metrics_df = pd.DataFrame()
         log_data_df = pd.DataFrame()
 
         old_print = print
@@ -88,13 +89,12 @@ def run() -> None:
                     kwargs['log_dir'] = dir
                     report = MetricsReport(**kwargs)
                     report.calculate()
-                    metrics_df = report.ll_metrics_df
-                    metrics_dict = report.ll_metrics_dict
-                    ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
-                    ll_metrics_dicts.append(metrics_dict)
-                    df = report._log_data
-                    df['run_id'] = dir.name
-                    log_data_df = log_data_df.append(df, ignore_index=True)
+                    ll_metrics_df = ll_metrics_df.append(report.ll_metrics_df, ignore_index=True)
+                    ll_metrics_dicts.append(report.ll_metrics_dict)
+                    regime_metrics_df = regime_metrics_df.append(report.regime_metrics_df, ignore_index=True)
+                    log_data_df = report._log_data
+                    log_data_df['run_id'] = dir.name
+                    log_data_df = log_data_df.append(log_data_df, ignore_index=True)
 
                     # Plot metrics
                     if args.do_plot:
@@ -121,6 +121,9 @@ def run() -> None:
             if ll_metrics_dicts:
                 with open(str(filename) + '.json', 'w', newline='\n') as metrics_file:
                     json.dump(ll_metrics_dicts, metrics_file)
+            if not regime_metrics_df.empty:
+                with open(str(filename) + '_regime.tsv', 'w', newline='\n') as metrics_file:
+                    regime_metrics_df.set_index(['run_id']).to_csv(metrics_file, sep='\t')
             if not log_data_df.empty:
                 log_data_df.reset_index(drop=True).to_feather(str(filename) + '_data.feather')
     else:

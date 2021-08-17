@@ -60,6 +60,10 @@ class SampleEfficiency(Metric):
             self.validate(block_info)
 
             # Initialize metric dictionaries
+            se_task_saturation = {}
+            se_task_eps_to_sat = {}
+            se_ste_saturation = {}
+            se_ste_eps_to_sat = {}
             se_saturation = {}
             se_eps_to_sat = {}
             sample_efficiency = {}
@@ -85,6 +89,10 @@ class SampleEfficiency(Metric):
                         if task_eps_to_sat == 0:
                                 print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
                                 continue
+                        
+                        # Store task saturation value and episodes to saturation
+                        se_task_saturation[task_data['regime_num'].iloc[-1]] = task_saturation
+                        se_task_eps_to_sat[task_data['regime_num'].iloc[-1]] = task_eps_to_sat
 
                         if self.ste_averaging_method == 'time':
                             # Average all the STE data together after truncating to same length
@@ -100,13 +108,21 @@ class SampleEfficiency(Metric):
                             if ste_eps_to_sat == 0:
                                 print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
                                 continue
+                            
+                            # Store STE saturation value and episodes to saturation
+                            se_ste_saturation[task_data['regime_num'].iloc[-1]] = [ste_saturation]
+                            se_ste_eps_to_sat[task_data['regime_num'].iloc[-1]] = [ste_eps_to_sat]
 
                             # Compute sample efficiency
-                            se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
-                            se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
+                            se_saturation[task_data['regime_num'].iloc[-1]] = [task_saturation / ste_saturation]
+                            se_eps_to_sat[task_data['regime_num'].iloc[-1]] = [ste_eps_to_sat / task_eps_to_sat]
                             sample_efficiency[task_data['regime_num'].iloc[-1]] = \
-                                (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)
+                                [(task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)]
                         elif self.ste_averaging_method == 'metrics':
+                            se_ste_saturation_vals = []
+                            se_ste_eps_to_sat_vals = []
+                            se_saturation_vals = []
+                            se_eps_to_sat_vals = []
                             sample_efficiency_vals = []
                             
                             for ste_data_df in ste_data:
@@ -122,15 +138,25 @@ class SampleEfficiency(Metric):
                                     continue
 
                                 # Compute sample efficiency
-                                se_saturation[task_data['regime_num'].iloc[-1]] = task_saturation / ste_saturation
-                                se_eps_to_sat[task_data['regime_num'].iloc[-1]] = ste_eps_to_sat / task_eps_to_sat
+                                se_ste_saturation_vals.append(ste_saturation)
+                                se_ste_eps_to_sat_vals.append(ste_eps_to_sat)
+                                se_saturation_vals.append(task_saturation / ste_saturation)
+                                se_eps_to_sat_vals.append(ste_eps_to_sat / task_eps_to_sat)
                                 sample_efficiency_vals.append(
                                     (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat))
 
-                            sample_efficiency[task_data['regime_num'].iloc[-1]] = np.mean(sample_efficiency_vals)
+                            se_ste_saturation[task_data['regime_num'].iloc[-1]] = se_ste_saturation_vals
+                            se_ste_eps_to_sat[task_data['regime_num'].iloc[-1]] = se_ste_eps_to_sat_vals
+                            se_saturation[task_data['regime_num'].iloc[-1]] = se_saturation_vals
+                            se_eps_to_sat[task_data['regime_num'].iloc[-1]] = se_eps_to_sat_vals
+                            sample_efficiency[task_data['regime_num'].iloc[-1]] = sample_efficiency_vals
                     else:
                         print(f"Cannot compute {self.name} for task {task} - No STE data available")
 
+            metrics_df = fill_metrics_df(se_task_saturation, 'se_task_saturation', metrics_df)
+            metrics_df = fill_metrics_df(se_task_eps_to_sat, 'se_task_eps_to_sat', metrics_df)
+            metrics_df = fill_metrics_df(se_ste_saturation, 'se_ste_saturation', metrics_df)
+            metrics_df = fill_metrics_df(se_ste_eps_to_sat, 'se_ste_eps_to_sat', metrics_df)
             metrics_df = fill_metrics_df(se_saturation, 'se_saturation', metrics_df)
             metrics_df = fill_metrics_df(se_eps_to_sat, 'se_eps_to_sat', metrics_df)
             return fill_metrics_df(sample_efficiency, 'sample_efficiency', metrics_df)

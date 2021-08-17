@@ -311,6 +311,7 @@ class MetricsReport():
         self.ll_metrics_df = self.lifetime_metrics_df.copy()
         if self.ll_metrics_df.empty:
             self.ll_metrics_df = self.ll_metrics_df.append(pd.Series([np.nan]), ignore_index=True)
+        self.regime_metrics_df['run_id'] = Path(self.log_dir).name
         self.ll_metrics_df['run_id'] = Path(self.log_dir).name
         self.ll_metrics_df['complexity'] = self.scenario_info['complexity']
         self.ll_metrics_df['difficulty'] = self.scenario_info['difficulty']
@@ -376,6 +377,12 @@ class MetricsReport():
             self.task_metrics_df['backward_transfer_contrast'] = [{}] * num_tasks
             self.forward_transfer_contrast = defaultdict(dict)
             self.backward_transfer_contrast = defaultdict(dict)
+        self.task_metrics_df['ste_rel_perf_vals'] = [[]] * num_tasks
+        self.task_metrics_df['ste_saturation_vals'] = [[]] * num_tasks
+        self.task_metrics_df['ste_eps_to_sat_vals'] = [[]] * num_tasks
+        self.task_metrics_df['se_saturation_vals'] = [[]] * num_tasks
+        self.task_metrics_df['se_eps_to_sat_vals'] = [[]] * num_tasks
+        self.task_metrics_df['sample_efficiency_vals'] = [[]] * num_tasks
 
         # Create data structures for transfer values
         for _, row in self._metrics_df.iterrows():
@@ -400,23 +407,62 @@ class MetricsReport():
             for metric in self.task_metrics:
                 if metric in tm.keys():
                     if metric == 'perf_recovery':
-                        pr = tm[metric].dropna().to_numpy()
+                        pr = tm[metric].dropna().to_numpy(dtype=float)
                         self.task_metrics_df.at[task, metric] = np.NaN if len(pr) == 0 else pr[0]
                         self.task_metrics_df.at[task, 'recovery_times'] = list(
-                            tm['recovery_time'].dropna().to_numpy())
+                            tm['recovery_time'].dropna().to_numpy(dtype=float))
                     elif metric in ['perf_maintenance_mrtlp', 'perf_maintenance_mrlep']:
-                        pm = tm[metric].dropna().to_numpy()
+                        pm = tm[metric].dropna().to_numpy(dtype=float)
                         self.task_metrics_df.at[task, metric] = pm[0] if len(pm) else np.NaN
                         maintenance_val_name = 'maintenance_val_' + metric.split('_')[-1]
-                        maintenance_values = list(tm[maintenance_val_name].to_numpy())
+                        maintenance_values = list(tm[maintenance_val_name].to_numpy(dtype=float))
                         self.task_metrics_df.at[task, maintenance_val_name] = [
                             maintenance_values[s] for s in np.ma.clump_unmasked(np.ma.masked_invalid(maintenance_values))]
                     elif metric in ['forward_transfer_contrast', 'forward_transfer_ratio',
                                     'backward_transfer_contrast', 'backward_transfer_ratio']:
                         self.task_metrics_df.at[task, metric] = getattr(self, metric)[task]
+                    elif metric == 'ste_rel_perf':
+                        rp = tm[metric].dropna().to_numpy()
+                        if rp.size == 0:
+                            self.task_metrics_df.at[task, 'ste_rel_perf_vals'] = []
+                            self.task_metrics_df.at[task, metric] = np.NaN
+                        elif rp.size == 1:
+                            self.task_metrics_df.at[task, 'ste_rel_perf_vals'] = rp[0]
+                            self.task_metrics_df.at[task, metric] = np.nanmean(rp[0])
+                        else:
+                            raise Exception('Unexpected size for relative performance')
+                    elif metric == 'sample_efficiency':
+                        task_sat = tm['se_task_saturation'].dropna().to_numpy(dtype=float)
+                        task_eps_to_sat = tm['se_task_eps_to_sat'].dropna().to_numpy(dtype=float)
+                        ste_saturation = tm['se_ste_saturation'].dropna().to_numpy()
+                        ste_eps_to_sat = tm['se_ste_eps_to_sat'].dropna().to_numpy()
+                        se_saturation = tm['se_saturation'].dropna().to_numpy()
+                        se_eps_to_sat = tm['se_eps_to_sat'].dropna().to_numpy()
+                        se = tm[metric].dropna().to_numpy()
+
+                        if se.size == 0:
+                            self.task_metrics_df.at[task, 'se_task_saturation'] = np.NaN
+                            self.task_metrics_df.at[task, 'se_task_eps_to_sat'] = np.NaN
+                            self.task_metrics_df.at[task, 'ste_saturation_vals'] = []
+                            self.task_metrics_df.at[task, 'ste_eps_to_sat_vals'] = []
+                            self.task_metrics_df.at[task, 'se_saturation_vals'] = []
+                            self.task_metrics_df.at[task, 'se_eps_to_sat_vals'] = []
+                            self.task_metrics_df.at[task, 'sample_efficiency_vals'] = []
+                            self.task_metrics_df.at[task, metric] = np.NaN
+                        elif se.size == 1:
+                            self.task_metrics_df.at[task, 'se_task_saturation'] = task_sat[0]
+                            self.task_metrics_df.at[task, 'se_task_eps_to_sat'] = task_eps_to_sat[0]
+                            self.task_metrics_df.at[task, 'ste_saturation_vals'] = ste_saturation[0]
+                            self.task_metrics_df.at[task, 'ste_eps_to_sat_vals'] = ste_eps_to_sat[0]
+                            self.task_metrics_df.at[task, 'se_saturation_vals'] = se_saturation[0]
+                            self.task_metrics_df.at[task, 'se_eps_to_sat_vals'] = se_eps_to_sat[0]
+                            self.task_metrics_df.at[task, 'sample_efficiency_vals'] = se[0]
+                            self.task_metrics_df.at[task, metric] = np.nanmean(se[0])
+                        else:
+                            raise Exception('Unexpected size for sample efficiency')
                     else:
                         # Drop NaN values
-                        metric_values = tm[metric].dropna().to_numpy()
+                        metric_values = tm[metric].dropna().to_numpy(dtype=float)
 
                         if len(metric_values) == 0:
                             self.task_metrics_df.at[task, metric] = np.NaN
@@ -436,7 +482,7 @@ class MetricsReport():
                     # Get the first calculated transfer values for each task pair
                     metric_vals = np.array([v2[0] for _, v in getattr(self, metric).items() for _, v2 in v.items()])
                 else:
-                    metric_vals = self.task_metrics_df[metric].dropna().to_numpy()
+                    metric_vals = self.task_metrics_df[metric].dropna().to_numpy(dtype=float)
 
                 if len(metric_vals):
                     # Aggregate metric values
@@ -472,6 +518,7 @@ class MetricsReport():
         # Save metrics to file
         with open(Path(output_dir) / (filename + '_metrics.json'), 'w', newline='\n') as metrics_file:
             json.dump(self.ll_metrics_dict, metrics_file)
+        self.regime_metrics_df.to_csv(Path(output_dir) / (filename + '_regime_metrics.tsv'), sep='\t')
 
     def save_data(self, output_dir: str = '', filename: str = None) -> None:
         """Save out raw and processed data.

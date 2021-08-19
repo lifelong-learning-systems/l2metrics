@@ -166,6 +166,10 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
     else:
         reward_col_smooth = None
 
+    # Use sleep evaluation blocks if they exist and filter out wake evaluation
+    if 'sleep' in dataframe['block_subtype'].to_numpy():
+        dataframe = dataframe[~(dataframe.block_type.isin(['test']) & dataframe.block_subtype.isin(['wake']))]
+
     df_test = dataframe[dataframe.block_type == 'test']
     df_train = dataframe[dataframe.block_type == 'train']
 
@@ -261,6 +265,11 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         task_colors = color_selection[:len(unique_tasks)]
     else:
         task_colors = [color_selection[i % len(color_selection)] for i in range(len(unique_tasks))]
+
+    # Use sleep evaluation blocks if they exist and filter out wake evaluation
+    if 'sleep' in block_info['block_subtype'].to_numpy():
+        block_info = block_info[~(block_info.block_type.isin(['test']) & block_info.block_subtype.isin(['wake']))]
+        dataframe = dataframe[~(dataframe.block_type.isin(['test']) & dataframe.block_subtype.isin(['wake']))]
 
     # Loop through tasks and plot their performance curves
     for task_color, task in zip(task_colors, unique_tasks):

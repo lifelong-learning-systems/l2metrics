@@ -3,6 +3,7 @@ import pprint
 from typing import List, Tuple, Union
 import pandas as pd
 import seaborn as sns
+import matplotlib as plt
 from functools import reduce
 
 class TaskMetrics:
@@ -63,6 +64,9 @@ class TaskMetrics:
     
     def plotHist(self,data:list): 
         sns.histplot(data)
+
+    def plotDist(self,data:list): 
+        sns.distplot(data)
     
     def df2dict_helper(self,key:list,val:any):
         new_dict={}
@@ -97,6 +101,21 @@ class TaskMetrics:
     def getNormalizationDataRange(self,task:str=None)->List[Union[dict,Tuple[int,int]]]:
         return [self.getNormalizationDataRange_helper(run,task) for run in self.dfs]
 
+    # possible types: 'hist','dist','line'
+    def plotNormalizationDataRange(self,plottype:str,task:str=None):
+        normdatrange = self.getNormalizationDataRange(task)
+        fig, ax = plt.pyplot.subplots(1,2,figsize=(18,10))
+        if plottype == 'hist':
+            sns.histplot([min for min,_ in normdatrange], ax=ax[0])
+            sns.histplot([max for _,max in normdatrange], ax=ax[1])
+        elif plottype == 'dist':
+            sns.distplot([min for min,_ in normdatrange], ax=ax[0])
+            sns.distplot([max for _,max in normdatrange], ax=ax[1])
+        elif plottype == 'line':
+            sns.lineplot([min for min,_ in normdatrange], ax=ax[0])
+            sns.lineplot([max for _,max in normdatrange], ax=ax[1])
+        return fig
+
     def getBackwardTransferRatio_helper(self,df:pd.DataFrame,taska:str=None,taskb:str=None)->Union[int,dict,list]:
         try:
             if taska is None:
@@ -110,6 +129,22 @@ class TaskMetrics:
 
     def getBackwardTransferRatio(self,taska:str=None,taskb:str=None)->List[Union[int,dict,list]]:
         return [self.getBackwardTransferRatio_helper(run,taska,taskb) for run in self.dfs]
+
+    def plotBackwardTransferRatio(self,plottype:str,taska:str=None,taskb:str=None):
+        backtransfratio = self.getBackwardTransferRatio(taska,taskb)
+        if not (taska and taskb):
+            print("resulting query is in the form of dictionaries\ntherefore there will be no plot but instead a list of dict returned")
+            return backtransfratio
+        if isinstance( backtransfratio[0],list):
+            reduce(lambda l,m: l+m if m else l+[m],backtransfratio)
+        fig,ax = plt.pyplot.subplots(figsize=(10,5))
+        if plottype == 'hist':
+            sns.histplot(backtransfratio,ax=ax)
+        elif plottype == 'dist':
+            sns.distplot(backtransfratio,ax=ax)
+        elif plottype == 'line':
+            sns.lineplot(backtransfratio,ax=ax)
+        return fig
 
     def getForwardTransferRatio_helper(self,df:pd.DataFrame,taska:str=None,taskb:str=None)->Union[int,dict,list]:
         try:

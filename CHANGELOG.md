@@ -2,6 +2,15 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.12.0 - 2021-08-17
+
+- Implemented class for parsing metrics JSON files (WIP)
+- Added more data to the metrics JSON output including:
+  - List of relative performance values with multiple runs of STE
+  - List of intermediate results used to calculate sample efficiency
+  - List of sample efficiency values with multiple runs of STE
+- Added additional output file for regime-level metrics containing terminal performance for each regime
+
 ## 2.11.0 - 2021-08-09
 
 - Implemented variant-aware and variant-agnostic metric calculations

@@ -15,8 +15,19 @@ class MetricsJsonParser:
     
     def toXL(self,):
         for idx,df in enumerate(self.dfs):
-            df.to_excel(r'C:\\Users\balamb1\Documents\Darpa L2M\\l2metrics\\examples\dfout\\'+str(idx)+'.xlsx', header=True)
-
+            df.to_excel(str(idx)+'.xlsx', header=True)
+    
+    def flatten(self,l:list):
+        flat = []
+        for subl in l:
+            if subl:
+                for item in subl:
+                    flat.append(item)
+            else:
+                flat.append(None)
+        return flat
+        # return [item for subl in l if subl for item in subl else None]
+    
     def json_refactor(self,json:dict,parent:str="root")->dict:
         new_dict={}
         for k,v in json.items():
@@ -103,18 +114,53 @@ class MetricsJsonParser:
 
     # possible types: 'hist','dist','line'
     def plotNormalizationDataRange(self,plottype:str,task:str=None):
-        normdatrange = self.getNormalizationDataRange(task)
-        fig, ax = plt.pyplot.subplots(1,2,figsize=(18,10))
-        if plottype == 'hist':
-            sns.histplot([min for min,_ in normdatrange], ax=ax[0])
-            sns.histplot([max for _,max in normdatrange], ax=ax[1])
-        elif plottype == 'dist':
-            sns.distplot([min for min,_ in normdatrange], ax=ax[0])
-            sns.distplot([max for _,max in normdatrange], ax=ax[1])
-        elif plottype == 'line':
-            sns.lineplot([min for min,_ in normdatrange], ax=ax[0])
-            sns.lineplot([max for _,max in normdatrange], ax=ax[1])
-        return fig
+        if task:
+        # normdatrange = self.flatten(self.getNormalizationDataRange(task))
+            normdatrange = [x for x in self.getNormalizationDataRange(task) if x]
+            fig, ax = plt.pyplot.subplots(1,2,figsize=(18,10))
+            if plottype == 'hist':
+                sns.histplot([min for min,_ in normdatrange], ax=ax[0])
+                sns.histplot([max for _,max in normdatrange], ax=ax[1])
+            elif plottype == 'dist':
+                sns.distplot([min for min,_ in normdatrange], ax=ax[0])
+                sns.distplot([max for _,max in normdatrange], ax=ax[1])
+            elif plottype == 'line':
+                sns.lineplot([min for min,_ in normdatrange], ax=ax[0])
+                sns.lineplot([max for _,max in normdatrange], ax=ax[1])
+            return fig
+        else:
+            normdatrange = [x for x in self.getNormalizationDataRange(task) if x]
+            graph_titles = set()
+            for d in normdatrange:
+                graph_titles.update(list(d.keys()))
+            # print(graph_titles)
+            graph_data = {k:[] for k in graph_titles}
+            # print(graph_data)
+            for d in normdatrange:
+                for k in d:
+                    # print(k)
+                    graph_data[k].append((d[k]["min"],d[k]["max"]))
+            # print(graph_data)
+            fig, ax = plt.pyplot.subplots(len(graph_titles),2,figsize=(18,30))
+            if plottype == 'hist':
+                i=0
+                for k,v in graph_data.items():
+                    sns.histplot([min for min,_ in v], ax=ax[i][0]).set(title=k+' Min')
+                    sns.histplot([max for _,max in v], ax=ax[i][1]).set(title=k+' Max')
+                    i+=1
+            elif plottype == 'dist':
+                i=0
+                for k,v in graph_data.items():
+                    sns.distplot([min for min,_ in v], ax=ax[i][0]).set(title=k+' Min')
+                    sns.distplot([max for _,max in v], ax=ax[i][1]).set(title=k+' Max')
+                    i+=1
+            elif plottype == 'line':
+                i=0
+                for k,v in graph_data.items():
+                    sns.lineplot([min for min,_ in v], ax=ax[i][0]).set(title=k+' Min')
+                    sns.lineplot([max for _,max in v], ax=ax[i][1]).set(title=k+' Max')
+                    i+=1
+            return fig
 
     def getBackwardTransferRatio_helper(self,df:pd.DataFrame,taska:str=None,taskb:str=None)->Union[int,dict,list]:
         try:
@@ -424,3 +470,12 @@ class MetricsJsonParser:
 
     def getSETaskEPS2Sat(self,task:str):
         return [self.getSETaskEPS2Sat_helper(run,task) for run in self.dfs]
+    
+    def getRuntime_helper(self,df:pd.DataFrame):
+        try:
+            return df.root.runtime.iloc[0,0]
+        except (KeyError,AttributeError) as e:
+            pass
+
+    def getRuntime(self):
+        return [self.getRuntime_helper(run) for run in self.dfs]

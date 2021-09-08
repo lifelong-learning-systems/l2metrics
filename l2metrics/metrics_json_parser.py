@@ -6,12 +6,15 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from functools import reduce
 
-class MetricsJsonParser:
-    def __init__(self, json_file_name):
-        with open(json_file_name) as file:
-            self.data = json.load(file)
-        self.dfs = [pd.DataFrame(self.json_refactor(run_num)) for run_num in self.data]
-        # pass
+class MetricsParser:
+    def __init__(self, file_name, tsv:bool=False):
+        if tsv:
+            pass
+        else:
+            with open(file_name) as file:
+                self.data = json.load(file)
+            self.dfs = [pd.DataFrame(self.json_refactor(run_num)) for run_num in self.data]
+            # pass
     
     def toXL(self,):
         for idx,df in enumerate(self.dfs):
@@ -352,6 +355,48 @@ class MetricsJsonParser:
     def getForwardTransferContrast(self,taska:str=None,taskb:str=None)->List[Union[int,dict,list]]:
         return [self.__getForwardTransferContrast_helper(run,taska,taskb) for run in self.dfs]
 
+    def plotForwardTransferConstrast(self,plottype:str,taska:str=None,taskb:str=None):
+        if taska is None:
+            graph_data = [x for x in self.getForwardTransferConstrast() if x]
+            fig, ax = plt.subplots(1,1,figsize=(10,5))
+            if plottype == 'hist':
+                sns.histplot([x for x in graph_data], ax=ax)
+            elif plottype == 'dist':
+                sns.distplot([x for x in graph_data], ax=ax)
+            elif plottype == 'line':
+                sns.lineplot([x for x in graph_data], ax=ax)
+            return fig
+        elif taskb is None:
+            graph_titles,graph_data=self.dictflatten([x for x in self.getForwardTransferConstrast(taska) if x])
+            # print(graph_titles,graph_data)
+            fig, ax = plt.subplots(len(graph_titles),1,figsize=(18,5))
+            if plottype == 'hist':
+                i=0
+                for k,v in graph_data.items():
+                    sns.histplot(list(v), ax=ax[i]).set(title=k)
+                    i+=1
+            elif plottype == 'dist':
+                i=0
+                for k,v in graph_data.items():
+                    sns.distplot(list(v), ax=ax[i]).set(title=k)
+                    i+=1
+            elif plottype == 'line':
+                i=0
+                for k,v in graph_data.items():
+                    sns.lineplot(list(v), ax=ax[i]).set(title=k)
+                    i+=1
+            return fig
+        else:
+            graph_data=self.listflatten([x for x in self.getForwardTransferConstrast(taska,taskb) if x])
+            fig, ax = plt.subplots(1,1,figsize=(10,5))
+            if plottype == 'hist':
+                sns.histplot([x for x in graph_data], ax=ax)
+            elif plottype == 'dist':
+                sns.distplot([x for x in graph_data], ax=ax)
+            elif plottype == 'line':
+                sns.lineplot([x for x in graph_data], ax=ax)
+            return fig
+
     def __getMaintenanceValMRLEP_helper(self,df:pd.DataFrame,task:str)->list:
         try:
             return df.root.task_metrics[task].maintenance_val_mrlep.iloc[0,0]
@@ -360,6 +405,17 @@ class MetricsJsonParser:
     
     def getMaintenanceValMRLEP(self,task:str)->List[list]:
         return list(filter(None,[self.__getMaintenanceValMRLEP_helper(run,task) for run in self.dfs]))
+    
+    def plotMaintenenceValMRLEP(self,plottype:str,task:str):
+        graph_data = self.listflatten([x for x in self.getForwardTransferConstrast() if x])
+        fig, ax = plt.subplots(1,1,figsize=(10,5))
+        if plottype == 'hist':
+            sns.histplot([x for x in graph_data], ax=ax)
+        elif plottype == 'dist':
+            sns.distplot([x for x in graph_data], ax=ax)
+        elif plottype == 'line':
+            sns.lineplot([x for x in graph_data], ax=ax)
+        return fig
     
     def __getMaintenanceValMRTLP_helper(self,df:pd.DataFrame,task:str)->list:
         try:

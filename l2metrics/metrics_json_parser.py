@@ -9,7 +9,7 @@ from functools import reduce
 class MetricsParser:
     def __init__(self, file_name, tsv:bool=False):
         if tsv:
-            pass
+            self.df_tsv = pd.read_csv(file_name,sep='\t')
         else:
             with open(file_name) as file:
                 self.data = json.load(file)
@@ -100,6 +100,9 @@ class MetricsParser:
     def plotDist(self,data:list): 
         sns.distplot(data)
     
+    # -----------------------------------------------------
+    # JSON methods
+
     def __df2dict_helper(self,key:list,val:any):
         new_dict={}
         if len(key) == 1:
@@ -553,6 +556,8 @@ class MetricsParser:
         try:
             if task is None:
                 return df.root.sample_efficiency.iloc[0,0]
+            elif task is 'all':
+                return {t:df.root.task_metrics[t].sample_efficiency.iloc[0,0] for t in df.root.task_metrics.columns.levels[0]}
             else:
                 return df.root.task_metrics[task].sample_efficiency.iloc[0,0]
         except (KeyError,AttributeError) as e:
@@ -562,14 +567,33 @@ class MetricsParser:
         return [self.__getSampleEfficiency_helper(run,task) for run in self.dfs]
 
     def plotSampleEfficiency(self,plottype:str,task:str=None):
-        graph_data = [x for x in self.getSampleEfficiency(task) if x]
-        fig, ax = plt.subplots(1,1,figsize=(10,5))
-        if plottype == 'hist':
-            sns.histplot([x for x in graph_data], ax=ax)
-        elif plottype == 'dist':
-            sns.distplot([x for x in graph_data], ax=ax)
-        elif plottype == 'line':
-            sns.lineplot([x for x in graph_data], ax=ax)
+        if task is 'all':
+            graph_titles,graph_data = self.dictflatten([x for x in self.getSampleEfficiency(task) if x])
+            fig, ax = plt.subplots(len(graph_titles),1,figsize=(18,30))
+            if plottype == 'hist':
+                i=0
+                for k,v in graph_data.items():
+                    sns.histplot([x for x in v], ax=ax[i]).set(title=k+' Sample Efficiency')
+                    i+=1
+            elif plottype == 'dist':
+                i=0
+                for k,v in graph_data.items():
+                    sns.distplot([x for x in v], ax=ax[i]).set(title=k+' Sample Efficiency')
+                    i+=1
+            elif plottype == 'line':
+                i=0
+                for k,v in graph_data.items():
+                    sns.lineplot([x for x in v], ax=ax[i]).set(title=k+' Sample Efficiency')
+                    i+=1
+        else:
+            graph_data = [x for x in self.getSampleEfficiency(task) if x]
+            fig, ax = plt.subplots(1,1,figsize=(10,5))
+            if plottype == 'hist':
+                sns.histplot([x for x in graph_data], ax=ax)
+            elif plottype == 'dist':
+                sns.distplot([x for x in graph_data], ax=ax)
+            elif plottype == 'line':
+                sns.lineplot([x for x in graph_data], ax=ax)
         return fig
 
     def __getRunID_helper(self,df:pd.DataFrame)->str:
@@ -715,7 +739,7 @@ class MetricsParser:
     def getSTERelPerf(self,task:str=None):
         return [self.__getSTERelPerf_helper(run,task) for run in self.dfs]
 
-    def __getSampleEfficiency_helper(self,df:pd.DataFrame,task:str=None):
+    def __getSampleEfficiency_helper(self,df:pd.DataFrame,task:str=None)-> List[int]:
         try:
             if task is None:
                 return df.root.sample_efficiency.iloc[0,0]
@@ -727,12 +751,25 @@ class MetricsParser:
     def getSTERelPerf(self,task:str=None):
         return [self.getSampleEfficiency(run,task) for run in self.dfs]
 
+    def plotSTERelPerf(self,plottype:str,task:str=None):
+        graph_data = [x for x in self.getSTERelPerf(task) if x]
+        fig, ax = plt.subplots(1,1,figsize=(10,5))
+        if plottype == 'hist':
+            sns.histplot([x for x in graph_data], ax=ax)
+        elif plottype == 'dist':
+            sns.distplot([x for x in graph_data], ax=ax)
+        elif plottype == 'line':
+            sns.lineplot([x for x in graph_data], ax=ax)
+        return fig
+
     def __getSTERelPerfVals_helper(self,df:pd.DataFrame,task:str)->list:
         try:
             return df.root.task_metrics[task].ste_rel_perf_vals.iloc[0,0]
         except (KeyError,AttributeError) as e:
             pass
     
+
+
     def getSTERelPerfVals(self,task:str)->List[list]:
         return [self.__getSTERelPerfVals_helper(run,task) for run in self.dfs]
     
@@ -807,3 +844,21 @@ class MetricsParser:
 
     def getRuntime(self):
         return [self.__getRuntime_helper(run) for run in self.dfs]
+
+    # ----------------------------------------------------------------------------
+    # TSV methods
+
+    def getRegime(self,):
+        return self.df_tsv.regime_num
+        pass
+    def getRegimeByTask(self,task:str):
+        return self.df_tsv[self.df_tsv.task == task].regime_num
+        pass
+    def getRegimeByBlockType(self,blktype:str=None,subtype:str=None):
+        if subtype and blktype:
+            return self.df_tsv[(self.df_tsv.block_type == blktype) & (self.df_tsv.block_subtype == subtype)].regime_num
+        elif subtype:
+            return self.df_tsv[self.df_tsv.block_subtype == subtype].regime_num
+        else:
+            return self.df_tsv[self.df_tsv.block_type == blktype].regime_num
+        pass

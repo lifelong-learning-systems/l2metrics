@@ -10,7 +10,7 @@ class MetricsParser:
     dfs = None
     df_tsv=None 
 
-    def init(self, file_name, tsv:bool=False):
+    def __init__(self, file_name, tsv:bool=False):
         if tsv:
             self.df_tsv = pd.read_csv(file_name,sep='\t')
         else:

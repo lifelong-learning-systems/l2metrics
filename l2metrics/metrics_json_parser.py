@@ -955,7 +955,7 @@ class MetricsParser:
             pass
 
     def getUniqueTaskNames(self):
-        return set(self.listflatten([self.getUniqueTaskNames_helper(run) for run in self.dfs]).remove(None))
+        return set(self.listflatten([list(self.getUniqueTaskNames_helper(run)) for run in self.dfs]))
 
     # ----------------------------------------------------------------------------
     # TSV methods

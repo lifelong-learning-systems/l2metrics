@@ -947,6 +947,15 @@ class MetricsParser:
         elif plottype == 'line':
             sns.lineplot([x for x in graph_data], ax=ax)
         return fig
+    
+    def getUniqueTaskNames_helper(self,df:pd.DataFrame):
+        try:
+            return df.root.task_metrics.columns.levels[0]
+        except (KeyError,AttributeError) as e:
+            pass
+
+    def getUniqueTaskNames(self):
+        return set(self.listflatten([self.getUniqueTaskNames_helper(run) for run in self.dfs]).remove(None))
 
     # ----------------------------------------------------------------------------
     # TSV methods

@@ -376,7 +376,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
                 # Create subplot
                 ax = fig.add_subplot(rows, cols, index + 1)
 
-                plt.scatter([], [], label=task_name, color=task_color, marker='*', s=8)  
+                plt.scatter([], [], label=task_name, color=task_color, marker='*', s=8)
                 plt.scatter([], [], label='STE', color='orange', marker='*', s=8)
 
                 # Plot LL data
@@ -401,7 +401,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
                     # Plot runs of STE data
                     for y in y_ste:
                         x = list(range(0, len(y)))
-                        ax.plot(x, y, color='orange', linewidth=2)
+                        ax.scatter(x, y, color='orange', marker='*', s=8)
                         x_limit = max(x_limit, len(y), len(y_ll))
                         y_limit = (np.nanmin([y_limit[0], np.nanmin(y), np.nanmin(y_ll)]),
                                 np.nanmax([y_limit[1], np.nanmax(y), np.nanmax(y_ll)]))

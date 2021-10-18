@@ -1,5 +1,7 @@
 # Lifelong Learning Metrics (L2Metrics)
 
+![logo](docs/apl_small_vertical_blue.png)
+
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -14,7 +16,7 @@
   - [Generating a Metrics Report](#generating-metrics-report)
   - [Custom Metrics](#custom-metrics)
 - [License](#license)
-- [Notes](#notes)
+- [Acknowledgements](#acknowledgements)
 
 ## Introduction
 
@@ -361,6 +363,8 @@ See documentation in the examples folder at [examples/README.md](./examples/READ
 
 See [LICENSE](LICENSE) for license information.
 
-## Notes
+## Acknowledgements
 
-There are aspects of L2Metrics still under development including support for distributed training and testing/validation. This repository is being released to facilitate experimentation and feedback regarding the overall approach.
+Primary development of Lifelong Learning Metrics (L2Metrics) was funded by the DARPA Lifelong Learning Machines (L2M) Program.
+
+© 2021 The Johns Hopkins University Applied Physics Laboratory LLC

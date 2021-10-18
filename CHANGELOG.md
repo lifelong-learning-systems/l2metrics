@@ -2,6 +2,13 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.13.0 - 2021-10-18
+
+- Filtered out wake EBs in plotting methods
+- Sanitized metrics JSON parser example notebook
+- Minor STE plot appearance changes
+- Updated README and copyright statement
+
 ## 2.12.0 - 2021-08-17
 
 - Implemented class for parsing metrics JSON files (WIP)

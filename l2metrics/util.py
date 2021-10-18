@@ -1,20 +1,23 @@
-# (c) 2019 The Johns Hopkins University Applied Physics Laboratory LLC (JHU/APL).
-# All Rights Reserved. This material may be only be used, modified, or reproduced
-# by or for the U.S. Government pursuant to the license rights granted under the
-# clauses at DFARS 252.227-7013/7014 or FAR 52.227-14. For any other permission,
-# please contact the Office of Technology Transfer at JHU/APL.
+"""
+Copyright © 2021 The Johns Hopkins University Applied Physics Laboratory LLC
 
-# NO WARRANTY, NO LIABILITY. THIS MATERIAL IS PROVIDED “AS IS.” JHU/APL MAKES NO
-# REPRESENTATION OR WARRANTY WITH RESPECT TO THE PERFORMANCE OF THE MATERIALS,
-# INCLUDING THEIR SAFETY, EFFECTIVENESS, OR COMMERCIAL VIABILITY, AND DISCLAIMS
-# ALL WARRANTIES IN THE MATERIAL, WHETHER EXPRESS OR IMPLIED, INCLUDING (BUT NOT
-# LIMITED TO) ANY AND ALL IMPLIED WARRANTIES OF PERFORMANCE, MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT OF INTELLECTUAL PROPERTY
-# OR OTHER THIRD PARTY RIGHTS. ANY USER OF THE MATERIAL ASSUMES THE ENTIRE RISK
-# AND LIABILITY FOR USING THE MATERIAL. IN NO EVENT SHALL JHU/APL BE LIABLE TO ANY
-# USER OF THE MATERIAL FOR ANY ACTUAL, INDIRECT, CONSEQUENTIAL, SPECIAL OR OTHER
-# DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE MATERIAL, INCLUDING,
-# BUT NOT LIMITED TO, ANY DAMAGES FOR LOST PROFITS.
+Permission is hereby granted, free of charge, to any person obtaining a copy 
+of this software and associated documentation files (the “Software”), to 
+deal in the Software without restriction, including without limitation the 
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or 
+sell copies of the Software, and to permit persons to whom the Software is 
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in 
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR 
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
 
 import os
 import pickle
@@ -166,6 +169,10 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
     else:
         reward_col_smooth = None
 
+    # Use sleep evaluation blocks if they exist and filter out wake evaluation
+    if 'sleep' in dataframe['block_subtype'].to_numpy():
+        dataframe = dataframe[~(dataframe.block_type.isin(['test']) & dataframe.block_subtype.isin(['wake']))]
+
     df_test = dataframe[dataframe.block_type == 'test']
     df_train = dataframe[dataframe.block_type == 'train']
 
@@ -221,6 +228,7 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
 
     # Set y-axis limits
     plt.setp(fig.axes, ylim=(np.nanmin(df_test[reward_col]), np.nanmax(df_test[reward_col])))
+    fig.tight_layout()
 
     if do_save_fig:
         print(f'Saving block plot with name: {plot_filename.replace(" ", "_")}')
@@ -261,6 +269,11 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         task_colors = color_selection[:len(unique_tasks)]
     else:
         task_colors = [color_selection[i % len(color_selection)] for i in range(len(unique_tasks))]
+
+    # Use sleep evaluation blocks if they exist and filter out wake evaluation
+    if 'sleep' in block_info['block_subtype'].to_numpy():
+        block_info = block_info[~(block_info.block_type.isin(['test']) & block_info.block_subtype.isin(['wake']))]
+        dataframe = dataframe[~(dataframe.block_type.isin(['test']) & dataframe.block_subtype.isin(['wake']))]
 
     # Loop through tasks and plot their performance curves
     for task_color, task in zip(task_colors, unique_tasks):
@@ -308,6 +321,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
     # Want the saved figured to have a grid so do this before saving
     ax.set(xlabel=input_xlabel, ylabel=input_ylabel, title=input_title)
     ax.grid()
+    fig.tight_layout()
 
     if do_save_fig:
         print(f'Saving performance plot with name: {plot_filename.replace(" ", "_")}')
@@ -367,7 +381,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
                 # Create subplot
                 ax = fig.add_subplot(rows, cols, index + 1)
 
-                plt.scatter([], [], label=task_name, color=task_color, marker='*', s=8)  
+                plt.scatter([], [], label=task_name, color=task_color, marker='*', s=8)
                 plt.scatter([], [], label='STE', color='orange', marker='*', s=8)
 
                 # Plot LL data
@@ -392,7 +406,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
                     # Plot runs of STE data
                     for y in y_ste:
                         x = list(range(0, len(y)))
-                        ax.plot(x, y, color='orange', linewidth=2)
+                        ax.scatter(x, y, color='orange', marker='*', s=8)
                         x_limit = max(x_limit, len(y), len(y_ll))
                         y_limit = (np.nanmin([y_limit[0], np.nanmin(y), np.nanmin(y_ll)]),
                                 np.nanmax([y_limit[1], np.nanmax(y), np.nanmax(y_ll)]))
@@ -412,6 +426,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
     fig.subplots_adjust(wspace=0.3, hspace=0.4)
 
     plt.setp(fig.axes, xlim=(0, x_limit), ylim=y_limit)
+    fig.tight_layout()
 
     if do_save:
         print(f'Saving STE plot with name: {plot_filename.replace(" ", "_")}')

@@ -15,6 +15,7 @@
   - [Storing Single-Task Expert Data](#storing-single-task-expert-data)
   - [Generating a Metrics Report](#generating-metrics-report)
   - [Custom Metrics](#custom-metrics)
+- [Changelog](#changelog)
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
 
@@ -358,6 +359,10 @@ The black dashed lines indicate the block boundaries where task performance was 
 ### Custom Metrics
 
 See documentation in the examples folder at [examples/README.md](./examples/README.md) for more details on how to implement custom metrics.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a list of notable changes to the project.
 
 ## License
 

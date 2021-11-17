@@ -156,7 +156,7 @@ def collect_task_data(feather_data: pd.DataFrame, perf_key: str, run_ids: list =
 
 def mean_task_results(task_data_samples: list, base_perfs: dict):
     """
-    Compute the mean area-between-curve (AreaBC) and Quarter AreaBC differences between runs with
+    Compute the mean area-between-curve (AreaBC) and n-division AreaBC differences between runs with
     repeated (1st, 2nd) task pairs. Return that as well as the numbers of samples for each.
     :param task_data_samples: (list) A list of dictionaries, where each contains the data for one ABC value.
     :param base_perfs: (dict) A dictionary of performance curves for each task trained in the first block. The
@@ -246,10 +246,10 @@ def show_task_transfer_info(means, counts, print_table=False, plots=False):
         n_div_matrix = means[m]['n_div_matrix']
         print()
         print("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
-        print('pre-train task:', pre_train_task, '-- task:', task2)
-        print('Num samples:', num_samples)
+        print('Pre-train task (Task1):', pre_train_task, '-- Learning task (Task2):', task2)
+        print('Number of samples for this task pair (averaged over):', num_samples)
         print("Area between curves (normalized by num LXs):", abcs)
-        print("Table diagonal values (diffs) +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        print("Division matrix diagonal values +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         n_diags = n_div_matrix.shape[0]
         out_strs = [f"{i}:  {n_div_matrix[i, i]}," for i in range(n_diags)]
         print(' '.join(out_strs)[:-1])

@@ -22,7 +22,15 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 This is meant to be a Python module containing function definitions for 
 computing the Area Between Curve (ABC) transfer measure of a lifelong 
-learning experiment.  
+learning experiment.  ABC transfer is an alternate transfer metric that
+attempts to account for the differences in training an L2 agent without
+experience with another task and with experience with another task. This
+is done by computing the area between the performance curves for the 
+two aforementioned cases. It is hoped that this measure will better
+reflect the overall benefits of pre-training, including:
+- Accelerated learning rate
+- Initial jumpstart transfer
+- Difference in final performance
 
 """
 
@@ -33,9 +41,10 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 
 from prettytable import PrettyTable
+from typing import Union, Tuple
 
 
-def make_n_divs(perf1: np.ndarray, perf2: np.ndarray, divs: int = 4):
+def _make_n_divs(perf1: np.ndarray, perf2: np.ndarray, divs: int = 4) -> (np.ndarray, np.ndarray):
     """
     Given two performance curves, divide them into 'divs' equal divisions, and return the areas under
     each section of each curve. Note that each area is normalized to fit in the interval [0, 1], which is the same as
@@ -58,7 +67,7 @@ def make_n_divs(perf1: np.ndarray, perf2: np.ndarray, divs: int = 4):
     return n_divs1, n_divs2
 
 
-def get_n_divs_matrix(perf1: np.ndarray, perf2: np.ndarray, divs: int = 4):
+def _get_n_divs_matrix(perf1: np.ndarray, perf2: np.ndarray, divs: int = 4) -> np.ndarray:
     """
     Given two performance curves, divide them into 'divs' equal divisions, and return the areas under
     each section of each curve. Then compute the differences in area between 'perf2' divisions and the 'perf1' divisions
@@ -72,7 +81,7 @@ def get_n_divs_matrix(perf1: np.ndarray, perf2: np.ndarray, divs: int = 4):
     :return (ndarray) <divs> by <divs> size matrix of area under the curve differences between performance curve 2 and
     performance curve 1.
     """
-    t1_n_divs, t2_n_divs = make_n_divs(perf1, perf2, divs=divs)
+    t1_n_divs, t2_n_divs = _make_n_divs(perf1, perf2, divs=divs)
 
     end = divs + 1
     div_matrix = np.array(
@@ -81,7 +90,8 @@ def get_n_divs_matrix(perf1: np.ndarray, perf2: np.ndarray, divs: int = 4):
     return div_matrix
 
 
-def collect_task_data(feather_data: pd.DataFrame, perf_key: str, run_ids: list = None, num_divs: int = 4):
+def calculate_abc(feather_data: pd.DataFrame, perf_key: str, run_ids: Union[list, None] = None, num_divs: int = 4)\
+        -> Tuple[list, dict]:
     """
     Collect performance data for all 1st and 2nd training task pairs for a given feather file and the desired set of
      run IDs. Construct the mean base performance for each 1st task, and compute the areas between the 2nd task curve
@@ -100,7 +110,7 @@ def collect_task_data(feather_data: pd.DataFrame, perf_key: str, run_ids: list =
         get all run IDs from the feather file
     :param num_divs: (int) How many equal divisions to divide the performance curve into. Note that the size of each
         division might not be perfectly equal if 'divs' doesn't perfectly divide the full size of the curve.
-    :return: (Tuple(dict, dict)) samples, base performance curves
+    :return: (Tuple(list, dict)) samples, base performance curves
     """
 
     all_samples = []
@@ -148,13 +158,13 @@ def collect_task_data(feather_data: pd.DataFrame, perf_key: str, run_ids: list =
         s['task2_perf'] = perf2  # store with new len
         s["base_perf"] = base_perf  # store with new len
         s["area_between_curves"] = np.trapz(perf2 - base_perf, dx=1 / common_lxs)  # normalize by num lxs in integral
-        s["n_div_matrix"] = get_n_divs_matrix(base_perf, perf2, divs=num_divs)
+        s["n_div_matrix"] = _get_n_divs_matrix(base_perf, perf2, divs=num_divs)
         assert len(base_perf) == len(perf2)
 
     return all_samples, base_perfs
 
 
-def mean_task_results(task_data_samples: list, base_perfs: dict):
+def mean_task_results(task_data_samples: list, base_perfs: dict) -> Tuple[dict, dict]:
     """
     Compute the mean area-between-curve (AreaBC) and n-division AreaBC differences between runs with
     repeated (1st, 2nd) task pairs. Return that as well as the numbers of samples for each.
@@ -194,7 +204,7 @@ def mean_task_results(task_data_samples: list, base_perfs: dict):
     return all_task_tuples, num_samples
 
 
-def pretty_table(div_matrix: np.ndarray):
+def _pretty_table(div_matrix: np.ndarray) -> PrettyTable:
     """
     Create human readable table of the ABC difference values matrix.
     :param div_matrix: (ndarray) Square matrix of division ABC differences.
@@ -208,7 +218,8 @@ def pretty_table(div_matrix: np.ndarray):
     return tab
 
 
-def get_task_transfer_quarters(feather_data, run_ids, perf_key='reward_normalized'):
+def get_task_transfer_quarters(feather_data: pd.DataFrame, run_ids: list, perf_key: str = 'reward_normalized') \
+        -> Tuple[dict, dict]:
     """
     Get the mean ABC values and n_div_matrices. Return those and the number of samples per task pair used to compute
     the mean. Really just a convenience function.
@@ -220,12 +231,12 @@ def get_task_transfer_quarters(feather_data, run_ids, perf_key='reward_normalize
     :return (dict, dict) A dictionary of mean performance data per task-tuple pair, and another with just the number
         of samples per pair.
     """
-    task_information, base_perfs = collect_task_data(feather_data, run_ids, perf_key, num_divs=4)
+    task_information, base_perfs = calculate_abc(feather_data, perf_key, run_ids, num_divs=4)
     means, counts = mean_task_results(task_information, base_perfs)
     return means, counts
 
 
-def show_task_transfer_info(means, counts, print_table=False, plots=False):
+def show_task_transfer_info(means: dict, counts: dict, print_table: bool = False, plots: bool = False) -> None:
     """
     Given the means and numbers of samples of task-pair performances, print useful information, normalized
     by the number of LXs in each curve, and plot performance curves and n_div_matrix.
@@ -255,7 +266,7 @@ def show_task_transfer_info(means, counts, print_table=False, plots=False):
         print(' '.join(out_strs)[:-1])
         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         if print_table:
-            print(pretty_table(n_div_matrix))
+            print(_pretty_table(n_div_matrix))
         if plots:
             sns.heatmap(n_div_matrix)
             plt.show()
@@ -276,10 +287,17 @@ def show_task_transfer_info(means, counts, print_table=False, plots=False):
         print("----------------------------------------------------------------------------------------\n\n")
 
 
-def task_transfer_quarters(feather_data, run_ids, perf_key='reward_normalized', print_table=True, plots=True):
+def calculate_abc_quarters(feather_data: pd.DataFrame, run_ids: list, perf_key: str = 'reward_normalized',
+                           print_table: bool = True, plots: bool = True) -> None:
     """
     A convenience function. Compute and show mean area-between-curve transfer information for a given set of feather
     data.
+    :param feather_data: (DataFrame) SG data from feather file
+    :param run_ids: (list of strings) Run IDs to pull from the feather data to use in computing ABC measure.
+    :param perf_key: (str) Performance value used for this SG to extract performance values from previously mentioned
+        DataFrames, for example: 'performance_normalized'.
+    :param print_table: (bool) If true, print the table of division data as part of the output.
+    :param plots: (bool) If true, plot the n_div_matrix as a heatmap and the curve mean performance curves.
     """
     means, counts = get_task_transfer_quarters(feather_data, run_ids, perf_key=perf_key)
     show_task_transfer_info(means, counts, print_table=print_table, plots=plots)

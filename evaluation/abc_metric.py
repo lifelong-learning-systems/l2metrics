@@ -32,16 +32,54 @@ reflect the overall benefits of pre-training, including:
 - Initial jumpstart transfer
 - Difference in final performance
 
+We define **ABC Transfer** as follows:
+
+
+    ABC(T_1, T_2) = integral{ (P_{T_2 | T_1}(l) - B_{T_2}(l))dl } 
+                  = integral{ P_{T_2 | T_1}(l)dl } - integral{ B_{T_2}(l)dl }
+
+
+where T_1 is the task pre-trained on, and T_2 is the task trying to be learned. P_{T_i| T_j}(l) is the performance
+curve of task i given that it was pre-trained on task j, B_{T_i} is some baseline performance of a learning 
+algorithm on task i, and l in R denotes the l-th learning experience (LX) in the training block. 
+
+This Implementation:
+
+- Expected data format and baseline performance
+This implementation assumes that there will be a set number of tasks for the agent to learn, and that the agent will 
+experience all of them in a single lifetime. Then multiple lifetimes will be ran with different permutations of the 
+tasks. This implementation consumes data from a set of lifetimes (runs), computes a baseline performance for each task 
+by averaging the performance curves of each task ran in the first training block. For example, if there are two 
+lifetimes in which task $T_b$ is trained on first, the baseline performance curve for task $T_b$ will be the average of 
+the two curves, and so on for each task. In cases where the lengths of the curves are different, we cut off the end of 
+the longer curve so they have the same number of LXs. Naturally, *that means there may be tasks for which ABC will not 
+be computed if it was never ran first in the training sequence*. 
+
+- Normalization
+In order to facilitate comparability between different environments, tasks, and systems, we normalize the ABC values by 
+the number of LXs in the performance curve (or performance curve segments if examining ABC of a section of the curve). 
+This is accomplished by making the substitution x = l/n, where n is the number of LXs in the performance and baseline 
+curves (if their lengths are different, we drop the end of the longer curve to make them the same). The result is
+
+    ABC(T_1, T_2) = integral |(0, n) { (P_{T_2 | T_1}(l) - B_{T_2}(l))dl }
+    = integral |(0, n) { P_{T_2 | T_1}(l)dl } - integral |(0, n) { B_{T_2}(l)dl }
+    = integral |(0, 1) { (P_{T_2 | T_1}(nx) - B_{T_2}(nx))dx }
+    = integral |(0, 1) { P_{T_2 | T_1}(nx)dx } - integral |(0, 1) { B_{T_2}(nx)dx } 
+
+Computation:
+
+The computation is accomplished via the Trapezoid Rule using `numpy`'s `trapz` method. 
+
 """
+
+import os
+from typing import Union, Tuple
 
 import numpy as np
 import pandas as pd
-
-from matplotlib import pyplot as plt
 import seaborn as sns
-
+from matplotlib import pyplot as plt
 from prettytable import PrettyTable
-from typing import Union, Tuple
 
 
 def _make_n_divs(perf1: np.ndarray, perf2: np.ndarray, divs: int = 4) -> (np.ndarray, np.ndarray):
@@ -79,7 +117,15 @@ def _get_n_divs_matrix(perf1: np.ndarray, perf2: np.ndarray, divs: int = 4) -> n
     :param divs (int) How many equal divisions to divide the performance curve into. Note that the size of each division
     might not be perfectly equal if 'divs' doesn't perfectly divide the full size of the curve.
     :return (ndarray) <divs> by <divs> size matrix of area under the curve differences between performance curve 2 and
-    performance curve 1.
+    performance curve 1. The following is an example of the data fit into a table:
+    +----------------------+--------+-------+-------+-------+
+    | T1\\T2 Division Diffs | T2.D1 | T2.D2 | T2.D3 | T2.D4 |
+    +----------------------+-------+-------+-------+-------+
+    |        T1.D1         | 41.73 | 53.07 | 62.18 | 66.32 |
+    |        T1.D2         | 28.00 | 39.34 | 48.45 | 52.58 |
+    |        T1.D3         | 13.06 | 24.40 | 33.51 | 37.64 |
+    |        T1.D4         | 00.70 | 12.04 | 21.15 | 25.29 |
+    +----------------------+-------+-------+-------+-------+
     """
     t1_n_divs, t2_n_divs = _make_n_divs(perf1, perf2, divs=divs)
 
@@ -90,8 +136,8 @@ def _get_n_divs_matrix(perf1: np.ndarray, perf2: np.ndarray, divs: int = 4) -> n
     return div_matrix
 
 
-def calculate_abc(feather_data: pd.DataFrame, perf_key: str, run_ids: Union[list, None] = None, num_divs: int = 4)\
-        -> Tuple[list, dict]:
+def calculate_abc(feather_data: Union[pd.DataFrame, str], perf_key: str, run_ids: Union[list, None] = None,
+                  num_divs: int = 4) -> Tuple[list, dict]:
     """
     Collect performance data for all 1st and 2nd training task pairs for a given feather file and the desired set of
      run IDs. Construct the mean base performance for each 1st task, and compute the areas between the 2nd task curve
@@ -103,15 +149,58 @@ def calculate_abc(feather_data: pd.DataFrame, perf_key: str, run_ids: Union[list
         and
         - Computed base performance vector (1st task)
 
-    :param feather_data: (DataFrame) SG data from feather file
-    :param perf_key: (str) Performance value used for this SG to extract performance values from previously mentioned
-        DataFrames, for example: 'performance_normalized'.
-    :param run_ids: (list of strings) Run IDs to pull from the feather data to use in computing ABC measure. If None,
-        get all run IDs from the feather file
+    :param feather_data: (DataFrame or path) Agent lifetime performance data included in the feather file generated from
+        running L2Metrics (see README.md for L2Metrics). For example, if running L2Metrics on a set of lifetimes were to
+        produce the file `/Users/user/data/agent1_experiment.feather`, then
+
+        ```
+        feather_data = pd.read_feather("/Users/user/data/agent1_experiment.feather")
+        ```
+
+        would be an appropriate designation for this parameter. If a path-like input is given, the function will attempt
+        to create a Pandas DataFrame using the given path and assuming it is in feather format
+        (https://pandas.pydata.org/docs/reference/api/pandas.read_feather.html). See the L2Metrics README for more
+        information on feather files.
+    :param perf_key: (str) Name of the performance column in the feather file to use. This is likely the name of the
+        application-specific performance and the preprocessing applied separated by an underscore, e.g.
+        "performance_normalized". See the L2Metrics README for more information about the columns of the feather file.
+    :param run_ids: (list of strings, or None) Run IDs (designating each lifetime) to pull from the feather data to use
+        in computing ABC measure. These are under the "run_id" column of the feather file. If None, use all run IDs
+        included in the given feather data.
     :param num_divs: (int) How many equal divisions to divide the performance curve into. Note that the size of each
         division might not be perfectly equal if 'divs' doesn't perfectly divide the full size of the curve.
-    :return: (Tuple(list, dict)) samples, base performance curves
+    :return: (Tuple(list, dict)) List of individual ABC measure samples, and base performance curves. Each ABC sample
+        is of the form:
+
+            {
+            "task1_id": <str>,               # ID for the 1st training task, i.e. task being transferred from
+            "task1_perf": <numpy.ndarray>,   # Performance curve for task 1
+            "task2_id": <str>,               # ID for the 2nd training task, i.e. task being transferred to
+            "task2_perf": <numpy.ndarray>,   # Performance curve for task 2
+            "area_between_curves": <float>,  # ABC value from task 1 to task 2
+            "base_perf": <numpy.ndarray>,    # Baseline (mean) performance for this agent on task 2, from feather data
+            "n_div_matrix": <numpy.ndarray>  # Matrix of ABC values between each subsection of task 2 and task 1
+            }
+
+        The base performance curve dictionary is simply a separate dictionary containing the baseline performance
+        curves for all tasks, e.g.
+
+            {
+            <task1_id>: <numpy.ndarray>,
+            ...
+            <taskN_id>: <numpy.ndarray>
+            }
+
+        and is returned in this format for convenience.
     """
+
+    if not isinstance(feather_data, pd.DataFrame):
+        if not os.path.isfile(feather_data):
+            raise TypeError("Argument 'feather_data' must be a Pandas DataFrame object or path to a feather file "
+                            "readable via `pandas.read_feather`. Instead got type {} with value "
+                            "{}".format(type(feather_data), feather_data))
+        else:
+            feather_data = pd.read_feather(feather_data)
 
     all_samples = []
     for syl, df in feather_data.groupby('run_id'):
@@ -166,14 +255,40 @@ def calculate_abc(feather_data: pd.DataFrame, perf_key: str, run_ids: Union[list
 
 def mean_task_results(task_data_samples: list, base_perfs: dict) -> Tuple[dict, dict]:
     """
-    Compute the mean area-between-curve (AreaBC) and n-division AreaBC differences between runs with
-    repeated (1st, 2nd) task pairs. Return that as well as the numbers of samples for each.
-    :param task_data_samples: (list) A list of dictionaries, where each contains the data for one ABC value.
+    Compute the mean area-between-curve (ABC) and n-division ABC differences between all repeated task pairs.
+    Return that as well as the numbers of samples for each.  For example, if `task_data_samples` contains two samples of
+    (taskA, taskB) data (i.e. two dictionaries with task1_id="taskA" and task2_id="taskB"), then average their ABC
+    values, n_div_matrix values, and their performance curves together to get just one "sample" per task pair.
+
+    :param task_data_samples: (list) A list of dictionaries, where each contains the data for one ABC value. See
+        specification of first parameter returned from the <calculate_abc> function.
     :param base_perfs: (dict) A dictionary of performance curves for each task trained in the first block. The
         performance curve for each task is the mean performance over all of the performance curves available for that
-        task.
-    :return (dict, dict) A dictionary of mean performance data per task-tuple pair, and another with just the number
-        of samples per pair.
+        task. See specification of second parameter returned from the <calculate_abc> function.
+    :return (dict, dict) (means, num_samples) A dictionary of mean performance data per task-tuple pair, and a
+        dictionary with the number of samples per task pair. For example, means would be of the form:
+
+        {
+        '(task1_id, task2_id)': {
+                                   {
+                                    'task2_perf': <np.ndarray>,
+                                    "area_between_curves": float,
+                                    "n_div_matrix": <np.ndarray>,
+                                    "base_perf": <np.ndarray>
+                                   }
+                                },
+       '(task1_id, task3_id)': <dict>,
+       ...
+       '(task(N-1)_id, taskN_id): <dict>'
+       }
+
+       and num_samples would be of the form:
+
+       '(task1_id, task2_id)': <int>,
+       '(task1_id, task3_id)': <int>,
+       ...
+       '(task(N-1)_id, taskN_id): <int>'
+       }
     """
     all_task_tuples = {}
     num_samples = {}
@@ -207,6 +322,7 @@ def mean_task_results(task_data_samples: list, base_perfs: dict) -> Tuple[dict, 
 def _pretty_table(div_matrix: np.ndarray) -> PrettyTable:
     """
     Create human readable table of the ABC difference values matrix.
+
     :param div_matrix: (ndarray) Square matrix of division ABC differences.
     :return (PrettyTable) A PrettyTable object that is easily printed in human readable format.
     """
@@ -218,18 +334,16 @@ def _pretty_table(div_matrix: np.ndarray) -> PrettyTable:
     return tab
 
 
-def get_task_transfer_quarters(feather_data: pd.DataFrame, run_ids: list, perf_key: str = 'reward_normalized') \
-        -> Tuple[dict, dict]:
+def get_task_transfer_quarters(feather_data: Union[pd.DataFrame, str], run_ids: Union[list, None] = None,
+                               perf_key: str = 'reward_normalized') -> Tuple[dict, dict]:
     """
-    Get the mean ABC values and n_div_matrices. Return those and the number of samples per task pair used to compute
-    the mean. Really just a convenience function.
+    Convenience function, combining `calculate_abc` and `mean_task_results`. Get the mean ABC values and n_div_matrices.
+    Return those and the number of samples per task pair used to compute the mean.
 
-    :param feather_data: (DataFrame) SG data from feather file
-    :param run_ids: (list of strings) Run IDs to pull from the feather data to use in computing ABC measure.
-    :param perf_key: (str) Performance value used for this SG to extract performance values from previously mentioned
-        DataFrames, for example: 'performance_normalized'.
-    :return (dict, dict) A dictionary of mean performance data per task-tuple pair, and another with just the number
-        of samples per pair.
+    :param feather_data: (DataFrame or path) See definition for the same variable in `calculate_abc`.
+    :param run_ids: (list of strings, or None) See definition for the same variable in `calculate_abc`.
+    :param perf_key: (str) See definition for the same variable in `calculate_abc`.
+    :return (dict, dict) See definition for the return value of `mean_task_results`.
     """
     task_information, base_perfs = calculate_abc(feather_data, perf_key, run_ids, num_divs=4)
     means, counts = mean_task_results(task_information, base_perfs)
@@ -238,13 +352,24 @@ def get_task_transfer_quarters(feather_data: pd.DataFrame, run_ids: list, perf_k
 
 def show_task_transfer_info(means: dict, counts: dict, print_table: bool = False, plots: bool = False) -> None:
     """
-    Given the means and numbers of samples of task-pair performances, print useful information, normalized
-    by the number of LXs in each curve, and plot performance curves and n_div_matrix.
+    Given the means and numbers of samples of task-pair performances (i.e. output of `mean_task_results`), print the
+    following values for each task pair:
+        - task 1 name ("pre-train", or "transfer-from" task)
+        - task 2 name ("learning", or "transfer-to" task)
+        - Number of samples for the given task pair
+        - Average ABC for the given task pair
+        - Diagonal values of the n-div-matrix; corresponds to the ABC values for each division with itself
 
-    :param means: (dict) A dictionary of mean performance data per task-tuple pair.
-    :param counts: (dict) A dictionary with the number of samples per pair used to compute the mean performance data.
+    Optionally, print a human readable table of the n_div_matrix results if 'print_table' is set to True. Also
+    optionally, show a plot of the n_div_matrix as a heatmap, and show another plot of mean performance curve and the
+    baseline performance curve the area between the curves filled green for positive ABC, and filled red for negative
+    ABC.
+
+    :param means: (dict) See definition for the first return value of `mean_task_results`.
+    :param counts: (dict) See definition for the second return value of `mean_task_results`.
     :param print_table: (bool) If true, print the table of division data as part of the output.
-    :param plots: (bool) If true, plot the n_div_matrix as a heatmap and the curve mean performance curves.
+    :param plots: (bool) If true, plot the n_div_matrix as a heatmap and the mean performance curve and baseline
+        performance with the area between those curves filled green for positive ABC and red for negative ABC.
     :return None
     """
     for m in means.keys():
@@ -287,17 +412,19 @@ def show_task_transfer_info(means: dict, counts: dict, print_table: bool = False
         print("----------------------------------------------------------------------------------------\n\n")
 
 
-def calculate_abc_quarters(feather_data: pd.DataFrame, run_ids: list, perf_key: str = 'reward_normalized',
-                           print_table: bool = True, plots: bool = True) -> None:
+def calculate_abc_quarters(feather_data: Union[pd.DataFrame, str], run_ids: Union[list, None] = None,
+                           perf_key: str = 'reward_normalized', print_table: bool = True, plots: bool = True) -> None:
     """
-    A convenience function. Compute and show mean area-between-curve transfer information for a given set of feather
-    data.
-    :param feather_data: (DataFrame) SG data from feather file
-    :param run_ids: (list of strings) Run IDs to pull from the feather data to use in computing ABC measure.
-    :param perf_key: (str) Performance value used for this SG to extract performance values from previously mentioned
-        DataFrames, for example: 'performance_normalized'.
+    A top-level convenience function combining "get_task_transfer_quarters", and "show_task_transfer_info". Effectively
+    reduces all other functions in the module into one function call to compute and then show mean
+    area-between-curve transfer information for the given feather data.
+
+    :param feather_data: (DataFrame or path) See definition for the same variable in `calculate_abc`.
+    :param run_ids: (list of strings or None) See definition for the same variable in `calculate_abc`.
+    :param perf_key: (str) See definition for the same variable in `calculate_abc`.
     :param print_table: (bool) If true, print the table of division data as part of the output.
     :param plots: (bool) If true, plot the n_div_matrix as a heatmap and the curve mean performance curves.
+    :return None
     """
     means, counts = get_task_transfer_quarters(feather_data, run_ids, perf_key=perf_key)
     show_task_transfer_info(means, counts, print_table=print_table, plots=plots)

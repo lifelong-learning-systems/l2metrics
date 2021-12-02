@@ -345,7 +345,7 @@ class MetricsReport():
 
     def calculate_regime_metrics(self) -> None:
         # Create dataframe for regime-level metrics
-        regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
+        regime_metrics = ['saturation', 'exp_to_sat', 'term_perf', 'exp_to_term_perf']
         self.regime_metrics_df = self.block_info[self.block_info_keys_to_include]
 
         # Fill regime metrics dataframe
@@ -382,9 +382,9 @@ class MetricsReport():
             self.backward_transfer_contrast = defaultdict(dict)
         self.task_metrics_df['ste_rel_perf_vals'] = [[]] * num_tasks
         self.task_metrics_df['ste_saturation_vals'] = [[]] * num_tasks
-        self.task_metrics_df['ste_eps_to_sat_vals'] = [[]] * num_tasks
+        self.task_metrics_df['ste_exp_to_sat_vals'] = [[]] * num_tasks
         self.task_metrics_df['se_saturation_vals'] = [[]] * num_tasks
-        self.task_metrics_df['se_eps_to_sat_vals'] = [[]] * num_tasks
+        self.task_metrics_df['se_exp_to_sat_vals'] = [[]] * num_tasks
         self.task_metrics_df['sample_efficiency_vals'] = [[]] * num_tasks
 
         # Create data structures for transfer values
@@ -436,29 +436,29 @@ class MetricsReport():
                             raise Exception('Unexpected size for relative performance')
                     elif metric == 'sample_efficiency':
                         task_sat = tm['se_task_saturation'].dropna().to_numpy(dtype=float)
-                        task_eps_to_sat = tm['se_task_eps_to_sat'].dropna().to_numpy(dtype=float)
+                        task_exp_to_sat = tm['se_task_exp_to_sat'].dropna().to_numpy(dtype=float)
                         ste_saturation = tm['se_ste_saturation'].dropna().to_numpy()
-                        ste_eps_to_sat = tm['se_ste_eps_to_sat'].dropna().to_numpy()
+                        ste_exp_to_sat = tm['se_ste_exp_to_sat'].dropna().to_numpy()
                         se_saturation = tm['se_saturation'].dropna().to_numpy()
-                        se_eps_to_sat = tm['se_eps_to_sat'].dropna().to_numpy()
+                        se_exp_to_sat = tm['se_exp_to_sat'].dropna().to_numpy()
                         se = tm[metric].dropna().to_numpy()
 
                         if se.size == 0:
                             self.task_metrics_df.at[task, 'se_task_saturation'] = np.NaN
-                            self.task_metrics_df.at[task, 'se_task_eps_to_sat'] = np.NaN
+                            self.task_metrics_df.at[task, 'se_task_exp_to_sat'] = np.NaN
                             self.task_metrics_df.at[task, 'ste_saturation_vals'] = []
-                            self.task_metrics_df.at[task, 'ste_eps_to_sat_vals'] = []
+                            self.task_metrics_df.at[task, 'ste_exp_to_sat_vals'] = []
                             self.task_metrics_df.at[task, 'se_saturation_vals'] = []
-                            self.task_metrics_df.at[task, 'se_eps_to_sat_vals'] = []
+                            self.task_metrics_df.at[task, 'se_exp_to_sat_vals'] = []
                             self.task_metrics_df.at[task, 'sample_efficiency_vals'] = []
                             self.task_metrics_df.at[task, metric] = np.NaN
                         elif se.size == 1:
                             self.task_metrics_df.at[task, 'se_task_saturation'] = task_sat[0]
-                            self.task_metrics_df.at[task, 'se_task_eps_to_sat'] = task_eps_to_sat[0]
+                            self.task_metrics_df.at[task, 'se_task_exp_to_sat'] = task_exp_to_sat[0]
                             self.task_metrics_df.at[task, 'ste_saturation_vals'] = ste_saturation[0]
-                            self.task_metrics_df.at[task, 'ste_eps_to_sat_vals'] = ste_eps_to_sat[0]
+                            self.task_metrics_df.at[task, 'ste_exp_to_sat_vals'] = ste_exp_to_sat[0]
                             self.task_metrics_df.at[task, 'se_saturation_vals'] = se_saturation[0]
-                            self.task_metrics_df.at[task, 'se_eps_to_sat_vals'] = se_eps_to_sat[0]
+                            self.task_metrics_df.at[task, 'se_exp_to_sat_vals'] = se_exp_to_sat[0]
                             self.task_metrics_df.at[task, 'sample_efficiency_vals'] = se[0]
                             self.task_metrics_df.at[task, metric] = np.nanmean(se[0])
                         else:

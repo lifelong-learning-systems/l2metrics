@@ -237,7 +237,7 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
 
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
                      x_axis_col: str = 'exp_num', y_axis_col: str = 'reward', input_title: str = '',
-                     input_xlabel: str = 'Episodes', input_ylabel: str = 'Performance',
+                     input_xlabel: str = 'Experiences', input_ylabel: str = 'Performance',
                      show_eval_lines: bool = True, show_block_boundary: bool = False,
                      shade_test_blocks: bool = True, output_dir: str = '', do_save_fig: bool = False,
                      plot_filename: str = 'performance_plot') -> None:
@@ -250,7 +250,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
         y_axis_col (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         input_title (str, optional): The plot title. Defaults to ''.
-        input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
+        input_xlabel (str, optional): The x-axis label. Defaults to 'Experiences'.
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
         show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
             changing slope of evaluation performance. Defaults to True.
@@ -330,7 +330,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
 
 def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFrame, unique_tasks: list,
                   perf_measure: str = 'reward', ste_averaging_method: str = 'metrics',
-                  input_title: str = '', input_xlabel: str = 'Episodes', input_ylabel: str = 'Performance',
+                  input_title: str = '', input_xlabel: str = 'Experiences', input_ylabel: str = 'Performance',
                   output_dir: str = '', do_save: bool = False, plot_filename: str = 'ste_plot') -> None:
     """Plots the relative performance of tasks compared to Single-Task Experts.
 
@@ -342,7 +342,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
         perf_measure (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         ste_averaging_method (str, optional): Method for handling STE metric averaging. Defaults to 'metrics'.
         input_title (str, optional): Plot title. Defaults to ''.
-        input_xlabel (str, optional): The x-axis label. Defaults to 'Episodes'.
+        input_xlabel (str, optional): The x-axis label. Defaults to 'Experiences'.
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_save (bool, optional): Flag for enabling saving figure. Defaults to False.

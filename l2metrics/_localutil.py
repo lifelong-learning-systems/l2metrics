@@ -92,7 +92,7 @@ def smooth(x: np.ndarray, window_len: int = None, window: str = 'flat') -> np.nd
 
 def get_block_saturation_perf(data: Union[pd.DataFrame, List], col_to_use: str = None,
                               prev_sat_val: float = None, window_len: int = None) -> Tuple[float, int, int]:
-    """Calculates the saturation value, episodes to saturation, and episodes to recovery.
+    """Calculates the saturation value, experiences to saturation, and experiences to recovery.
 
     Args:
         data (Union[pd.DataFrame, List]): The input data.
@@ -102,43 +102,43 @@ def get_block_saturation_perf(data: Union[pd.DataFrame, List], col_to_use: str =
         window_len (int, optional): The window length for smoothing the data. Defaults to None.
 
     Returns:
-        Tuple[float, int, int]: Saturation value, episodes to saturation, and episodes to recovery.
+        Tuple[float, int, int]: Saturation value, experiences to saturation, and experiences to recovery.
     """
 
-    # Aggregate multiple reward values for the same episode
+    # Aggregate multiple reward values for the same experience
     if isinstance(data, pd.DataFrame):
-        mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
-        mean_data = np.ravel(mean_reward_per_episode.to_numpy())
+        mean_reward_per_experience = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
+        mean_data = np.ravel(mean_reward_per_experience.to_numpy())
     else:
         mean_data = np.array(data)
 
-    # Take the moving average of the mean of the per episode reward
+    # Take the moving average of the mean of the per experience reward
     smoothed_data = smooth(mean_data, window_len=window_len)
     smoothed_data = smoothed_data[~np.isnan(smoothed_data)]
 
     if len(smoothed_data):
         sat_val = np.max(smoothed_data)
 
-        # Calculate the number of episodes to "saturation", which we define as the max of the moving average
+        # Calculate the number of experiences to "saturation", which we define as the max of the moving average
         indices = np.where(smoothed_data == sat_val)
-        eps_to_sat = int(indices[0][0])
-        eps_to_rec = len(data) + 1
+        exp_to_sat = int(indices[0][0])
+        exp_to_rec = len(data) + 1
 
         if prev_sat_val:
             indices = np.where(smoothed_data >= prev_sat_val)
             if len(indices[0]):
-                eps_to_rec = indices[0][0]
+                exp_to_rec = indices[0][0]
     else:
         sat_val = np.nan
-        eps_to_sat = np.nan
-        eps_to_rec = np.nan
+        exp_to_sat = np.nan
+        exp_to_rec = np.nan
 
-    return sat_val, eps_to_sat, eps_to_rec
+    return sat_val, exp_to_sat, exp_to_rec
 
 
 def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = None,
                       term_window_ratio: float = 0.1) -> Tuple[float, int, int]:
-    """Calculates the terminal performance, episodes to terminal performance, and episodes to recovery.
+    """Calculates the terminal performance, experiences to terminal performance, and experiences to recovery.
 
     Args:
         data (pd.DataFrame): The input data.
@@ -149,14 +149,14 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
             terminal performance. Defaults to 0.1 for training blocks and 1.0 for evaluation blocks.
 
     Returns:
-        Tuple[float, int, int]: Terminal performance, episodes to terminal performance,
-            and episodes to recovery.
+        Tuple[float, int, int]: Terminal performance, experiences to terminal performance,
+            and experiences to recovery.
     """
 
-    # Aggregate multiple reward values for the same episode
+    # Aggregate multiple reward values for the same experience
     if data.shape[0] > 1:
-        mean_reward_per_episode = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
-        mean_data = np.ravel(mean_reward_per_episode.to_numpy())
+        mean_reward_per_experience = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
+        mean_data = np.ravel(mean_reward_per_experience.to_numpy())
     else:
         mean_data = np.ravel(data[col_to_use].to_numpy(dtype=float))
 
@@ -169,22 +169,22 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
 
         terminal_value = np.mean(mean_data[int((1-term_window_ratio)*mean_data.size):])
 
-        # Calculate the number of episodes to terminal performance
-        episodes_to_terminal_perf = int((1-(term_window_ratio/2))*mean_data.size)
+        # Calculate the number of experiences to terminal performance
+        experiences_to_terminal_perf = int((1-(term_window_ratio/2))*mean_data.size)
 
         # Initialize recovery time to one more than number of learning experiences in the data
-        episodes_to_recovery = len(data) + 1
+        experiences_to_recovery = len(data) + 1
 
         if prev_val is not None:
             indices = np.where(mean_data >= prev_val)
             if len(indices[0]):
-                episodes_to_recovery = indices[0][0]
+                experiences_to_recovery = indices[0][0]
     else:
         terminal_value = np.nan
-        episodes_to_terminal_perf = np.nan
-        episodes_to_recovery = np.nan
+        experiences_to_terminal_perf = np.nan
+        experiences_to_recovery = np.nan
 
-    return terminal_value, episodes_to_terminal_perf, episodes_to_recovery
+    return terminal_value, experiences_to_terminal_perf, experiences_to_recovery
 
 
 def fill_metrics_df(data: dict, metric_string_name: str, metrics_df: pd.DataFrame, dict_key: str = None) -> pd.DataFrame:

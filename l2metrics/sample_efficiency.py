@@ -64,11 +64,11 @@ class SampleEfficiency(Metric):
 
             # Initialize metric dictionaries
             se_task_saturation = {}
-            se_task_eps_to_sat = {}
+            se_task_exp_to_sat = {}
             se_ste_saturation = {}
-            se_ste_eps_to_sat = {}
+            se_ste_exp_to_sat = {}
             se_saturation = {}
-            se_eps_to_sat = {}
+            se_exp_to_sat = {}
             sample_efficiency = {}
 
             for task in self.unique_tasks:
@@ -84,18 +84,18 @@ class SampleEfficiency(Metric):
                     ste_data = self.ste_data.get(task)
 
                     if ste_data:
-                        # Get task saturation value and episodes to saturation
-                        task_saturation, task_eps_to_sat, _ = get_block_saturation_perf(
+                        # Get task saturation value and experiences to saturation
+                        task_saturation, task_exp_to_sat, _ = get_block_saturation_perf(
                             task_data, col_to_use=self.perf_measure)
 
                         # Check for valid performance
-                        if task_eps_to_sat == 0:
+                        if task_exp_to_sat == 0:
                                 print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
                                 continue
                         
-                        # Store task saturation value and episodes to saturation
+                        # Store task saturation value and experiences to saturation
                         se_task_saturation[task_data['regime_num'].iloc[-1]] = task_saturation
-                        se_task_eps_to_sat[task_data['regime_num'].iloc[-1]] = task_eps_to_sat
+                        se_task_exp_to_sat[task_data['regime_num'].iloc[-1]] = task_exp_to_sat
 
                         if self.ste_averaging_method == 'time':
                             # Average all the STE data together after truncating to same length
@@ -104,64 +104,64 @@ class SampleEfficiency(Metric):
                             min_ste_exp = min(map(len, x_ste))
                             x_ste = np.array([x[:min_ste_exp] for x in x_ste]).mean(0)
 
-                            # Get STE saturation value and episodes to saturation
-                            ste_saturation, ste_eps_to_sat, _ = get_block_saturation_perf(x_ste)
+                            # Get STE saturation value and experiences to saturation
+                            ste_saturation, ste_exp_to_sat, _ = get_block_saturation_perf(x_ste)
 
                             # Check for valid performance
-                            if ste_eps_to_sat == 0:
+                            if ste_exp_to_sat == 0:
                                 print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
                                 continue
                             
-                            # Store STE saturation value and episodes to saturation
+                            # Store STE saturation value and experiences to saturation
                             se_ste_saturation[task_data['regime_num'].iloc[-1]] = [ste_saturation]
-                            se_ste_eps_to_sat[task_data['regime_num'].iloc[-1]] = [ste_eps_to_sat]
+                            se_ste_exp_to_sat[task_data['regime_num'].iloc[-1]] = [ste_exp_to_sat]
 
                             # Compute sample efficiency
                             se_saturation[task_data['regime_num'].iloc[-1]] = [task_saturation / ste_saturation]
-                            se_eps_to_sat[task_data['regime_num'].iloc[-1]] = [ste_eps_to_sat / task_eps_to_sat]
+                            se_exp_to_sat[task_data['regime_num'].iloc[-1]] = [ste_exp_to_sat / task_exp_to_sat]
                             sample_efficiency[task_data['regime_num'].iloc[-1]] = \
-                                [(task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat)]
+                                [(task_saturation / ste_saturation) * (ste_exp_to_sat / task_exp_to_sat)]
                         elif self.ste_averaging_method == 'metrics':
                             se_ste_saturation_vals = []
-                            se_ste_eps_to_sat_vals = []
+                            se_ste_exp_to_sat_vals = []
                             se_saturation_vals = []
-                            se_eps_to_sat_vals = []
+                            se_exp_to_sat_vals = []
                             sample_efficiency_vals = []
                             
                             for ste_data_df in ste_data:
                                 ste_data_df = ste_data_df[ste_data_df['block_type'] == 'train']
 
-                                # Get STE saturation value and episodes to saturation
-                                ste_saturation, ste_eps_to_sat, _ = get_block_saturation_perf(
+                                # Get STE saturation value and experiences to saturation
+                                ste_saturation, ste_exp_to_sat, _ = get_block_saturation_perf(
                                     ste_data_df, col_to_use=self.perf_measure)
 
                                 # Check for valid performance
-                                if ste_eps_to_sat == 0:
+                                if ste_exp_to_sat == 0:
                                     print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
                                     continue
 
                                 # Compute sample efficiency
                                 se_ste_saturation_vals.append(ste_saturation)
-                                se_ste_eps_to_sat_vals.append(ste_eps_to_sat)
+                                se_ste_exp_to_sat_vals.append(ste_exp_to_sat)
                                 se_saturation_vals.append(task_saturation / ste_saturation)
-                                se_eps_to_sat_vals.append(ste_eps_to_sat / task_eps_to_sat)
+                                se_exp_to_sat_vals.append(ste_exp_to_sat / task_exp_to_sat)
                                 sample_efficiency_vals.append(
-                                    (task_saturation / ste_saturation) * (ste_eps_to_sat / task_eps_to_sat))
+                                    (task_saturation / ste_saturation) * (ste_exp_to_sat / task_exp_to_sat))
 
                             se_ste_saturation[task_data['regime_num'].iloc[-1]] = se_ste_saturation_vals
-                            se_ste_eps_to_sat[task_data['regime_num'].iloc[-1]] = se_ste_eps_to_sat_vals
+                            se_ste_exp_to_sat[task_data['regime_num'].iloc[-1]] = se_ste_exp_to_sat_vals
                             se_saturation[task_data['regime_num'].iloc[-1]] = se_saturation_vals
-                            se_eps_to_sat[task_data['regime_num'].iloc[-1]] = se_eps_to_sat_vals
+                            se_exp_to_sat[task_data['regime_num'].iloc[-1]] = se_exp_to_sat_vals
                             sample_efficiency[task_data['regime_num'].iloc[-1]] = sample_efficiency_vals
                     else:
                         print(f"Cannot compute {self.name} for task {task} - No STE data available")
 
             metrics_df = fill_metrics_df(se_task_saturation, 'se_task_saturation', metrics_df)
-            metrics_df = fill_metrics_df(se_task_eps_to_sat, 'se_task_eps_to_sat', metrics_df)
+            metrics_df = fill_metrics_df(se_task_exp_to_sat, 'se_task_exp_to_sat', metrics_df)
             metrics_df = fill_metrics_df(se_ste_saturation, 'se_ste_saturation', metrics_df)
-            metrics_df = fill_metrics_df(se_ste_eps_to_sat, 'se_ste_eps_to_sat', metrics_df)
+            metrics_df = fill_metrics_df(se_ste_exp_to_sat, 'se_ste_exp_to_sat', metrics_df)
             metrics_df = fill_metrics_df(se_saturation, 'se_saturation', metrics_df)
-            metrics_df = fill_metrics_df(se_eps_to_sat, 'se_eps_to_sat', metrics_df)
+            metrics_df = fill_metrics_df(se_exp_to_sat, 'se_exp_to_sat', metrics_df)
             return fill_metrics_df(sample_efficiency, 'sample_efficiency', metrics_df)
         except Exception as e:
             print(f"Cannot compute {self.name} - {e}")

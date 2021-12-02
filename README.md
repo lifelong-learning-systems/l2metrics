@@ -340,7 +340,7 @@ The plot separates learning/training experiences from evaluation experiences. Th
 
 ### Performance Plot
 
-The output figure of performance over episodes should look like this:
+The output figure of performance over experiences should look like this:
 
 ![diagram](examples/multi_task_perf.png)
 

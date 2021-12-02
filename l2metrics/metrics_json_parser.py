@@ -815,18 +815,18 @@ class MetricsParser:
         elif plottype == 'line':
             sns.lineplot(data=[x for x in graph_data], ax=ax)
 
-    def getSTEEps2SatVals_helper(self, df: pd.DataFrame, task: str) -> list:
+    def getSTEExp2SatVals_helper(self, df: pd.DataFrame, task: str) -> list:
         try:
-            return df.root.task_metrics[task].ste_eps_to_sat_vals.iloc[0, 0]
+            return df.root.task_metrics[task].ste_exp_to_sat_vals.iloc[0, 0]
         except (KeyError, AttributeError) as e:
             pass
 
-    def getSTEEps2SatVals(self, task: str) -> List[list]:
-        return [self.getSTEEps2SatVals_helper(run, task) for run in self.dfs]
+    def getSTEExp2SatVals(self, task: str) -> List[list]:
+        return [self.getSTEExp2SatVals_helper(run, task) for run in self.dfs]
 
-    def plotSTEEps2SatVals(self, plottype: str, task: str):
+    def plotSTEExp2SatVals(self, plottype: str, task: str):
         graph_data = self.listflatten(
-            [x for x in self.getSTEEps2SatVals(task) if x])
+            [x for x in self.getSTEExp2SatVals(task) if x])
         fig, ax = plt.subplots(1, 1, figsize=(10, 5))
         if plottype == 'hist':
             sns.histplot([x for x in graph_data], ax=ax)
@@ -855,18 +855,18 @@ class MetricsParser:
         elif plottype == 'line':
             sns.lineplot(data=[x for x in graph_data], ax=ax)
 
-    def getSEEps2SatVals_helper(self, df: pd.DataFrame, task: str) -> list:
+    def getSEExp2SatVals_helper(self, df: pd.DataFrame, task: str) -> list:
         try:
-            return df.root.task_metrics[task].se_eps_to_sat_vals.iloc[0, 0]
+            return df.root.task_metrics[task].se_exp_to_sat_vals.iloc[0, 0]
         except (KeyError, AttributeError) as e:
             pass
 
-    def getSEEps2SatVals(self, task: str) -> List[list]:
-        return [self.getSEEps2SatVals_helper(run, task) for run in self.dfs]
+    def getSEExp2SatVals(self, task: str) -> List[list]:
+        return [self.getSEExp2SatVals_helper(run, task) for run in self.dfs]
 
-    def plotSEEps2SatVals(self, plottype: str, task: str):
+    def plotSEExp2SatVals(self, plottype: str, task: str):
         graph_data = self.listflatten(
-            [x for x in self.getSEEps2SatVals(task) if x])
+            [x for x in self.getSEExp2SatVals(task) if x])
         fig, ax = plt.subplots(1, 1, figsize=(10, 5))
         if plottype == 'hist':
             sns.histplot([x for x in graph_data], ax=ax)
@@ -916,7 +916,7 @@ class MetricsParser:
 
     def getSETaskEPS2Sat_helper(self, df: pd.DataFrame, task: str):
         try:
-            return df.root.task_metrics[task].se_task_eps_to_sat.iloc[0, 0]
+            return df.root.task_metrics[task].se_task_exp_to_sat.iloc[0, 0]
         except (KeyError, AttributeError) as e:
             pass
 

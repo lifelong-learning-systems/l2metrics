@@ -41,7 +41,7 @@ class TerminalPerformance(Metric):
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         # Initialize metric dictionaries
         term_perf_values = {}
-        eps_to_terminal_perf = {}
+        exp_to_terminal_perf = {}
 
         # Iterate over all of the blocks and compute the within block performance
         for idx in range(max(block_info['regime_num'].to_numpy()) + 1):
@@ -49,8 +49,8 @@ class TerminalPerformance(Metric):
             block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
             # Make within block calculations
-            term_perf_values[idx], eps_to_terminal_perf[idx], _ = get_terminal_perf(
+            term_perf_values[idx], exp_to_terminal_perf[idx], _ = get_terminal_perf(
                 block_data, col_to_use=self.perf_measure)
 
         metrics_df = fill_metrics_df(term_perf_values, 'term_perf', metrics_df)
-        return fill_metrics_df(eps_to_terminal_perf, 'eps_to_term_perf', metrics_df)
+        return fill_metrics_df(exp_to_terminal_perf, 'exp_to_term_perf', metrics_df)

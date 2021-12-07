@@ -88,10 +88,10 @@ class RecoveryTime(Metric):
                     if block_data.ndim == 1:
                         block_data = pd.DataFrame(block_data).T
 
-                    _, _, eps_to_rec = get_terminal_perf(block_data,
+                    _, _, exp_to_rec = get_terminal_perf(block_data,
                                                          col_to_use=self.perf_measure,
                                                          prev_val=prev_val)
-                    recovery_time[assess_ind] = eps_to_rec
+                    recovery_time[assess_ind] = exp_to_rec
 
             return fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
         except Exception as e:

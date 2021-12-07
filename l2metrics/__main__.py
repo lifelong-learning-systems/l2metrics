@@ -65,6 +65,8 @@ def run() -> None:
         ll_metrics_dicts = []
         regime_metrics_df = pd.DataFrame()
         log_data_df = pd.DataFrame()
+        task_colors = {}
+        cc = util.color_cycler()
 
         old_print = print
 
@@ -101,9 +103,15 @@ def run() -> None:
 
                     # Plot metrics
                     if args.do_plot:
+                        # Update task color dictionary
+                        for task_name, c in zip(list(set(report._unique_tasks) - set(task_colors.keys())), cc):
+                            task_colors[task_name] = c['color']
+
+                        # Generate plots
                         report.plot(save=args.do_save, show_eval_lines=args.show_eval_lines,
-                                    output_dir=str(args.output_dir))
-                        report.plot_ste_data(save=args.do_save, output_dir=str(args.output_dir))
+                                    output_dir=str(args.output_dir), task_colors=task_colors)
+                        report.plot_ste_data(save=args.do_save, output_dir=str(args.output_dir),
+                                             task_colors=task_colors)
                         plt.close('all')
 
         # Assign base filename

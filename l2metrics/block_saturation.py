@@ -41,7 +41,7 @@ class BlockSaturation(Metric):
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         # Initialize metric dictionaries
         saturation_values = {}
-        eps_to_saturation = {}
+        exp_to_saturation = {}
 
         # Iterate over all of the blocks and compute the within block performance
         for idx in range(max(block_info['regime_num'].to_numpy()) + 1):
@@ -49,8 +49,8 @@ class BlockSaturation(Metric):
             block_data = dataframe.loc[dataframe['regime_num'] == idx]
 
             # Make within block calculations
-            saturation_values[idx], eps_to_saturation[idx], _ = get_block_saturation_perf(
+            saturation_values[idx], exp_to_saturation[idx], _ = get_block_saturation_perf(
                 block_data, col_to_use=self.perf_measure)
 
         metrics_df = fill_metrics_df(saturation_values, 'saturation', metrics_df)
-        return fill_metrics_df(eps_to_saturation, 'eps_to_sat', metrics_df)
+        return fill_metrics_df(exp_to_saturation, 'exp_to_sat', metrics_df)

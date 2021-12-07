@@ -345,7 +345,7 @@ class MetricsReport():
 
     def calculate_regime_metrics(self) -> None:
         # Create dataframe for regime-level metrics
-        regime_metrics = ['saturation', 'eps_to_sat', 'term_perf', 'eps_to_term_perf']
+        regime_metrics = ['saturation', 'exp_to_sat', 'term_perf', 'exp_to_term_perf']
         self.regime_metrics_df = self.block_info[self.block_info_keys_to_include]
 
         # Fill regime metrics dataframe
@@ -382,9 +382,9 @@ class MetricsReport():
             self.backward_transfer_contrast = defaultdict(dict)
         self.task_metrics_df['ste_rel_perf_vals'] = [[]] * num_tasks
         self.task_metrics_df['ste_saturation_vals'] = [[]] * num_tasks
-        self.task_metrics_df['ste_eps_to_sat_vals'] = [[]] * num_tasks
+        self.task_metrics_df['ste_exp_to_sat_vals'] = [[]] * num_tasks
         self.task_metrics_df['se_saturation_vals'] = [[]] * num_tasks
-        self.task_metrics_df['se_eps_to_sat_vals'] = [[]] * num_tasks
+        self.task_metrics_df['se_exp_to_sat_vals'] = [[]] * num_tasks
         self.task_metrics_df['sample_efficiency_vals'] = [[]] * num_tasks
 
         # Create data structures for transfer values
@@ -436,29 +436,29 @@ class MetricsReport():
                             raise Exception('Unexpected size for relative performance')
                     elif metric == 'sample_efficiency':
                         task_sat = tm['se_task_saturation'].dropna().to_numpy(dtype=float)
-                        task_eps_to_sat = tm['se_task_eps_to_sat'].dropna().to_numpy(dtype=float)
+                        task_exp_to_sat = tm['se_task_exp_to_sat'].dropna().to_numpy(dtype=float)
                         ste_saturation = tm['se_ste_saturation'].dropna().to_numpy()
-                        ste_eps_to_sat = tm['se_ste_eps_to_sat'].dropna().to_numpy()
+                        ste_exp_to_sat = tm['se_ste_exp_to_sat'].dropna().to_numpy()
                         se_saturation = tm['se_saturation'].dropna().to_numpy()
-                        se_eps_to_sat = tm['se_eps_to_sat'].dropna().to_numpy()
+                        se_exp_to_sat = tm['se_exp_to_sat'].dropna().to_numpy()
                         se = tm[metric].dropna().to_numpy()
 
                         if se.size == 0:
                             self.task_metrics_df.at[task, 'se_task_saturation'] = np.NaN
-                            self.task_metrics_df.at[task, 'se_task_eps_to_sat'] = np.NaN
+                            self.task_metrics_df.at[task, 'se_task_exp_to_sat'] = np.NaN
                             self.task_metrics_df.at[task, 'ste_saturation_vals'] = []
-                            self.task_metrics_df.at[task, 'ste_eps_to_sat_vals'] = []
+                            self.task_metrics_df.at[task, 'ste_exp_to_sat_vals'] = []
                             self.task_metrics_df.at[task, 'se_saturation_vals'] = []
-                            self.task_metrics_df.at[task, 'se_eps_to_sat_vals'] = []
+                            self.task_metrics_df.at[task, 'se_exp_to_sat_vals'] = []
                             self.task_metrics_df.at[task, 'sample_efficiency_vals'] = []
                             self.task_metrics_df.at[task, metric] = np.NaN
                         elif se.size == 1:
                             self.task_metrics_df.at[task, 'se_task_saturation'] = task_sat[0]
-                            self.task_metrics_df.at[task, 'se_task_eps_to_sat'] = task_eps_to_sat[0]
+                            self.task_metrics_df.at[task, 'se_task_exp_to_sat'] = task_exp_to_sat[0]
                             self.task_metrics_df.at[task, 'ste_saturation_vals'] = ste_saturation[0]
-                            self.task_metrics_df.at[task, 'ste_eps_to_sat_vals'] = ste_eps_to_sat[0]
+                            self.task_metrics_df.at[task, 'ste_exp_to_sat_vals'] = ste_exp_to_sat[0]
                             self.task_metrics_df.at[task, 'se_saturation_vals'] = se_saturation[0]
-                            self.task_metrics_df.at[task, 'se_eps_to_sat_vals'] = se_eps_to_sat[0]
+                            self.task_metrics_df.at[task, 'se_exp_to_sat_vals'] = se_exp_to_sat[0]
                             self.task_metrics_df.at[task, 'sample_efficiency_vals'] = se[0]
                             self.task_metrics_df.at[task, metric] = np.nanmean(se[0])
                         else:
@@ -572,29 +572,28 @@ class MetricsReport():
             json.dump(settings_json, outfile)
 
     def plot(self, save: bool = False, show_eval_lines: bool = True, output_dir: str = '',
-             input_title: str = None) -> None:
+             task_colors: dict = {}, input_title: str = None) -> None:
 
         if input_title is None:
             input_title = Path(self.log_dir).name
         plot_filename = input_title
 
-        plot_blocks(self._log_data, self.perf_measure, self._unique_tasks,
+        plot_blocks(self._log_data, self.perf_measure, self._unique_tasks, task_colors=task_colors,
                     input_title=input_title, output_dir=output_dir, do_save_fig=save,
                     plot_filename=plot_filename + '_block')
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
-                         show_eval_lines=show_eval_lines, y_axis_col=self.perf_measure,
-                         input_title=input_title, output_dir=output_dir, do_save_fig=save,
-                         plot_filename=plot_filename + '_perf')
+                         task_colors=task_colors, show_eval_lines=show_eval_lines,
+                         y_axis_col=self.perf_measure, input_title=input_title,
+                         output_dir=output_dir, do_save_fig=save, plot_filename=plot_filename + '_perf')
 
-
-    def plot_ste_data(self, input_title: str = None,
-                      save: bool = False, output_dir: str = '') -> None:
+    def plot_ste_data(self, input_title: str = None, save: bool = False, output_dir: str = '',
+                      task_colors: dict = {}) -> None:
         if input_title is None:
             input_title = 'Performance Relative to STE\n' + \
                 Path(self.log_dir).name
         plot_filename = Path(self.log_dir).name + '_ste'
 
         plot_ste_data(self._log_data, self.ste_data, self.block_info, self._unique_tasks,
-                      perf_measure=self.perf_measure, ste_averaging_method=self.ste_averaging_method,
-                      input_title=input_title, output_dir=output_dir, do_save=save,
-                      plot_filename=plot_filename)
+                      task_colors=task_colors, perf_measure=self.perf_measure,
+                      ste_averaging_method=self.ste_averaging_method, input_title=input_title,
+                      output_dir=output_dir, do_save=save, plot_filename=plot_filename)

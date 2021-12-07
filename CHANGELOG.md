@@ -2,6 +2,14 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.14.0 - 2021-12-07
+
+- Implemented supplemental metrics subpackage for ABC transfer
+- Designed task coloring in plots to be consistent across runs when computing recursive metrics or evaluation
+- Optimized code by limiting groupby calls
+- Refactored episodes to experiences in variable names and plot labels
+- Updated example evaluation results
+
 ## 2.13.0 - 2021-10-18
 
 - Filtered out wake EBs in plotting methods

@@ -51,6 +51,8 @@ from l2metrics.report import MetricsReport
 sns.set_style("dark")
 sns.set_context("paper")
 
+cc = util.color_cycler()
+
 if get_ipython() is None:
     from tqdm import tqdm
     old_print = print
@@ -209,6 +211,7 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
             changing slope of evaluation performance. Defaults to True.
         do_plot (bool, optional): Flag for enabling plotting. Defaults to True.
         do_save_plots (bool, optional): Flag for enabling saving of plots. Defaults to True.
+        task_colors (dict, optional): Dict of task names and colors for plotting. Defaults to {}.
 
     Returns:
         Tuple[pd.DataFrame, dict, pd.DataFrame, pd.DataFrame]: DataFrame containing lifelong metrics
@@ -216,6 +219,7 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
     """
 
     log_dir = kwargs.get('log_dir', Path(''))
+    task_colors = kwargs.get('task_colors', {})
     output_dir = kwargs.get('output_dir', '')
     show_eval_lines = kwargs.get('show_eval_lines', True)
     do_plot = kwargs.get('do_plot', True)
@@ -246,8 +250,14 @@ def compute_scenario_metrics(**kwargs) -> Tuple[pd.DataFrame, dict, pd.DataFrame
     log_data_df['run_id'] = log_dir.name
 
     if do_plot:
-        report.plot(save=do_save_plots, show_eval_lines=show_eval_lines, output_dir=output_dir)
-        report.plot_ste_data(save=do_save_plots, output_dir=output_dir)
+        # Update task color dictionary
+        for task_name, c in zip(list(set(report._unique_tasks) - set(task_colors.keys())), cc):
+            task_colors[task_name] = c['color']
+
+        report.plot(save=do_save_plots, show_eval_lines=show_eval_lines,
+                    output_dir=output_dir, task_colors=task_colors)
+        report.plot_ste_data(save=do_save_plots,
+                             output_dir=output_dir, task_colors=task_colors)
         plt.close('all')
 
     return ll_metrics_df, ll_metrics_dict, regime_metrics_df, log_data_df
@@ -289,6 +299,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame, pd
     ll_metrics_dicts = []
     regime_metrics_df = pd.DataFrame()
     log_data_df = pd.DataFrame()
+    task_colors = {}
 
     # Iterate through agent configuration directories
     for agent_config in tqdm(list(eval_dir.glob('agent_config*')), desc='Agents'):
@@ -311,7 +322,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame, pd
                         # Check if current path is log directory for single run
                         if all(x in [f.name for f in path.glob('*.json')] for x in ['logger_info.json', 'scenario_info.json']):
                             metrics_df, metrics_dict, regime_df, data_df = compute_scenario_metrics(
-                                log_dir=path, **kwargs)
+                                log_dir=path, task_colors=task_colors, **kwargs)
                             ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                             ll_metrics_dicts.append(metrics_dict)
                             regime_metrics_df = regime_metrics_df.append(regime_df, ignore_index=True)
@@ -321,7 +332,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame, pd
                             for sub_path in tqdm(list(path.iterdir()), desc=path.name):
                                 if sub_path.is_dir():
                                     metrics_df, metrics_dict, regime_df, data_df = compute_scenario_metrics(
-                                        log_dir=sub_path, **kwargs)
+                                        log_dir=sub_path, task_colors=task_colors, **kwargs)
                                     ll_metrics_df = ll_metrics_df.append(metrics_df, ignore_index=True)
                                     ll_metrics_dicts.append(metrics_dict)
                                     regime_metrics_df = regime_metrics_df.append(regime_df, ignore_index=True)

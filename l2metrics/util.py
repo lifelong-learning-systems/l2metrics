@@ -32,8 +32,8 @@ import numpy as np
 import pandas as pd
 
 
-color_selection = ['blue', 'green', 'red',
-                   'black', 'magenta', 'cyan', 'orange', 'purple']
+# Get default color cycler
+color_cycler = plt.rcParams['axes.prop_cycle']
 
 
 def get_ste_data_names() -> list:
@@ -148,14 +148,16 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
     print(f'Stored STE data for {task_name[0]} in {log_dir.name}')
 
 
-def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_title: str = '',
-                output_dir: str = '', do_save_fig: bool = False, plot_filename: str = 'block_plot'):
+def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, task_colors: dict = {},
+                input_title: str = '', output_dir: str = '', do_save_fig: bool = False,
+                plot_filename: str = 'block_plot'):
     """Plot learning performance curves and evaluation blocks as separate plots.
 
     Args:
         dataframe (pd.DataFrame): The performance data to plot.
         reward (str): The column name of the metric to plot.
         unique_tasks (list): List of unique tasks in scenario.
+        task_colors (dict): Dict of task names and colors for plotting. Defaults to {}.
         input_title (str, optional): The plot title. Defaults to ''.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to False.
@@ -181,34 +183,33 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
     ax0.set_ylabel(reward_col + ' (LX)')
     ax0.grid()
 
-    if len(unique_tasks) < len(color_selection):
-        task_colors = color_selection[:len(unique_tasks)]
-    else:
-        task_colors = [color_selection[i % len(color_selection)] for i in range(len(unique_tasks))]
-
     task_idx = 1
     xv_max = None  # Workaround for inconsistent # of samples
 
+    # Assign colors for each task
+    if not task_colors:
+        task_colors = {task: c['color'] for c, task in zip(color_cycler(), unique_tasks)}
+
     # Plot training and test data
-    for task_color, task in zip(task_colors, unique_tasks):
-        x = df_train[df_train['task_name'] == task].exp_num
-        y = df_train[df_train['task_name'] == task][reward_col]
-        ax0.plot(x, y, '.', label=task, color=task_color, markersize=4)
+    for task_name in unique_tasks:
+        x = df_train[df_train['task_name'] == task_name].exp_num
+        y = df_train[df_train['task_name'] == task_name][reward_col]
+        ax0.plot(x, y, '.', label=task_name, color=task_colors[task_name], markersize=4)
 
         ax = axes[task_idx]
-        x = df_test[df_test['task_name'] == task].exp_num
-        y = df_test[df_test['task_name'] == task][reward_col]
-        ax.plot(x, y, '.', label=task, color=task_color, markersize=4)
-        task_ex_block_data = df_test[df_test['task_name'] == task].groupby('block_num')
+        x = df_test[df_test['task_name'] == task_name].exp_num
+        y = df_test[df_test['task_name'] == task_name][reward_col]
+        ax.plot(x, y, '.', label=task_name, color=task_colors[task_name], markersize=4)
+        task_ex_block_data = df_test[df_test['task_name'] == task_name].groupby('block_num')
         xv = task_ex_block_data.exp_num.median()
         if xv_max is None or len(xv) > len(xv_max):
             xv_max = xv
         ex_median = task_ex_block_data[reward_col].median()
         ex_iqr_lower = task_ex_block_data[reward_col].quantile(.25)
         ex_iqr_upper = task_ex_block_data[reward_col].quantile(.75)
-        ax.fill_between(xv, ex_iqr_lower, ex_iqr_upper, color=task_color, alpha=0.5)
-        ax.plot(xv, ex_median, color=task_color)
-        ax.set_ylabel(task + ' (EX)')
+        ax.fill_between(xv, ex_iqr_lower, ex_iqr_upper, color=task_colors[task_name], alpha=0.5)
+        ax.plot(xv, ex_median, color=task_colors[task_name])
+        ax.set_ylabel(task_name + ' (EX)')
         ax.grid()
         task_idx += 1
 
@@ -227,7 +228,8 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
     ax0.legend()
 
     # Set y-axis limits
-    plt.setp(fig.axes, ylim=(np.nanmin(df_test[reward_col]), np.nanmax(df_test[reward_col])))
+    if not df_test.empty:
+        plt.setp(fig.axes, ylim=(np.nanmin(df_test[reward_col]), np.nanmax(df_test[reward_col])))
     fig.tight_layout()
 
     if do_save_fig:
@@ -236,10 +238,11 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, input_
 
 
 def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_tasks: list,
-                     x_axis_col: str = 'exp_num', y_axis_col: str = 'reward', input_title: str = '',
-                     input_xlabel: str = 'Experiences', input_ylabel: str = 'Performance',
-                     show_eval_lines: bool = True, show_block_boundary: bool = False,
-                     shade_test_blocks: bool = True, output_dir: str = '', do_save_fig: bool = False,
+                     task_colors: dict = {}, x_axis_col: str = 'exp_num', y_axis_col: str = 'reward',
+                     input_title: str = '', input_xlabel: str = 'Experiences',
+                     input_ylabel: str = 'Performance', show_eval_lines: bool = True,
+                     show_block_boundary: bool = False, shade_test_blocks: bool = True,
+                     output_dir: str = '', do_save_fig: bool = False,
                      plot_filename: str = 'performance_plot') -> None:
     """Plots the performance curves for the given DataFrame.
 
@@ -247,6 +250,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
         dataframe (pd.DataFrame): The performance data to plot.
         block_info (pd.DataFrame): The block info of the DataFrame.
         unique_tasks (list): List of unique tasks in scenario.
+        task_colors (dict): Dict of task names and colors for plotting. Defaults to {}.
         x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
         y_axis_col (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         input_title (str, optional): The plot title. Defaults to ''.
@@ -265,25 +269,24 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
     fig = plt.figure(figsize=(12, 6))
     ax = fig.add_subplot(111)
 
-    if len(unique_tasks) < len(color_selection):
-        task_colors = color_selection[:len(unique_tasks)]
-    else:
-        task_colors = [color_selection[i % len(color_selection)] for i in range(len(unique_tasks))]
-
     # Use sleep evaluation blocks if they exist and filter out wake evaluation
     if 'sleep' in block_info['block_subtype'].to_numpy():
         block_info = block_info[~(block_info.block_type.isin(['test']) & block_info.block_subtype.isin(['wake']))]
         dataframe = dataframe[~(dataframe.block_type.isin(['test']) & dataframe.block_subtype.isin(['wake']))]
 
+    # Assign colors for each task
+    if not task_colors:
+        task_colors = {task: c['color'] for c, task in zip(color_cycler(), unique_tasks)}
+
     # Loop through tasks and plot their performance curves
-    for task_color, task in zip(task_colors, unique_tasks):
+    for task_name in unique_tasks:
         if show_eval_lines:
             eval_x_data = []
             eval_y_data = []
             eval_line, = ax.plot(eval_x_data, eval_y_data,
-                                 color=task_color, linestyle='--', alpha=0.2)
+                                 color=task_colors[task_name], linestyle='--', alpha=0.2)
 
-        for _, row in block_info[block_info['task_name'] == task].iterrows():
+        for _, row in block_info[block_info['task_name'] == task_name].iterrows():
             regime_num = row['regime_num']
             block_type = row['block_type']
 
@@ -309,7 +312,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
             if len(x) != len(y):
                 x = list(range(x[0], x[0] + len(y)))
 
-            ax.scatter(x, y, color=task_color, marker='*', s=8, label=task)
+            ax.scatter(x, y, color=task_colors[task_name], marker='*', s=8, label=task_name)
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
@@ -329,7 +332,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
 
 
 def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFrame, unique_tasks: list,
-                  perf_measure: str = 'reward', ste_averaging_method: str = 'metrics',
+                  task_colors: dict = {}, perf_measure: str = 'reward', ste_averaging_method: str = 'metrics',
                   input_title: str = '', input_xlabel: str = 'Experiences', input_ylabel: str = 'Performance',
                   output_dir: str = '', do_save: bool = False, plot_filename: str = 'ste_plot') -> None:
     """Plots the relative performance of tasks compared to Single-Task Experts.
@@ -339,6 +342,7 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
         ste_data (dict): STE data.
         block_info (pd.DataFrame): The block info of the DataFrame.
         unique_tasks (list): List of unique tasks in scenario.
+        task_colors (dict): Dict of task names and colors for plotting. Defaults to {}.
         perf_measure (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         ste_averaging_method (str, optional): Method for handling STE metric averaging. Defaults to 'metrics'.
         input_title (str, optional): Plot title. Defaults to ''.
@@ -361,12 +365,11 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
     x_limit = 0
     y_limit = (np.nan, np.nan)
 
-    if len(unique_tasks) < len(color_selection):
-        task_colors = color_selection[:len(unique_tasks)]
-    else:
-        task_colors = [color_selection[i % len(color_selection)] for i in range(len(unique_tasks))]
+    # Assign colors for each task
+    if not task_colors:
+        task_colors = {task: c['color'] for c, task in zip(color_cycler(), unique_tasks)}
 
-    for index, (task_color, task_name) in enumerate(zip(task_colors, unique_tasks)):
+    for index, task_name in enumerate(unique_tasks):
         # Get block info for task during training
         task_blocks = block_info[(block_info['task_name'] == task_name) & (
             block_info['block_type'] == 'train') & (block_info['block_subtype'] == 'wake')]
@@ -381,13 +384,13 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
                 # Create subplot
                 ax = fig.add_subplot(rows, cols, index + 1)
 
-                plt.scatter([], [], label=task_name, color=task_color, marker='*', s=8)
+                plt.scatter([], [], label=task_name, color=task_colors[task_name], marker='*', s=8)
                 plt.scatter([], [], label='STE', color='orange', marker='*', s=8)
 
                 # Plot LL data
                 y_ll = task_data[perf_measure].to_numpy()
                 x_ll = list(range(0, len(y_ll)))
-                ax.scatter(x_ll, y_ll, color=task_color, marker='*', s=8, zorder=3)
+                ax.scatter(x_ll, y_ll, color=task_colors[task_name], marker='*', s=8, zorder=3)
 
                 # Get STE data
                 y_ste = [ste_data_df[ste_data_df['block_type'] == 'train']

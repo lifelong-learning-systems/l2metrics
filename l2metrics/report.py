@@ -572,29 +572,28 @@ class MetricsReport():
             json.dump(settings_json, outfile)
 
     def plot(self, save: bool = False, show_eval_lines: bool = True, output_dir: str = '',
-             input_title: str = None) -> None:
+             task_colors: dict = {}, input_title: str = None) -> None:
 
         if input_title is None:
             input_title = Path(self.log_dir).name
         plot_filename = input_title
 
-        plot_blocks(self._log_data, self.perf_measure, self._unique_tasks,
+        plot_blocks(self._log_data, self.perf_measure, self._unique_tasks, task_colors=task_colors,
                     input_title=input_title, output_dir=output_dir, do_save_fig=save,
                     plot_filename=plot_filename + '_block')
         plot_performance(self._log_data, self.block_info, unique_tasks=self._unique_tasks,
-                         show_eval_lines=show_eval_lines, y_axis_col=self.perf_measure,
-                         input_title=input_title, output_dir=output_dir, do_save_fig=save,
-                         plot_filename=plot_filename + '_perf')
+                         task_colors=task_colors, show_eval_lines=show_eval_lines,
+                         y_axis_col=self.perf_measure, input_title=input_title,
+                         output_dir=output_dir, do_save_fig=save, plot_filename=plot_filename + '_perf')
 
-
-    def plot_ste_data(self, input_title: str = None,
-                      save: bool = False, output_dir: str = '') -> None:
+    def plot_ste_data(self, input_title: str = None, save: bool = False, output_dir: str = '',
+                      task_colors: dict = {}) -> None:
         if input_title is None:
             input_title = 'Performance Relative to STE\n' + \
                 Path(self.log_dir).name
         plot_filename = Path(self.log_dir).name + '_ste'
 
         plot_ste_data(self._log_data, self.ste_data, self.block_info, self._unique_tasks,
-                      perf_measure=self.perf_measure, ste_averaging_method=self.ste_averaging_method,
-                      input_title=input_title, output_dir=output_dir, do_save=save,
-                      plot_filename=plot_filename)
+                      task_colors=task_colors, perf_measure=self.perf_measure,
+                      ste_averaging_method=self.ste_averaging_method, input_title=input_title,
+                      output_dir=output_dir, do_save=save, plot_filename=plot_filename)

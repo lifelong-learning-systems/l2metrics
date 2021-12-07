@@ -107,8 +107,11 @@ def get_block_saturation_perf(data: Union[pd.DataFrame, List], col_to_use: str =
 
     # Aggregate multiple reward values for the same experience
     if isinstance(data, pd.DataFrame):
-        mean_reward_per_experience = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
-        mean_data = np.ravel(mean_reward_per_experience.to_numpy())
+        if data.exp_num.is_unique:
+            mean_data = data[col_to_use].to_numpy()
+        else:
+            mean_reward_per_experience = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
+            mean_data = np.ravel(mean_reward_per_experience.to_numpy())
     else:
         mean_data = np.array(data)
 
@@ -155,8 +158,11 @@ def get_terminal_perf(data: pd.DataFrame, col_to_use: str, prev_val: float = Non
 
     # Aggregate multiple reward values for the same experience
     if data.shape[0] > 1:
-        mean_reward_per_experience = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
-        mean_data = np.ravel(mean_reward_per_experience.to_numpy())
+        if data.exp_num.is_unique:
+            mean_data = data[col_to_use].to_numpy()
+        else:
+            mean_reward_per_experience = data.loc[:, ['exp_num', col_to_use]].groupby('exp_num').mean()
+            mean_data = np.ravel(mean_reward_per_experience.to_numpy())
     else:
         mean_data = np.ravel(data[col_to_use].to_numpy(dtype=float))
 

@@ -19,7 +19,7 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import warnings
+import logging
 from itertools import permutations
 
 import numpy as np
@@ -27,6 +27,8 @@ import pandas as pd
 
 from ._localutil import fill_metrics_df
 from .core import Metric
+
+logger = logging.getLogger(__name__)
 
 
 class Transfer(Metric):
@@ -41,7 +43,7 @@ class Transfer(Metric):
 
         # Check for valid transfer method
         if method not in ['ratio', 'contrast', 'both']:
-            raise Exception(f'Invalid transfer method: {method}')
+            raise KeyError(f'Invalid transfer method: {method}')
         else:
             self.do_ratio = method in ['ratio', 'both']
             self.do_contrast = method in ['contrast', 'both']
@@ -58,12 +60,12 @@ class Transfer(Metric):
 
                 if regime['block_type'] == 'test':
                     if last_block_type == 'test':
-                        warnings.warn('Block types are not alternating')
+                        logger.warning('Block types are not alternating')
                         break
                     last_block_type = 'test'
                 elif regime['block_type'] == 'train':
                     if last_block_type == 'train':
-                        warnings.warn('Block types are not alternating')
+                        logger.warning('Block types are not alternating')
                         break
                     last_block_type = 'train'
 
@@ -134,7 +136,7 @@ class Transfer(Metric):
                                         backward_transfer['contrast'][test_regime_2] = {task: (tp_2 - tp_1) / (tp_1 + tp_2)}
 
             if not (forward_transfer['ratio'] or forward_transfer['contrast']):
-                print('No valid task pairs for forward transfer')
+                logger.warning("Cannot compute Forward Transfer - No valid task pairs")
             else:
                 if self.do_ratio:
                     metrics_df = fill_metrics_df(
@@ -144,7 +146,7 @@ class Transfer(Metric):
                         forward_transfer['contrast'], 'forward_transfer_contrast', metrics_df)
 
             if not (backward_transfer['ratio'] or backward_transfer['contrast']):
-                print('No valid task pairs for backward transfer')
+                logger.warning("Cannot compute Backward Transfer - No valid task pairs")
             else:
                 if self.do_ratio:
                     metrics_df = fill_metrics_df(
@@ -154,6 +156,6 @@ class Transfer(Metric):
                         backward_transfer['contrast'], 'backward_transfer_contrast', metrics_df)
 
             return metrics_df
-        except Exception as e:
-            print(f"Cannot compute {self.name} - {e}")
+        except ValueError as e:
+            logger.warning(f"Cannot compute {self.name} - {e}")
             return metrics_df

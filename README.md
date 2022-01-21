@@ -7,8 +7,8 @@
 - [Introduction](#introduction)
 - [Metrics](#metrics)
 - [Evaluation](#evaluation)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
+- [Data Preprocessing](#data-preprocessing)
+- [Requirements](#requirements)
   - [Installation](#installation)
 - [Usage](#usage)
   - [Command-Line Execution](#command-line-execution)
@@ -28,7 +28,7 @@ Lifelong Learning Metrics (L2Metrics) is a Python library containing foundationa
 
 ## Metrics
 
-The L2Metrics library supports the following lifelong learning metrics as defined in the [Lifelong Learning Metrics for L2M specification version 0.68](https://github.com/darpa-l2m/shared_docs/blob/master/working_groups/metrics/metrics_specifications/Lifelong_Learning_Metrics_for_L2M.docx):
+The L2Metrics library supports the following lifelong learning metrics as defined in the [Lifelong Learning Metrics for L2M specification](https://arxiv.org/abs/2201.08278):
 
 - Performance Recovery (PR)
 - Performance Maintenance (PM)
@@ -39,41 +39,19 @@ The L2Metrics library supports the following lifelong learning metrics as define
 
 ## Evaluation
 
-Refer to this [README](./evaluation/README.md) for information on the L2Metrics evaluation framework.
+Refer to the [Evaluation README](./evaluation/README.md) for information on the L2Metrics evaluation framework.
 
-## Getting Started
+## Data Preprocessing
+
+Refer to the [Data Processing README](./docs/data_preprocessing.md) for details on the data preprocessing methods in this library.
+
+## Requirements
 
 L2Metrics is written in Python 3 and it is highly recommended to use at least version Python 3.6. The Metrics Framework has been tested on Windows 10 and Ubuntu 18.04/20.04. It should work on other platforms but has not been verified.
 
-### Prerequisites
-
-This library depends on the following main Python packages, also listed in [setup.py](setup.py):
-
-- l2logger
-- ipykernel
-- ipympl
-- matplotlib
-- numpy
-- pandas
-- pyarrow
-- python-dateutil
-- pytz
-- scipy
-- seaborn
-- six
-- tabulate
-- tqdm
-
 ### Installation
 
-#### 1. Clone the L2Logger and L2Metrics repositories
-
-```bash
-git clone https://github.com/darpa-l2m/l2logger.git
-git clone https://github.com/darpa-l2m/l2metrics.git
-```
-
-#### 2. (Optional) Create a Python virtual environment
+#### 1. (Optional) Create a Python virtual environment
 
 ```bash
 python -m venv <path_to_new_venv>
@@ -93,7 +71,20 @@ Windows:
 <path_to_new_venv>/Scripts/Activate.ps1
 ```
 
-#### 3. Install the L2Logger and L2Metrics packages
+#### 2. Update pip and wheel in your environment
+
+```bash
+pip install -U pip wheel
+```
+
+#### 3. Clone the L2Logger and L2Metrics repositories
+
+```bash
+git clone https://github.com/darpa-l2m/l2logger.git
+git clone https://github.com/darpa-l2m/l2metrics.git
+```
+
+#### 4. Install the L2Logger and L2Metrics packages
 
 ```bash
 pip install -e <path_to_l2logger>
@@ -107,117 +98,17 @@ To calculate metrics on the performance of your system, you must first generate 
 Once these logs are generated, you'll need to store Single-Task Expert (STE) data and pass the log directories as command-line arguments to compute STE-related metrics. Several example files are included to get you started:
 
 - Example STE and LL log directories:
-  - `./examples/ste_task1_1_run1/`
-  - `./examples/ste_task2_1_run1/`
-  - `./examples/ste_task3_1_run1/`
-  - `./examples/ste_task3_1_run2/`
-  - `./examples/multi_task/`
-- Example `settings.json` file for setting command-line arguments
+  - `./examples/ste_task1_1_run1/` (STE)
+  - `./examples/ste_task2_1_run1/` (STE)
+  - `./examples/ste_task3_1_run1/` (STE)
+  - `./examples/ste_task3_1_run2/` (STE)
+  - `./examples/multi_task/` (LL)
+- Example `settings.json` file for configuring command-line arguments
 - Example `data_range.json` file to show how the user can specify task normalization ranges
 
 ### Command-Line Execution
 
-This section describes how to run L2Metrics from the command line.
-
-```
-usage: python -m l2metrics [-h] [-l LOG_DIR] [-R] [-r {aware,agnostic}] [-s {w,a}]
-                   [-v {time,metrics}] [-p PERF_MEASURE] [-a {mean,median}]
-                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
-                   [-n {task,run,none}]
-                   [-g {flat,hanning,hamming,bartlett,blackman,none}] [-G]
-                   [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
-                   [-O OUTPUT_DIR] [-o OUTPUT] [-e] [--no-show-eval-lines]
-                   [-P] [--no-plot] [-S] [--no-save] [-c LOAD_SETTINGS] [-C]
-                   [--no-save-settings]
-
-Run L2Metrics from the command line
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -l LOG_DIR, --log-dir LOG_DIR
-                        Log directory of scenario. Defaults to None.
-  -R, --recursive       Recursively compute metrics on logs found in specified
-                        directory. Defaults to false.
-  -r {aware,agnostic}, --variant-mode {aware,agnostic}
-                        Mode for computing metrics with respect to task
-                        variants. Defaults to aware.
-  -s {w,a}, --ste-store-mode {w,a}
-                        Mode for storing log data as STE, overwrite (w) or
-                        append (a). Defaults to None.
-  -v {time,metrics}, --ste-averaging-method {time,metrics}
-                        Method for handling STE runs, time-series averaging
-                        (time) or LL metric averaging (metrics). Defaults to
-                        time.
-  -p PERF_MEASURE, --perf-measure PERF_MEASURE
-                        Name of column to use for metrics calculations.
-                        Defaults to reward.
-  -a {mean,median}, --aggregation-method {mean,median}
-                        Method for aggregating within-lifetime metrics.
-                        Defaults to mean.
-  -m {mrlep,mrtlp,both}, --maintenance-method {mrlep,mrtlp,both}
-                        Method for computing performance maintenance. Defaults
-                        to mrlep.
-  -t {ratio,contrast,both}, --transfer-method {ratio,contrast,both}
-                        Method for computing forward and backward transfer.
-                        Defaults to ratio.
-  -n {task,run,none}, --normalization-method {task,run,none}
-                        Method for normalizing data. Defaults to task.
-  -g {flat,hanning,hamming,bartlett,blackman,none}, --smoothing-method {flat,hanning,hamming,bartlett,blackman,none}
-                        Method for smoothing data, window type. Defaults to
-                        flat.
-  -G, --smooth-eval-data
-                        Smooth evaluation block data. Defaults to false.
-  -w WINDOW_LENGTH, --window-length WINDOW_LENGTH
-                        Window length for smoothing data. Defaults to None.
-  -x, --clamp-outliers  Remove outliers in data for metrics by clamping to
-                        quantiles. Defaults to false.
-  -d DATA_RANGE_FILE, --data-range-file DATA_RANGE_FILE
-                        JSON file containing task performance ranges for
-                        normalization. Defaults to None.
-  -N MEAN STD, --noise MEAN STD
-                        Mean and standard deviation for Gaussian noise in log
-                        data. Defaults to [0, 0].
-  -O OUTPUT_DIR, --output-dir OUTPUT_DIR
-                        Directory for output files. Defaults to results.
-  -o OUTPUT, --output OUTPUT
-                        Specify output filename for plot and results. Defaults
-                        to None.
-  -e, --show-eval-lines
-                        Show lines between evaluation blocks. Defaults to
-                        true.
-  --no-show-eval-lines  Do not show lines between evaluation blocks
-  -P, --do-plot         Plot performance. Defaults to true.
-  --no-plot             Do not plot performance
-  -S, --do-save         Save metrics outputs. Defaults to true.
-  --no-save             Do not save metrics outputs
-  -c LOAD_SETTINGS, --load-settings LOAD_SETTINGS
-                        Load L2Metrics settings from JSON file. Defaults to
-                        None.
-  -C, --do-save-settings
-                        Save L2Metrics settings to JSON file. Defaults to
-                        true.
-  --no-save-settings    Do not save L2Metrics settings to JSON file
-```
-
-By default, the L2Metrics package will calculate metrics with the following options:
-
-- Variant mode is `aware`, which treats task variants as separate tasks.
-- STE averaging method is `time`, which averages the time-series training data across STE logs for relative performance and sample efficiency calculations.
-- Performance measure is `reward`.
-- Aggregation method is `mean`, which reports the lifetime metrics as the mean of task-level metrics as opposed to median.
-- Performance maintenance method is `mrlep`, which uses the most recent learning evaluation performance as opposed to the most recent terminal learning performance (`mrtlp`).
-- Forward and backward transfer use `ratio`.
-- Normalization method is `task`, which computes the per-task data ranges by looking at LL and STE log data, then normalizing to [0, 100].
-- Smoothing method is `flat`, which smooths data with a rectangular sliding window. Other available options include [hanning](https://numpy.org/doc/stable/reference/generated/numpy.hanning.html#numpy.hanning), [hamming](https://numpy.org/doc/stable/reference/generated/numpy.hamming.html#numpy.hamming), [bartlett](https://numpy.org/doc/stable/reference/generated/numpy.bartlett.html#numpy.bartlett), and [blackman](https://numpy.org/doc/stable/reference/generated/numpy.blackman.html).
-- Smoothing window length is `None`, which defaults to min(int(`block_length` \* 0.2), 100).
-- Outlier clamping is `disabled`. When enabled, the outliers (detected using 0.1, 0.9 quantiles) will be clamped to the quantile bounds.
-- Gaussian noise is `disabled`.
-- Plotting is `enabled`.
-- Draw lines between evaluation blocks is `enabled`.
-- Saving of results and log data is `enabled`.
-- Saving of settings is `enabled`.
-
-**Note**: Valid values for the performance measure input argument are determined by the `metrics_columns` dictionary in `logger_info.json`.
+Refer to the [Command-Line README](./docs/command_line.md) for more information on how to run L2Metrics from the command line.
 
 ### Storing Single-Task Expert Data
 
@@ -244,7 +135,7 @@ python -m l2metrics -l ./multi_task -p performance
 
 The default output files are saved in the current working directory and defined below:
 
-- `multi_task_data.feather`: The log data DataFrame containing raw and pre-processed data.
+- `multi_task_data.feather`: The log data DataFrame containing raw and preprocessed data.
 - `multi_task_metrics.json`: The lifetime and task-level metrics of the run.
 - `multi_task_settings.json`: The settings used to generate the metrics report.
 - `multi_task_block.png`: The block plot with separate subplots for evaluation blocks.
@@ -267,38 +158,7 @@ python -m l2metrics -l <path/to/directory/containing/multiple/runs> -R
 
 ### Log Data
 
-If saving is enabled, the framework will generate a [Feather file](https://arrow.apache.org/docs/python/feather.html) containing the raw and pre-processed log data from the scenario. This file can be easily read as a pandas.DataFrame in Python using the `read_feather()` function or as a Table using the `read_table()` function:
-
-```python
-import pandas as pd
-import pyarrow.feather as feather
-
-# Result is pandas.DataFrame
-read_df = pd.read_feather('/path/to/file')
-read_df = feather.read_feather('/path/to/file')
-
-# Result is pyarrow.Table
-read_arrow = feather.read_table('/path/to/file')
-```
-
-The `multi_task_data.feather` file contains the following columns:
-
-- `regime_num`: Regime number, defined as unique block number, block type, task name, and task parameter combination
-- `block_num`: Block number from scenario definition
-- `block_type`: Block type from scenario definition
-- `block_subtype`: Block subtype from scenario definition
-- `exp_num`: Experience number
-- `worker_id`: Worker ID
-- `task_name`: Task name
-- `task_params`: Task parameters
-- `exp_status`: Experience status (complete)
-- `timestamp`: Timestamp
-- `performance`: Application-specific measure of performance, processed and used for computing metrics
-- `performance_raw`: Raw application-specific measure of performance
-- `performance_smoothed`: Smoothed application-specific measure of performance
-- `performance_normalized`: Smoothed and normalized application-specific measure of performance
-
-As alluded to above, the Metrics Framework stores all intermediate values of the performance measure during pre-processing, following the order of operations (smooth -> clamp outliers -> normalize). The original column (e.g., `performance`) is overwritten after each step in the data pre-processing and is used by the framework to compute metrics.
+Refer to the [Log Data README](./docs/log_data.md) for more information on how to interface with the raw and preprocessed log data from the scenario.
 
 ### Output Settings File
 
@@ -306,17 +166,17 @@ If saving of L2Metrics settings is enabled, the framework will generate a JSON f
 
 ```json
 {
-    "log_dir": "multi_task",
-    "perf_measure": "performance",
-    "variant_mode": "aware",
-    "ste_averaging_method": "metrics",
-    "aggregation_method": "mean",
-    "maintenance_method": "mrlep",
-    "transfer_method": "ratio",
-    "normalization_method": "task",
-    "smoothing_method": "flat",
-    "window_length": null,
-    "clamp_outliers": false
+  "log_dir": "multi_task",
+  "perf_measure": "performance",
+  "variant_mode": "aware",
+  "ste_averaging_method": "metrics",
+  "aggregation_method": "mean",
+  "maintenance_method": "mrlep",
+  "transfer_method": "ratio",
+  "normalization_method": "task",
+  "smoothing_method": "flat",
+  "window_length": null,
+  "clamp_outliers": false
 }
 ```
 
@@ -325,8 +185,8 @@ If saving of L2Metrics settings is enabled, the framework will generate a JSON f
 The metrics module will print the lifetime metrics to the console when it has successfully completed execution. The following table shows an example of a metrics report output:
 
 | perf_recovery | perf_maintenance_mrlep | forward_transfer_ratio | backward_transfer_ratio | ste_rel_perf | sample_efficiency |
-| ------------- | ---------------------- | ------------------------- | -------------------------- | ------------ | ----------------- |
-| -2.0           | 3.86                  | 12.63                      | 1.08                      | 1.11         | 0.91              |
+| ------------- | ---------------------- | ---------------------- | ----------------------- | ------------ | ----------------- |
+| -2.0          | 3.86                   | 12.63                  | 1.08                    | 1.11         | 0.91              |
 
 If saving is enabled, the framework will also generate a JSON file containing lifetime and task-level metrics for the scenario. Please refer to the [evaluation README](./evaluation/README.md#metrics-json-file) for more information on the format of this file.
 

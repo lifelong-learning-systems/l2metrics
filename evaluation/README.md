@@ -14,7 +14,7 @@ Once logs have been generated or unzipped, the LL agent can be evaluated with ei
 
 ### Command-Line Execution
 
-```
+```text
 usage: python -m evaluation.evaluate [-h] [-l EVAL_DIR] [-f AGENT_CONFIG_DIR] [-s STE_DIR]
                    [-r {aware,agnostic}] [-v {time,metrics}] [-p PERF_MEASURE]
                    [-a {mean,median}] [-m {mrlep,mrtlp,both}]
@@ -102,7 +102,7 @@ optional arguments:
 
 An evaluation directory can be validated from the command line:
 
-```
+```text
 usage: python -m evaluation.validate [-h] eval_dir
 
 Validate evaluation submission from the command line

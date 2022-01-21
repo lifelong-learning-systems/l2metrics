@@ -2,6 +2,15 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 2.15.0 - 2022-01-21
+
+- Handled additional edge cases for storing STEs
+- Filtered STEs by “complete” experiences before storing
+- Modified normalization function to accept constant performance and normalize to 0
+- Replaced majority of print statements with logging library
+- Updated reference to lifelong learning metrics specification document on arxiv
+- Added additional documentation on data preprocessing
+
 ## 2.14.0 - 2021-12-07
 
 - Implemented supplemental metrics subpackage for ABC transfer

@@ -20,7 +20,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import json
-import traceback
+import logging
 from itertools import product
 from multiprocessing import Pool
 from pathlib import Path
@@ -30,6 +30,8 @@ import psutil
 from tqdm import tqdm
 
 from evaluation.evaluate import compute_eval_metrics
+
+logger = logging.getLogger(__name__)
 
 matplotlib.use('Agg')
 
@@ -127,8 +129,10 @@ def run():
 
 
 if __name__ == '__main__':
+    # Configure logger
+    logging.basicConfig(level=logging.INFO)
+
     try:
         run()
-    except Exception as e:
-        print(f'Error: {e}')
-        traceback.print_exc()
+    except (KeyError, ValueError) as e:
+        logger.exception(e)

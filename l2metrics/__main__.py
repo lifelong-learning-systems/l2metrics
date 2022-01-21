@@ -21,15 +21,18 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import inspect
 import json
-import traceback
+import logging
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from tqdm import tqdm
+
 from l2metrics import util
 from l2metrics.parser import init_parser
 from l2metrics.report import MetricsReport
-from tqdm import tqdm
+
+logger = logging.getLogger("L2Metrics")
 
 
 def run() -> None:
@@ -68,16 +71,6 @@ def run() -> None:
         task_colors = {}
         cc = util.color_cycler()
 
-        old_print = print
-
-        def new_print(*args, **kwargs):
-            try:
-                tqdm.write(*args, **kwargs)
-            except:
-                old_print(*args, ** kwargs)
-
-        inspect.builtins.print = new_print
-
         # Iterate over all runs found in the directory
         dirs = [p for p in Path(args.log_dir).rglob("*") if p.is_dir()]
         for dir in tqdm(dirs, desc=Path(args.log_dir).name):
@@ -87,8 +80,8 @@ def run() -> None:
                     # Store STE data
                     try:
                         util.store_ste_data(log_dir=dir, mode=args.ste_store_mode)
-                    except Exception as e:
-                        print(e)
+                    except ValueError as e:
+                        logger.error(e)
                 else:
                     # Compute and store the LL metrics
                     kwargs['log_dir'] = dir
@@ -173,8 +166,10 @@ def run() -> None:
 
 
 if __name__ == '__main__':
+    # Configure logger
+    logging.basicConfig(level=logging.INFO)
+
     try:
         run()
-    except Exception as e:
-        print(f'Error: {e}')
-        traceback.print_exc()
+    except (KeyError, ValueError) as e:
+        logger.exception(e)

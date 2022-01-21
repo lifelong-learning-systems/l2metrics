@@ -19,13 +19,15 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import warnings
+import logging
 
 import numpy as np
 import pandas as pd
 
 from ._localutil import fill_metrics_df, get_block_saturation_perf
 from .core import Metric
+
+logger = logging.getLogger(__name__)
 
 
 class SampleEfficiency(Metric):
@@ -40,7 +42,7 @@ class SampleEfficiency(Metric):
         self.perf_measure = perf_measure
         self.ste_data = ste_data
         if ste_averaging_method not in ['time', 'metrics']:
-            raise Exception(f'Invalid STE averaging method: {ste_averaging_method}')
+            raise KeyError(f'Invalid STE averaging method: {ste_averaging_method}')
         else:
             self.ste_averaging_method = ste_averaging_method
 
@@ -49,13 +51,13 @@ class SampleEfficiency(Metric):
         self.unique_tasks = block_info.loc[:, 'task_name'].unique()
         ste_names = tuple(self.ste_data.keys())
 
-        # Raise exception if none of the tasks have STE data
+        # Raise value error if none of the tasks have STE data
         if ~np.any(np.isin(self.unique_tasks, ste_names)):
-            raise Exception('No STE data available for any task')
+            raise ValueError('No STE data available for any task')
 
         # Make sure STE baselines are available for all tasks, else send warning
         if ~np.all(np.isin(self.unique_tasks, ste_names)):
-            warnings.warn('STE data not available for all tasks')
+            logger.warning('STE data not available for all tasks')
 
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
@@ -90,8 +92,9 @@ class SampleEfficiency(Metric):
 
                         # Check for valid performance
                         if task_exp_to_sat == 0:
-                                print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
-                                continue
+                            logger.warning(
+                                f"Cannot compute {self.name} for task {task} - Saturation not achieved")
+                            continue
                         
                         # Store task saturation value and experiences to saturation
                         se_task_saturation[task_data['regime_num'].iloc[-1]] = task_saturation
@@ -109,7 +112,8 @@ class SampleEfficiency(Metric):
 
                             # Check for valid performance
                             if ste_exp_to_sat == 0:
-                                print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
+                                logger.warning(
+                                    f"Cannot compute {self.name} for task {task} - Saturation not achieved")
                                 continue
                             
                             # Store STE saturation value and experiences to saturation
@@ -137,7 +141,8 @@ class SampleEfficiency(Metric):
 
                                 # Check for valid performance
                                 if ste_exp_to_sat == 0:
-                                    print(f"Cannot compute {self.name} for task {task} - Saturation not achieved")
+                                    logger.warning(
+                                        f"Cannot compute {self.name} for task {task} - Saturation not achieved")
                                     continue
 
                                 # Compute sample efficiency
@@ -154,7 +159,8 @@ class SampleEfficiency(Metric):
                             se_exp_to_sat[task_data['regime_num'].iloc[-1]] = se_exp_to_sat_vals
                             sample_efficiency[task_data['regime_num'].iloc[-1]] = sample_efficiency_vals
                     else:
-                        print(f"Cannot compute {self.name} for task {task} - No STE data available")
+                        logger.warning(
+                            f"Cannot compute {self.name} for task {task} - No STE data available")
 
             metrics_df = fill_metrics_df(se_task_saturation, 'se_task_saturation', metrics_df)
             metrics_df = fill_metrics_df(se_task_exp_to_sat, 'se_task_exp_to_sat', metrics_df)
@@ -163,6 +169,6 @@ class SampleEfficiency(Metric):
             metrics_df = fill_metrics_df(se_saturation, 'se_saturation', metrics_df)
             metrics_df = fill_metrics_df(se_exp_to_sat, 'se_exp_to_sat', metrics_df)
             return fill_metrics_df(sample_efficiency, 'sample_efficiency', metrics_df)
-        except Exception as e:
-            print(f"Cannot compute {self.name} - {e}")
+        except ValueError as e:
+            logger.warning(f"Cannot compute {self.name} - {e}")
             return metrics_df

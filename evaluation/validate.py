@@ -20,8 +20,10 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import argparse
-import traceback
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
@@ -64,6 +66,9 @@ def main() -> None:
             eval_dir / 'agent_config/ll_logs/3-high_dispersed.zip',
             eval_dir / 'agent_config/ste_logs/ste_logs.zip',
         )
+    else:
+        logger.error('Validation for directory not implemented!')
+        return
 
     num_required_files = len(required_files)
     num_files_found = 0
@@ -73,21 +78,20 @@ def main() -> None:
             if any(filepath.exists() for filepath in required_file):
                 num_files_found = num_files_found + 1
             else:
-                print(f'Missing file: {required_file[0].with_suffix("")}')
+                logger.error(f'Missing file: {required_file[0].with_suffix("")}')
         elif not required_file.exists():
-            print(f'Missing file: {required_file}')
+            logger.error(f'Missing file: {required_file}')
         else:
             num_files_found = num_files_found + 1
 
     if num_files_found == num_required_files:
-        print('Everything has been submitted!')
+        logger.info('Everything has been submitted!')
     else:
-        print(f'\nSubmitted {num_files_found} / {num_required_files} files')
+        logger.info(f'\nSubmitted {num_files_found} / {num_required_files} files')
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        print(f'Error: {e}')
-        traceback.print_exc()
+    # Configure logger
+    logging.basicConfig(level=logging.INFO)
+
+    main()

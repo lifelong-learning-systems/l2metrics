@@ -19,12 +19,16 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+import logging
+
 import numpy as np
 import pandas as pd
 from scipy import stats
 
 from ._localutil import fill_metrics_df
 from .core import Metric
+
+logger = logging.getLogger(__name__)
 
 
 class PerformanceRecovery(Metric):
@@ -45,9 +49,9 @@ class PerformanceRecovery(Metric):
             r_count = r.count()
 
             if r_count <= 1:
-                raise Exception('Not enough recovery times to assess performance recovery')
+                raise ValueError('Not enough recovery times to assess performance recovery')
         else:
-            raise Exception('No recovery times')
+            raise ValueError('No recovery times')
 
     def calculate(self, dataframe: pd.DataFrame, block_info: pd.DataFrame, metrics_df: pd.DataFrame) -> pd.DataFrame:
         try:
@@ -72,9 +76,9 @@ class PerformanceRecovery(Metric):
                     idx = block_info[block_info['task_name'] == task]['regime_num'].max()
                     pr_values[idx] = -slope
                 else:
-                    print(f"Cannot compute {self.name} for task {task} - Not enough recovery times")
+                    logger.warning(f"Cannot compute {self.name} for task {task} - Not enough recovery times")
 
             return fill_metrics_df(pr_values, 'perf_recovery', metrics_df)
-        except Exception as e:
-            print(f"Cannot compute {self.name} - {e}")
+        except ValueError as e:
+            logger.warning(f"Cannot compute {self.name} - {e}")
             return metrics_df

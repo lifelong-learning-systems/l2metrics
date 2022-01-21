@@ -20,6 +20,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import json
+import logging
 from collections import defaultdict
 from datetime import datetime as dt
 from pathlib import Path
@@ -42,6 +43,8 @@ from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
 from .transfer import Transfer
 from .util import load_ste_data, plot_blocks, plot_performance, plot_ste_data
+
+logger = logging.getLogger(__name__)
 
 
 class MetricsReport():
@@ -93,17 +96,17 @@ class MetricsReport():
         # Get metric fields
         self.logger_info = l2l.read_logger_info(self.log_dir)
 
-        # Do a check to make sure the performance measure has been logged
+        # Do a check to make sure the performance measure exists in logger info
         if self.perf_measure not in self.logger_info['metrics_columns']:
-            raise Exception(f'Performance measure not found in metrics columns: {self.perf_measure}\n'
-                            f"Valid measures are: {self.logger_info['metrics_columns']}")
+            raise KeyError(f"Performance measure ({self.perf_measure}) not found in valid metrics columns: "
+                           f"{self.logger_info['metrics_columns']}")
 
         # Gets all data from the relevant log files
         self._log_data = l2l.read_log_data(self.log_dir)
 
         # Do a check to make sure the performance measure is logged
         if self.perf_measure not in self._log_data.columns:
-            raise Exception(f'Performance measure ({self.perf_measure}) not found in the log data')
+            raise KeyError(f'Performance measure ({self.perf_measure}) not found in the log data')
 
         # Validate scenario info
         self.scenario_info = l2l.read_scenario_info(self.log_dir)
@@ -122,8 +125,9 @@ class MetricsReport():
             # Remove variant label from task names
             self._log_data.task_name = self._log_data.task_name.apply(lambda x: x.split('_')[0])
 
+        # Check for log data after filtering
         if self._log_data.empty:
-            raise Exception(f'Logs do not contain any valid data for: {self.perf_measure}')
+            raise ValueError(f'Logs do not contain any valid data for: {self.perf_measure}')
 
         # Fill in regime number and sort
         self._log_data = l2l.fill_regime_num(self._log_data)
@@ -251,13 +255,10 @@ class MetricsReport():
         self._log_data[self.perf_measure + '_normalized'] = self._log_data[self.perf_measure].to_numpy()
 
         # Normalize STE data
-        try:
-            for task, ste_data in self.ste_data.items():
-                if ste_data is not None:
-                    for idx, ste_data_df in enumerate(ste_data):
-                        self.ste_data[task][idx] = self.normalizer.normalize(ste_data_df)
-        except Exception as e:
-            print(f'Error: {e}')
+        for task, ste_data in self.ste_data.items():
+            if ste_data is not None:
+                for idx, ste_data_df in enumerate(ste_data):
+                    self.ste_data[task][idx] = self.normalizer.normalize(ste_data_df)
 
 
     def smooth_data(self) -> None:
@@ -433,7 +434,7 @@ class MetricsReport():
                             self.task_metrics_df.at[task, 'ste_rel_perf_vals'] = rp[0]
                             self.task_metrics_df.at[task, metric] = np.nanmean(rp[0])
                         else:
-                            raise Exception('Unexpected size for relative performance')
+                            raise ValueError('Unexpected size for relative performance')
                     elif metric == 'sample_efficiency':
                         task_sat = tm['se_task_saturation'].dropna().to_numpy(dtype=float)
                         task_exp_to_sat = tm['se_task_exp_to_sat'].dropna().to_numpy(dtype=float)
@@ -462,7 +463,7 @@ class MetricsReport():
                             self.task_metrics_df.at[task, 'sample_efficiency_vals'] = se[0]
                             self.task_metrics_df.at[task, metric] = np.nanmean(se[0])
                         else:
-                            raise Exception('Unexpected size for sample efficiency')
+                            raise ValueError('Unexpected size for sample efficiency')
                     else:
                         # Drop NaN values
                         metric_values = tm[metric].dropna().to_numpy(dtype=float)
@@ -497,7 +498,6 @@ class MetricsReport():
     def report(self) -> None:
         """Print summary report of lifetime metrics and return metric objects.
         """
-
         # TODO: Handle reporting custom metrics
         # Print lifetime metrics
         print('\nLifetime Metrics:')

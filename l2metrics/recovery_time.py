@@ -19,6 +19,7 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+import logging
 from collections import defaultdict
 from typing import Tuple
 
@@ -26,6 +27,8 @@ import pandas as pd
 
 from ._localutil import fill_metrics_df, get_terminal_perf
 from .core import Metric
+
+logger = logging.getLogger(__name__)
 
 
 class RecoveryTime(Metric):
@@ -66,7 +69,7 @@ class RecoveryTime(Metric):
                 ref_indices[task].append(tr_indices[idx - 1])
 
         if not (ref_indices and assess_indices):
-            raise Exception('Not enough blocks to assess recovery time')
+            raise ValueError('Not enough blocks to assess recovery time')
 
         return ref_indices, assess_indices
 
@@ -94,6 +97,6 @@ class RecoveryTime(Metric):
                     recovery_time[assess_ind] = exp_to_rec
 
             return fill_metrics_df(recovery_time, 'recovery_time', metrics_df)
-        except Exception as e:
-            print(f"Cannot compute {self.name} - {e}")
+        except ValueError as e:
+            logger.warning(f"Cannot compute {self.name} - {e}")
             return metrics_df

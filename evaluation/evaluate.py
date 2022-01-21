@@ -31,9 +31,8 @@ import argparse
 import fnmatch
 import inspect
 import json
+import logging
 import os
-import traceback
-import warnings
 from pathlib import Path
 from typing import List, Tuple
 from zipfile import ZipFile
@@ -51,19 +50,12 @@ from l2metrics.report import MetricsReport
 sns.set_style("dark")
 sns.set_context("paper")
 
+logger = logging.getLogger(__name__)
+
 cc = util.color_cycler()
 
 if get_ipython() is None:
     from tqdm import tqdm
-    old_print = print
-
-    def new_print(*args, **kwargs):
-        try:
-            tqdm.write(*args, **kwargs)
-        except:
-            old_print(*args, ** kwargs)
-
-    inspect.builtins.print = new_print
 else:
     from tqdm.notebook import tqdm
 
@@ -88,7 +80,7 @@ def load_computational_costs(eval_dir: Path) -> pd.DataFrame:
     if comp_cost_files:
         comp_cost_df = pd.concat((pd.read_csv(f) for f in comp_cost_files), ignore_index=True)
     else:
-        warnings.warn(f"No computational cost files found in directory: {eval_dir}\n")
+        logger.warning(f"No computational cost files found in directory: {eval_dir}\n")
 
     return comp_cost_df
 
@@ -113,7 +105,7 @@ def load_performance_thresholds(eval_dir: Path) -> pd.DataFrame:
     if perf_thresh_file.exists():
         perf_thresh_df = pd.read_csv(perf_thresh_file)
     else:
-        warnings.warn(f"No performance threshold file found in directory: {eval_dir}\n")
+        logger.warning(f"No performance threshold file found in directory: {eval_dir}\n")
 
     return perf_thresh_df
 
@@ -138,7 +130,7 @@ def load_task_similarities(eval_dir: Path) -> pd.DataFrame:
     if task_similarity_file.exists():
         task_similarity_df = pd.read_csv(task_similarity_file)
     else:
-        warnings.warn(f"No task similarity file found in directory: {eval_dir}\n")
+        logger.warning(f"No task similarity file found in directory: {eval_dir}\n")
 
     return task_similarity_df
 
@@ -151,8 +143,8 @@ def unzip_logs(eval_dir: Path) -> None:
     """
     for root, _, files in os.walk(eval_dir):
         for filename in fnmatch.filter(files, '*.zip'):
-            print(f'Unzipping file: {filename}')
             ZipFile(os.path.join(root, filename)).extractall(root)
+            logger.info(f'Unzipped file: {filename}')
 
 
 def store_ste_data(log_dir: Path) -> None:
@@ -171,12 +163,12 @@ def store_ste_data(log_dir: Path) -> None:
 
     if ste_log_dir.exists():
         # Store all the STE data found in the directory
-        print('Storing STE data...')
+        logger.info('Storing STE data...')
         for ste_dir in ste_log_dir.iterdir():
             if ste_dir.is_dir():
                 # Store STE data in append mode
                 util.store_ste_data(log_dir=ste_dir, mode='a')
-        print('Done storing STE data!\n')
+        logger.info('Done storing STE data!\n')
     else:
         # STE log path not found - possibly because compressed archive has not been
         # extracted in the same location yet
@@ -313,7 +305,7 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame, pd
             ll_log_dir = agent_config / 'll_logs'
 
             if ll_log_dir.exists():
-                print(
+                logger.info(
                     f'Computing metrics from LL logs for {agent_config.name}...')
 
                 # Compute and store the LL metrics for all scenarios found in the directory
@@ -346,8 +338,8 @@ def compute_eval_metrics(**kwargs) -> Tuple[pd.DataFrame, List, pd.DataFrame, pd
                 try:
                     ll_metrics_df = ll_metrics_df.sort_values(
                         by=['scenario_type', 'complexity', 'difficulty'])
-                except Exception as e:
-                    print(e)
+                except KeyError as e:
+                    logger.exception("KeyError occurred while sorting LL metrics")
 
     return ll_metrics_df, ll_metrics_dicts, regime_metrics_df, log_data_df
 
@@ -515,8 +507,8 @@ def evaluate() -> None:
     try:
         display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['mean', 'std']))
         display(ll_metrics_df.groupby(by=['scenario_type', 'complexity', 'difficulty']).agg(['median', scipy.stats.iqr]))
-    except Exception as e:
-        print(e)
+    except KeyError as e:
+        logger.exception("KeyError occurred while grouping LL metrics")
 
     # Save data
     if args.do_save:
@@ -543,8 +535,10 @@ def evaluate() -> None:
 
 
 if __name__ == '__main__':
+    # Configure logger
+    logging.basicConfig(level=logging.INFO)
+
     try:
         evaluate()
-    except Exception as e:
-        print(f'Error: {e}')
-        traceback.print_exc()
+    except (KeyError, ValueError) as e:
+        logger.exception(e)

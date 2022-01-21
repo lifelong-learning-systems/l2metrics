@@ -27,18 +27,20 @@ HERE = pathlib.Path(__file__).parent
 
 setup(
     name='l2metrics',
-    version='2.14.0',
+    version='2.15.0',
     description='Metrics for Lifelong Learning',
     long_description=(HERE / 'README.md').read_text(),
     long_description_content_type='text/markdown',
     author='Eric Nguyen, Megan Baker',
     author_email='Eric.Nguyen@jhuapl.edu, Megan.Baker@jhuapl.edu',
-    license='Proprietary',
+    license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
-        'License :: Other/Proprietary License',
+        'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
     packages=find_packages(),

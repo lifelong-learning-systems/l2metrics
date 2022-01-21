@@ -19,6 +19,7 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+import logging
 import os
 import pickle
 from collections import OrderedDict
@@ -31,9 +32,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-
 # Get default color cycler
 color_cycler = plt.rcParams['axes.prop_cycle']
+
+logger = logging.getLogger(__name__)
 
 
 def get_ste_data_names() -> list:
@@ -99,7 +101,7 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
             'a' - Append - Opens a file for writing, appends data if the file exists.
 
     Raises:
-        Exception: If scenario contains more than one task.
+        ValueError: If scenario does not only contain one task for training.
     """
 
     # Load data from ste logs
@@ -111,6 +113,9 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
     # Validate data format
     l2l.validate_log(ste_data_df, logger_info['metrics_columns'])
 
+    # Filter data by completed experiences
+    ste_data_df = ste_data_df[ste_data_df['exp_status'] == 'complete']
+
     # Fill in regime number and sort
     ste_data_df = l2l.fill_regime_num(ste_data_df)
     ste_data_df = ste_data_df.sort_values(by=['regime_num', 'exp_num'])
@@ -120,7 +125,7 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
 
     # Check for number of tasks in scenario
     if len(task_name) != 1:
-        raise Exception(f'Scenario trains more than one task: {log_dir.name}')
+        raise ValueError(f'Expected 1 trained task in {log_dir.name} but found {len(task_name)}')
 
     # Add STE dataframe to list
     ste_data = [ste_data_df]
@@ -145,7 +150,7 @@ def store_ste_data(log_dir: Path, mode: str = 'w') -> None:
     with open(filename, 'wb') as ste_file:
         pickle.dump(ste_data, ste_file)
 
-    print(f'Stored STE data for {task_name[0]} in {log_dir.name}')
+    logger.info(f'Stored STE data for {task_name[0]} in {log_dir.name}')
 
 
 def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, task_colors: dict = {},
@@ -178,7 +183,8 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, task_c
     df_test = dataframe[dataframe.block_type == 'test']
     df_train = dataframe[dataframe.block_type == 'train']
 
-    fig, axes = plt.subplots(len(unique_tasks)+1, 1, figsize=(12, 12), sharex=True)
+    fig, axes = plt.subplots(
+        len(unique_tasks)+1, 1, figsize=(12, 12), sharex=True, constrained_layout=True)
     ax0 = axes[0]
     ax0.set_ylabel(reward_col + ' (LX)')
     ax0.grid()
@@ -230,10 +236,9 @@ def plot_blocks(dataframe: pd.DataFrame, reward: str, unique_tasks: list, task_c
     # Set y-axis limits
     if not df_test.empty:
         plt.setp(fig.axes, ylim=(np.nanmin(df_test[reward_col]), np.nanmax(df_test[reward_col])))
-    fig.tight_layout()
 
     if do_save_fig:
-        print(f'Saving block plot with name: {plot_filename.replace(" ", "_")}')
+        logger.info(f'Saving block plot with name: {plot_filename.replace(" ", "_")}')
         fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + '.png'))
 
 
@@ -327,7 +332,7 @@ def plot_performance(dataframe: pd.DataFrame, block_info: pd.DataFrame, unique_t
     fig.tight_layout()
 
     if do_save_fig:
-        print(f'Saving performance plot with name: {plot_filename.replace(" ", "_")}')
+        logger.info(f'Saving performance plot with name: {plot_filename.replace(" ", "_")}')
         fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + '.png'))
 
 
@@ -422,9 +427,9 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
                 ax.grid()
                 plt.legend()
             else:
-                print(f"STE data for task cannot be found: {task_name}")
+                logger.warning(f"STE data for task cannot be found: {task_name}")
         else:
-            print(f"Task name cannot be found in scenario: {task_name}")
+            logger.warning(f"Scenario does not contain training data for task: {task_name}")
 
     fig.subplots_adjust(wspace=0.3, hspace=0.4)
 
@@ -432,5 +437,5 @@ def plot_ste_data(dataframe: pd.DataFrame, ste_data: dict, block_info: pd.DataFr
     fig.tight_layout()
 
     if do_save:
-        print(f'Saving STE plot with name: {plot_filename.replace(" ", "_")}')
+        logger.info(f'Saving STE plot with name: {plot_filename.replace(" ", "_")}')
         fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + '.png'))

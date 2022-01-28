@@ -35,7 +35,7 @@ setup(
     author_email="Eric.Nguyen@jhuapl.edu, Megan.Baker@jhuapl.edu",
     license="MIT",
     url="https://github.com/darpa-l2m/l2metrics",
-    download_url="https://github.com/darpa-l2m/l2logger/archive/v3.0.0.tar.gz",
+    download_url="https://github.com/darpa-l2m/l2metrics/archive/v3.0.0.tar.gz",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT License",

@@ -468,28 +468,27 @@ def plot_ste_data(
         ].reset_index(drop=True)
 
         if len(task_data):
-            # Load STE data
+            # Create subplot
+            ax = fig.add_subplot(rows, cols, index + 1)
+
+            plt.scatter(
+                [],
+                [],
+                label=task_name,
+                color=task_colors[task_name],
+                marker="*",
+                s=8,
+            )
+            plt.scatter([], [], label="STE", color="orange", marker="*", s=8)
+
+            # Plot LL data
+            y_ll = task_data[perf_measure].to_numpy()
+            x_ll = list(range(0, len(y_ll)))
+            ax.scatter(
+                x_ll, y_ll, color=task_colors[task_name], marker="*", s=8, zorder=3
+            )
+
             if ste_data.get(task_name):
-                # Create subplot
-                ax = fig.add_subplot(rows, cols, index + 1)
-
-                plt.scatter(
-                    [],
-                    [],
-                    label=task_name,
-                    color=task_colors[task_name],
-                    marker="*",
-                    s=8,
-                )
-                plt.scatter([], [], label="STE", color="orange", marker="*", s=8)
-
-                # Plot LL data
-                y_ll = task_data[perf_measure].to_numpy()
-                x_ll = list(range(0, len(y_ll)))
-                ax.scatter(
-                    x_ll, y_ll, color=task_colors[task_name], marker="*", s=8, zorder=3
-                )
-
                 # Get STE data
                 y_ste = [
                     ste_data_df[ste_data_df["block_type"] == "train"][
@@ -519,16 +518,22 @@ def plot_ste_data(
                             np.nanmin([y_limit[0], np.nanmin(y), np.nanmin(y_ll)]),
                             np.nanmax([y_limit[1], np.nanmax(y), np.nanmax(y_ll)]),
                         )
-
-                # Draw line at block boundaries of task data
-                for x_val in task_data[task_data.regime_num.diff() != 0].index.tolist():
-                    ax.axes.axvline(x=x_val, color="black", linestyle="--")
-
-                ax.set(xlabel=input_xlabel, ylabel=input_ylabel)
-                ax.grid()
-                plt.legend()
             else:
+                x_limit = max(x_limit, len(y_ll))
+                y_limit = (
+                    np.nanmin([y_limit[0], np.nanmin(y_ll)]),
+                    np.nanmax([y_limit[1], np.nanmax(y_ll)]),
+                )
+
                 logger.warning(f"STE data for task cannot be found: {task_name}")
+
+            # Draw line at block boundaries of task data
+            for x_val in task_data[task_data.regime_num.diff() != 0].index.tolist():
+                ax.axes.axvline(x=x_val, color="black", linestyle="--")
+
+            ax.set(xlabel=input_xlabel, ylabel=input_ylabel)
+            ax.grid()
+            plt.legend()
         else:
             logger.warning(
                 f"Scenario does not contain training data for task: {task_name}"

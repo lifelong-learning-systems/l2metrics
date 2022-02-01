@@ -342,52 +342,63 @@ def plot_performance(
             task: c["color"] for c, task in zip(color_cycler(), unique_tasks)
         }
 
-    # Loop through tasks and plot their performance curves
-    for task_name in unique_tasks:
-        if show_eval_lines:
-            eval_x_data = []
-            eval_y_data = []
-            (eval_line,) = ax.plot(
-                eval_x_data,
-                eval_y_data,
+    if show_eval_lines:
+        eval_x_data = {}
+        eval_y_data = {}
+        eval_lines = {}
+
+        for task_name in unique_tasks:
+            eval_x_data[task_name] = []
+            eval_y_data[task_name] = []
+            (eval_lines[task_name],) = ax.plot(
+                [],
+                [],
                 color=task_colors[task_name],
                 linestyle="--",
                 alpha=0.2,
             )
 
-        for _, row in block_info[block_info["task_name"] == task_name].iterrows():
-            regime_num = row["regime_num"]
-            block_type = row["block_type"]
+    # Initialize exp indices
+    lx_idx = 0
+    ex_idx = 0
 
-            # Get data for current regime
-            x = dataframe.loc[
-                dataframe["regime_num"] == regime_num, x_axis_col
-            ].to_numpy()
-            y = dataframe.loc[
-                dataframe["regime_num"] == regime_num, y_axis_col
-            ].to_numpy()
+    # Loop DataFrame and plot performance curves
+    for _, row in block_info.iterrows():
+        regime_num = row["regime_num"]
+        block_type = row["block_type"]
+        task_name = row["task_name"]
 
-            if show_block_boundary:
-                ax.axes.axvline(x[0], linewidth=1, linestyle=":")
+        # Get data for current regime
+        x = dataframe.loc[dataframe["regime_num"] == regime_num, x_axis_col].to_numpy()
+        y = dataframe.loc[dataframe["regime_num"] == regime_num, y_axis_col].to_numpy()
 
-            if shade_test_blocks and block_type == "test":
-                ax.axvspan(x[0], x[-1] + 1, alpha=0.1, facecolor="black")
+        if show_block_boundary:
+            ax.axes.axvline(x[0] - ex_idx, color="black", linewidth=0.5, linestyle="--", alpha=0.2)
 
-            if block_type == "test":
-                if show_eval_lines:
-                    x = list(range(x[0], x[0] + len(y)))
-                    eval_x_data.extend(x)
-                    eval_y_data.extend(np.nanmean(y) * np.ones(len(x)))
-                    eval_line.set_data(eval_x_data, eval_y_data)
-                    plt.draw()
+        if block_type == "test":
+            # if shade_test_blocks:
+            #     ax.axvspan(x[0], x[-1] + 1, alpha=0.1, facecolor="black")
 
-            # Match smoothed x and y length if data had NaNs
-            if len(x) != len(y):
-                x = list(range(x[0], x[0] + len(y)))
+            if show_eval_lines:
+                eval_x_data[task_name].extend([lx_idx])
+                eval_y_data[task_name].extend([np.nanmean(y)])
+                eval_lines[task_name].set_data(
+                    eval_x_data[task_name], eval_y_data[task_name]
+                )
+                plt.draw()
 
+            ex_idx += x[-1] - x[0] + 1
+        else:
             ax.scatter(
-                x, y, color=task_colors[task_name], marker="*", s=8, label=task_name
+                x - ex_idx,
+                y,
+                color=task_colors[task_name],
+                marker="*",
+                s=8,
+                label=task_name,
             )
+
+            lx_idx += x[-1] - x[0] + 1
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))

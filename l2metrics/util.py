@@ -23,7 +23,7 @@ import logging
 import os
 import pickle
 from collections import OrderedDict
-from math import ceil
+from math import ceil, sqrt
 from pathlib import Path
 from typing import List
 
@@ -206,9 +206,14 @@ def plot_blocks(
     df_train = dataframe[dataframe.block_type == "train"]
 
     fig, axes = plt.subplots(
-        len(unique_tasks) + 1, 1, figsize=(12, 12), sharex=True, constrained_layout=True
+        len(unique_tasks) + 1,
+        1,
+        figsize=(12, max(8, 2 * len(unique_tasks))),
+        sharex=True,
+        constrained_layout=True,
     )
     ax0 = axes[0]
+    ax0.set_xlabel("Experiences")
     ax0.set_ylabel(reward_col + " (LX)")
     ax0.grid()
 
@@ -260,7 +265,7 @@ def plot_blocks(
     ax0.set_title(input_title)
 
     # Enable plot legend
-    ax0.legend()
+    ax0.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     # Set y-axis limits
     if not df_test.empty:
@@ -313,7 +318,7 @@ def plot_performance(
     """
 
     # Initialize figure
-    fig = plt.figure(figsize=(12, 6))
+    fig = plt.figure(figsize=(12, 6), constrained_layout=True)
     ax = fig.add_subplot(111)
 
     # Use sleep evaluation blocks if they exist and filter out wake evaluation
@@ -386,7 +391,9 @@ def plot_performance(
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys())
+    ax.legend(
+        by_label.values(), by_label.keys(), loc="center left", bbox_to_anchor=(1, 0.5)
+    )
 
     if Path(input_title).parent != Path("."):
         _, input_title = os.path.split(input_title)
@@ -394,7 +401,6 @@ def plot_performance(
     # Want the saved figured to have a grid so do this before saving
     ax.set(xlabel=input_xlabel, ylabel=input_ylabel, title=input_title)
     ax.grid()
-    fig.tight_layout()
 
     if do_save_fig:
         logger.info(
@@ -436,13 +442,16 @@ def plot_ste_data(
         plot_filename (str, optional): The filename to use for saving. Defaults to 'ste_plot'.
     """
 
-    # Initialize figure
-    fig = plt.figure(figsize=(12, 6))
-    fig.suptitle(input_title)
-
     # Calculate subplot dimensions
-    cols = min(len(unique_tasks), 2)
+    cols = ceil(sqrt(len(unique_tasks)))
     rows = ceil(len(unique_tasks) / cols)
+
+    # Initialize figure
+    fig = plt.figure(
+        figsize=(min(18, 6 * cols), max(6, len(unique_tasks) // 2)),
+        constrained_layout=True,
+    )
+    fig.suptitle(input_title)
 
     # Initialize axis limits
     x_limit = 0
@@ -539,10 +548,7 @@ def plot_ste_data(
                 f"Scenario does not contain training data for task: {task_name}"
             )
 
-    fig.subplots_adjust(wspace=0.3, hspace=0.4)
-
     plt.setp(fig.axes, xlim=(0, x_limit), ylim=y_limit)
-    fig.tight_layout()
 
     if do_save:
         logger.info(f'Saving STE plot with name: {plot_filename.replace(" ", "_")}')

@@ -265,7 +265,7 @@ def plot_blocks(
     ax0.set_title(input_title)
 
     # Enable plot legend
-    ax0.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    ax0.legend(loc="center left", bbox_to_anchor=(1, 0.5), markerscale=2)
 
     # Set y-axis limits
     if not df_test.empty:
@@ -392,7 +392,11 @@ def plot_performance(
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
     ax.legend(
-        by_label.values(), by_label.keys(), loc="center left", bbox_to_anchor=(1, 0.5)
+        by_label.values(),
+        by_label.keys(),
+        loc="center left",
+        bbox_to_anchor=(1, 0.5),
+        markerscale=2,
     )
 
     if Path(input_title).parent != Path("."):
@@ -542,7 +546,7 @@ def plot_ste_data(
 
             ax.set(xlabel=input_xlabel, ylabel=input_ylabel)
             ax.grid()
-            ax.legend(loc="lower right")
+            ax.legend(loc="lower right", markerscale=2)
         else:
             logger.warning(
                 f"Scenario does not contain training data for task: {task_name}"

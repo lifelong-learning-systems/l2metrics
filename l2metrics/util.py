@@ -542,7 +542,7 @@ def plot_ste_data(
 
             ax.set(xlabel=input_xlabel, ylabel=input_ylabel)
             ax.grid()
-            plt.legend()
+            ax.legend(loc="lower right")
         else:
             logger.warning(
                 f"Scenario does not contain training data for task: {task_name}"

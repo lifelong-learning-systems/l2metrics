@@ -796,11 +796,16 @@ class MetricsReport:
             input_title = "Performance Relative to STE\n" + Path(self.log_dir).name
         plot_filename = Path(self.log_dir).name + "_ste"
 
+        # Only send list of unique tasks with training data
+        unique_tasks = self.block_info[
+            self.block_info["block_type"] == "train"
+        ].task_name.unique()
+
         plot_ste_data(
             self._log_data,
             self.ste_data,
             self.block_info,
-            self._unique_tasks,
+            unique_tasks,
             task_colors=task_colors,
             perf_measure=self.perf_measure,
             ste_averaging_method=self.ste_averaging_method,

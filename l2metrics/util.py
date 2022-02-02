@@ -310,7 +310,7 @@ def plot_performance(
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
         show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
             changing slope of evaluation performance. Defaults to True.
-        show_block_boundary (bool, optional): Flag for enabling block boundaries. Defaults to True.
+        show_block_boundary (bool, optional): Flag for enabling block boundaries. Defaults to False.
         shade_test_blocks (bool, optional): Flag for enabling block shading. Defaults to True.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to False.
@@ -373,7 +373,9 @@ def plot_performance(
         y = dataframe.loc[dataframe["regime_num"] == regime_num, y_axis_col].to_numpy()
 
         if show_block_boundary:
-            ax.axes.axvline(x[0] - ex_idx, color="black", linewidth=0.5, linestyle="--", alpha=0.2)
+            ax.axes.axvline(
+                x[0] - ex_idx, color="black", linewidth=0.5, linestyle="--", alpha=0.2
+            )
 
         if block_type == "test":
             # if shade_test_blocks:

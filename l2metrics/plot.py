@@ -62,6 +62,16 @@ def build_plot_parser():
         help="Enable live plotting of the specified log directory. Defaults to False.",
     )
 
+    # Flag for enabling live plotting
+    parser.add_argument(
+        "-i",
+        "--interval",
+        default=30,
+        type=int,
+        help="Update interval, in seconds. Defaults to 30.",
+    )
+
+
     # Method for handling task variants
     parser.add_argument(
         "-r",
@@ -413,14 +423,13 @@ def main() -> None:
 
     if args.live:
         while True:
-            logger.info("Updating plot")
+            logger.info("Updating plot...")
             plot(log_dir, data_range, fig, args)
             fig.canvas.flush_events()
-            sleep(5)
+            sleep(args.interval)
     else:
         plot(log_dir, data_range, fig, args)
-
-    plt.show()
+        plt.show()
 
 
 if __name__ == "__main__":
@@ -433,5 +442,5 @@ if __name__ == "__main__":
 
     try:
         main()
-    except (KeyError, ValueError) as e:
+    except (KeyboardInterrupt, KeyError, ValueError) as e:
         logger.exception(e)

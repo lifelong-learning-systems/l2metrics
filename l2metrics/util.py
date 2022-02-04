@@ -295,6 +295,7 @@ def plot_performance(
     output_dir: str = "",
     do_save_fig: bool = False,
     plot_filename: str = "performance_plot",
+    fig=None,
 ) -> None:
     """Plots the performance curves for the given DataFrame.
 
@@ -318,7 +319,10 @@ def plot_performance(
     """
 
     # Initialize figure
-    fig = plt.figure(figsize=(12, 6), constrained_layout=True)
+    if fig is None:
+        fig = plt.figure(figsize=(12, 6), constrained_layout=True)
+    else:
+        plt.clf()
     ax = fig.add_subplot(111)
 
     # Use sleep evaluation blocks if they exist and filter out wake evaluation

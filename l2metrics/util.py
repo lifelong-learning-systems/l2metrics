@@ -469,7 +469,7 @@ def plot_ste_data(
 
     # Initialize figure
     fig = plt.figure(
-        figsize=(min(18, 6 * cols), max(6, len(unique_tasks) // 2)),
+        figsize=(min(18, max(12, 6 * cols)), max(6, len(unique_tasks) // 2)),
         constrained_layout=True,
     )
     fig.suptitle(input_title)

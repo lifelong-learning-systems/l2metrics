@@ -465,6 +465,8 @@ def plot_ste_data(
 
     # Calculate subplot dimensions
     cols = ceil(sqrt(len(unique_tasks)))
+    if cols == 0:
+        return
     rows = ceil(len(unique_tasks) / cols)
 
     # Initialize figure

@@ -71,7 +71,6 @@ def build_plot_parser():
         help="Update interval, in seconds. Defaults to 30.",
     )
 
-
     # Method for handling task variants
     parser.add_argument(
         "-r",

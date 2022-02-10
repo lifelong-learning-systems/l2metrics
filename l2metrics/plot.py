@@ -424,7 +424,7 @@ def main() -> None:
         while True:
             logger.info("Updating plot...")
             plot(log_dir, data_range, fig, args)
-            fig.canvas.flush_events()
+            plt.pause(0.0001)
             sleep(args.interval)
     else:
         plot(log_dir, data_range, fig, args)

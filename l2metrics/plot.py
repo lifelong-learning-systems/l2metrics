@@ -90,6 +90,16 @@ def build_plot_parser():
         help="Name of column to use for metrics calculations. Defaults to reward.",
     )
 
+    # Horizontal axis unit
+    parser.add_argument(
+        "-u",
+        "--unit",
+        default="exp_num",
+        type=str,
+        choices=["exp_num", "steps"],
+        help="Unit for plotting data. Defaults to exp_num.",
+    )
+
     # Method for normalization
     parser.add_argument(
         "-n",
@@ -359,12 +369,20 @@ def plot(log_dir, data_range, fig, args):
     input_title = log_dir.name
     plot_filename = input_title
 
+    # Check for plotting units
+    if args.unit == "steps":
+        if "episode_step_count" in log_data.columns:
+            log_data["steps"] = log_data["episode_step_count"].cumsum()
+        else:
+            raise KeyError("Step information not available in logs")
+
     plot_performance(
         log_data,
         block_info,
         unique_tasks=unique_tasks,
         # task_colors=task_colors,
         show_eval_lines=args.show_eval_lines,
+        x_axis_col=args.unit,
         y_axis_col=args.perf_measure,
         input_title=input_title,
         output_dir="",

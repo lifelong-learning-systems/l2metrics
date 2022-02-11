@@ -165,17 +165,17 @@ def build_plot_parser():
     # Flag for enabling/disabling save
     parser.add_argument(
         "-S",
-        "--do-save",
+        "--save",
         dest="do_save",
-        default=True,
+        default=False,
         action="store_true",
-        help="Save metrics outputs. Defaults to true.",
+        help="Save plot. Defaults to false.",
     )
     parser.add_argument(
         "--no-save",
         dest="do_save",
         action="store_false",
-        help="Do not save metrics outputs",
+        help="Do not save plot",
     )
 
     return parser

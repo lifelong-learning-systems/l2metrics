@@ -238,6 +238,7 @@ def init_parser():
 
     # Plot types to generate
     parser.add_argument(
+        "-T",
         "--plot-types",
         default="all",
         type=str,

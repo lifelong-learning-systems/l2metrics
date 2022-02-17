@@ -104,11 +104,11 @@ def run() -> None:
                     # Plot metrics
                     if args.do_plot:
                         # Update task color dictionary
-                        for task_name, c in zip(
+                        for task_name, color in zip(
                             list(set(report._unique_tasks) - set(task_colors.keys())),
                             cc,
                         ):
-                            task_colors[task_name] = c["color"]
+                            task_colors[task_name] = color
 
                         # Generate plots
                         report.plot(

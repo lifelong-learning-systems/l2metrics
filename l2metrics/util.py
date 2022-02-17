@@ -29,12 +29,34 @@ from typing import List
 
 import l2logger.util as l2l
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# Get default color cycler
-color_cycler = plt.rcParams["axes.prop_cycle"]
+# Create color cycler
+color_cycler = [
+    "#1f77b4",
+    "#aec7e8",
+    "#ff7f0e",
+    "#ffbb78",
+    "#2ca02c",
+    "#98df8a",
+    "#d62728",
+    "#ff9896",
+    "#9467bd",
+    "#c5b0d5",
+    "#8c564b",
+    "#c49c94",
+    "#e377c2",
+    "#f7b6d2",
+    "#7f7f7f",
+    "#c7c7c7",
+    "#bcbd22",
+    "#dbdb8d",
+    "#17becf",
+    "#9edae5",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -204,9 +226,7 @@ def plot_raw(
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {
-            task: c["color"] for c, task in zip(color_cycler(), unique_tasks)
-        }
+        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
 
     # Plot raw training data
     for task_name in unique_tasks:
@@ -224,6 +244,7 @@ def plot_raw(
         _, input_title = os.path.split(input_title)
 
     ax.set_title(input_title)
+    ax.xaxis.set_major_formatter(ticker.EngFormatter())
     ax.set_xlabel("Experiences")
     ax.set_ylabel("Raw Performance")
     ax.grid()
@@ -279,9 +300,7 @@ def plot_evaluation_blocks(
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {
-            task: c["color"] for c, task in zip(color_cycler(), unique_tasks)
-        }
+        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
 
     # Initialize figure
     fig = plt.figure(
@@ -377,9 +396,7 @@ def plot_learning_blocks(
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {
-            task: c["color"] for c, task in zip(color_cycler(), unique_tasks)
-        }
+        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
 
     if show_eval_lines:
         eval_x_data = {}
@@ -456,6 +473,7 @@ def plot_learning_blocks(
 
     # Want the saved figured to have a grid so do this before saving
     ax.set(xlabel=input_xlabel, ylabel=input_ylabel, title=input_title)
+    ax.xaxis.set_major_formatter(ticker.EngFormatter())
     ax.grid()
 
     if do_save_fig:
@@ -519,9 +537,7 @@ def plot_ste(
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {
-            task: c["color"] for c, task in zip(color_cycler(), unique_tasks)
-        }
+        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
 
     for index, task_name in enumerate(unique_tasks):
         # Get block info for task during training
@@ -623,6 +639,7 @@ def plot_ste(
                 logger.warning(f"STE data for task cannot be found: {task_name}")
 
             ax.set(xlabel=input_xlabel, ylabel=input_ylabel)
+            ax.xaxis.set_major_formatter(ticker.EngFormatter())
             ax.grid()
             ax.legend(loc="lower right", markerscale=2)
         else:

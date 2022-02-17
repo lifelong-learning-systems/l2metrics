@@ -35,7 +35,13 @@ from matplotlib.animation import FuncAnimation
 
 from ._localutil import smooth
 from .normalizer import Normalizer
-from .util import load_ste_data, plot_blocks, plot_performance, plot_ste_data
+from .util import (
+    load_ste_data,
+    plot_evaluation_blocks,
+    plot_learning_blocks,
+    plot_raw,
+    plot_ste,
+)
 
 logging.captureWarnings(True)
 logger = logging.getLogger("l2metrics.plot")
@@ -69,6 +75,16 @@ def build_plot_parser():
         default=30,
         type=int,
         help="Update interval, in seconds. Defaults to 30.",
+    )
+
+    # Plot types to generate
+    parser.add_argument(
+        "--plot-types",
+        default="lb",
+        type=str,
+        nargs="+",
+        choices=["all", "raw", "eb", "lb", "ste"],
+        help="Specify which plot types to generate. Defaults to all.",
     )
 
     # Method for handling task variants
@@ -160,16 +176,8 @@ def build_plot_parser():
     parser.add_argument(
         "-e",
         "--show-eval-lines",
-        dest="show_eval_lines",
-        default=True,
         action="store_true",
-        help="Show lines between evaluation blocks. Defaults to true.",
-    )
-    parser.add_argument(
-        "--no-show-eval-lines",
-        dest="show_eval_lines",
-        action="store_false",
-        help="Do not show lines between evaluation blocks",
+        help="Show lines between evaluation blocks. Defaults to false.",
     )
 
     # Flag for enabling/disabling save
@@ -366,30 +374,81 @@ def plot(log_dir, data_range, fig, args):
     else:
         normalizer = None
 
-    input_title = log_dir.name
-    plot_filename = input_title
+    log_dir_name = log_dir.name
 
     # Check for plotting units
     if args.unit == "steps":
+        # Add steps column to log data
         if "episode_step_count" in log_data.columns:
             log_data["steps"] = log_data["episode_step_count"].cumsum()
         else:
-            raise KeyError("Step information not available in logs")
+            raise KeyError("Step information not available in log")
 
-    plot_performance(
-        log_data,
-        block_info,
-        unique_tasks=unique_tasks,
-        # task_colors=task_colors,
-        show_eval_lines=args.show_eval_lines,
-        x_axis_col=args.unit,
-        y_axis_col=args.perf_measure,
-        input_title=input_title,
-        output_dir="",
-        do_save_fig=args.do_save,
-        plot_filename=plot_filename + "_perf",
-        fig=fig,
-    )
+    if any(plot_type in args.plot_types for plot_type in ["all", "lb"]):
+        plot_learning_blocks(
+            log_data,
+            block_info,
+            unique_tasks=unique_tasks,
+            show_eval_lines=args.show_eval_lines,
+            x_axis_col=args.unit,
+            y_axis_col=args.perf_measure,
+            input_title="Learning Performance\n" + log_dir_name,
+            do_save_fig=args.do_save,
+            plot_filename=log_dir_name + "_learning",
+            fig=fig,
+        )
+
+    if any(plot_type in args.plot_types for plot_type in ["all", "raw"]):
+        plot_raw(
+            log_data,
+            unique_tasks,
+            x_axis_col=args.unit,
+            y_axis_col=args.perf_measure,
+            input_title="Raw and Smoothed Performance\n" + log_dir_name,
+            do_save_fig=args.do_save,
+            plot_filename=log_dir_name + "_raw",
+        )
+
+    if any(plot_type in args.plot_types for plot_type in ["all", "eb"]):
+        plot_evaluation_blocks(
+            log_data,
+            unique_tasks=unique_tasks,
+            x_axis_col=args.unit,
+            y_axis_col=args.perf_measure,
+            input_title="Evaluation Performance\n" + log_dir_name,
+            do_save_fig=args.do_save,
+            plot_filename=log_dir_name + "_evaluation",
+        )
+
+    if any(plot_type in args.plot_types for plot_type in ["all", "ste"]):
+        # Only send list of unique tasks with training data
+        unique_tasks = block_info[
+            block_info["block_type"] == "train"
+        ].task_name.unique()
+
+        if args.unit == "steps":
+            # Add steps column to STE data
+            for task, temp_ste_data in ste_data.items():
+                if temp_ste_data is not None:
+                    for idx, ste_data_df in enumerate(temp_ste_data):
+                        if "episode_step_count" in ste_data_df.columns:
+                            ste_data[task][idx]["steps"] = ste_data_df[
+                                "episode_step_count"
+                            ].cumsum()
+                        else:
+                            raise KeyError("Step information not available in STE logs")
+
+        plot_ste(
+            log_data,
+            ste_data,
+            block_info,
+            unique_tasks,
+            x_axis_col=args.unit,
+            perf_measure=args.perf_measure,
+            input_title="Performance Relative to STE\n" + log_dir_name,
+            do_save=args.do_save,
+            plot_filename=log_dir_name + "_ste",
+        )
 
 
 def main() -> None:

@@ -70,6 +70,7 @@ class MetricsReport:
         self.window_length = kwargs.get("window_length", None)
         self.clamp_outliers = kwargs.get("clamp_outliers", False)
         self.data_range = kwargs.get("data_range", None)
+        self.unit = kwargs.get("unit", "exp_num")
 
         # Modify data range based on variant mode
         if self.variant_mode == "agnostic" and self.data_range is not None:
@@ -187,6 +188,9 @@ class MetricsReport:
             self.normalize_data()
         else:
             self.normalizer = None
+
+        # Modify data for plotting unit
+        self.adjust_experience_units()
 
         # Adds default metrics
         self._add_default_metrics()
@@ -357,6 +361,25 @@ class MetricsReport:
                             window_len=self.window_length,
                             window=self.smoothing_method,
                         )
+
+    def adjust_experience_units(self) -> None:
+        if self.unit == "steps":
+            # Add steps column to log data
+            if "episode_step_count" in self._log_data.columns:
+                self._log_data["steps"] = self._log_data["episode_step_count"].cumsum()
+            else:
+                raise KeyError("Step information not available in logs")
+
+            # Add steps column to STE data
+            for task, ste_data in self.ste_data.items():
+                if ste_data is not None:
+                    for idx, ste_data_df in enumerate(ste_data):
+                        if "episode_step_count" in ste_data_df.columns:
+                            self.ste_data[task][idx]["steps"] = ste_data_df[
+                                "episode_step_count"
+                            ].cumsum()
+                        else:
+                            raise KeyError("Step information not available in logs")
 
     def log_summary(self) -> pd.DataFrame:
         # Get summary of log data
@@ -778,6 +801,7 @@ class MetricsReport:
             unique_tasks=self._unique_tasks,
             task_colors=task_colors,
             show_eval_lines=show_eval_lines,
+            x_axis_col=self.unit,
             y_axis_col=self.perf_measure,
             input_title=input_title,
             output_dir=output_dir,
@@ -806,6 +830,7 @@ class MetricsReport:
             self.ste_data,
             self.block_info,
             unique_tasks,
+            x_axis_col=self.unit,
             task_colors=task_colors,
             perf_measure=self.perf_measure,
             ste_averaging_method=self.ste_averaging_method,

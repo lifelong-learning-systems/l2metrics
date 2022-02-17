@@ -435,6 +435,7 @@ def plot_ste_data(
     ste_data: dict,
     block_info: pd.DataFrame,
     unique_tasks: list,
+    x_axis_col: str = "exp_num",
     task_colors: dict = {},
     perf_measure: str = "reward",
     ste_averaging_method: str = "metrics",
@@ -452,6 +453,7 @@ def plot_ste_data(
         ste_data (dict): STE data.
         block_info (pd.DataFrame): The block info of the DataFrame.
         unique_tasks (list): List of unique tasks in scenario.
+        x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
         task_colors (dict): Dict of task names and colors for plotting. Defaults to {}.
         perf_measure (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         ste_averaging_method (str, optional): Method for handling STE metric averaging. Defaults to 'metrics'.
@@ -515,53 +517,73 @@ def plot_ste_data(
 
             # Plot LL data
             y_ll = task_data[perf_measure].to_numpy()
-            x_ll = list(range(0, len(y_ll)))
+
+            x_ll = []
+            last_exp = 0
+            mean_exp_diff = 0
+            for reg_idx, regime in enumerate(task_data["regime_num"].unique()):
+                x = task_data.loc[
+                    task_data["regime_num"] == regime, x_axis_col
+                ].to_numpy()
+                if reg_idx == 0:
+                    x_ll.extend(x - x[0])
+                else:
+                    # Draw line at block boundaries of task data
+                    ax.axes.axvline(x=x_ll[-1], color="black", linestyle="--")
+
+                    x_ll.extend(x - (x[0] - last_exp) + mean_exp_diff)
+                last_exp = x_ll[-1]
+                mean_exp_diff = np.mean(np.diff(x))
+
             ax.scatter(
                 x_ll, y_ll, color=task_colors[task_name], marker="*", s=8, zorder=3
             )
 
             if ste_data.get(task_name):
+                x_ste = []
+                y_ste = []
+
                 # Get STE data
-                y_ste = [
-                    ste_data_df[ste_data_df["block_type"] == "train"][
-                        perf_measure
+                for ste_data_df in ste_data.get(task_name):
+                    x = ste_data_df[ste_data_df["block_type"] == "train"][
+                        x_axis_col
                     ].to_numpy()
-                    for ste_data_df in ste_data.get(task_name)
-                ]
+                    x_ste.append(x - x[0])
+                    y_ste.append(
+                        ste_data_df[ste_data_df["block_type"] == "train"][
+                            perf_measure
+                        ].to_numpy()
+                    )
 
                 if ste_averaging_method == "time":
                     # Average all the STE data together after truncating to same length
                     y_ste = np.array([x[: min(map(len, y_ste))] for x in y_ste]).mean(0)
-                    x_ste = list(range(0, len(y_ste)))
+                    x_ste = np.array([x[: min(map(len, x_ste))] for x in x_ste]).mean(0)
                     ax.scatter(x_ste, y_ste, color="orange", marker="*", s=8)
 
-                    x_limit = max(x_limit, len(y_ste), len(y_ll))
+                    x_limit = max(x_limit, np.nanmax(x_ste), np.nanmax(x_ll))
                     y_limit = (
                         np.nanmin([y_limit[0], np.nanmin(y_ste), np.nanmin(y_ll)]),
                         np.nanmax([y_limit[1], np.nanmax(y_ste), np.nanmax(y_ll)]),
                     )
+                    logger.warning("Time STE averaging method is deprecated")
                 else:
                     # Plot runs of STE data
-                    for y in y_ste:
-                        x = list(range(0, len(y)))
-                        ax.scatter(x, y, color="orange", marker="*", s=8)
-                        x_limit = max(x_limit, len(y), len(y_ll))
+                    for x, y in zip(x_ste, y_ste):
+                        ax.scatter(x, y, color="orange", marker="*", s=4)
+                        x_limit = max(x_limit, np.nanmax(x), np.nanmax(x_ll))
                         y_limit = (
                             np.nanmin([y_limit[0], np.nanmin(y), np.nanmin(y_ll)]),
                             np.nanmax([y_limit[1], np.nanmax(y), np.nanmax(y_ll)]),
                         )
             else:
-                x_limit = max(x_limit, len(y_ll))
+                x_limit = max(x_limit, np.nanmax(x_ll))
                 y_limit = (
                     np.nanmin([y_limit[0], np.nanmin(y_ll)]),
                     np.nanmax([y_limit[1], np.nanmax(y_ll)]),
                 )
 
                 logger.warning(f"STE data for task cannot be found: {task_name}")
-
-            # Draw line at block boundaries of task data
-            for x_val in task_data[task_data.regime_num.diff() != 0].index.tolist():
-                ax.axes.axvline(x=x_val, color="black", linestyle="--")
 
             ax.set(xlabel=input_xlabel, ylabel=input_ylabel)
             ax.grid()

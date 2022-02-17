@@ -202,6 +202,16 @@ def init_parser():
         help="Specify output filename for plot and results. Defaults to None.",
     )
 
+    # Horizontal axis unit
+    parser.add_argument(
+        "-u",
+        "--unit",
+        default="exp_num",
+        type=str,
+        choices=["exp_num", "steps"],
+        help="Unit for plotting data. Defaults to exp_num.",
+    )
+
     # Flag for showing evaluation block lines
     parser.add_argument(
         "-e",

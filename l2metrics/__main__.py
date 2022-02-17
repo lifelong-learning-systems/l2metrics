@@ -112,13 +112,9 @@ def run() -> None:
 
                         # Generate plots
                         report.plot(
+                            plot_types=args.plot_types,
                             save=args.do_save,
                             show_eval_lines=args.show_eval_lines,
-                            output_dir=str(args.output_dir),
-                            task_colors=task_colors,
-                        )
-                        report.plot_ste_data(
-                            save=args.do_save,
                             output_dir=str(args.output_dir),
                             task_colors=task_colors,
                         )
@@ -179,11 +175,11 @@ def run() -> None:
             # Plot metrics
             if args.do_plot:
                 report.plot(
+                    plot_types=args.plot_types,
                     save=args.do_save,
                     show_eval_lines=args.show_eval_lines,
                     output_dir=str(args.output_dir),
                 )
-                report.plot_ste_data(save=args.do_save, output_dir=str(args.output_dir))
                 plt.show()
 
             # Save settings used to run calculate metrics

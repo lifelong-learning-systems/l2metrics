@@ -244,6 +244,16 @@ def init_parser():
         help="Do not plot performance",
     )
 
+    # Plot types to generate
+    parser.add_argument(
+        "--plot-types",
+        default="all",
+        type=str,
+        nargs="+",
+        choices=["all", "raw", "eb", "lb", "ste"],
+        help="Specify which plot types to generate. Defaults to all.",
+    )
+
     # Flag for enabling/disabling save
     parser.add_argument(
         "-S",

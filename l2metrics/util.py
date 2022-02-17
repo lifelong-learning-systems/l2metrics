@@ -529,7 +529,9 @@ def plot_ste_data(
                     x_ll.extend(x - x[0])
                 else:
                     # Draw line at block boundaries of task data
-                    ax.axes.axvline(x=x_ll[-1], color="black", linestyle="--")
+                    ax.axes.axvline(
+                        x=x_ll[-1] + mean_exp_diff, color="black", linestyle="--"
+                    )
 
                     x_ll.extend(x - (x[0] - last_exp) + mean_exp_diff)
                 last_exp = x_ll[-1]

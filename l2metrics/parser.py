@@ -216,16 +216,8 @@ def init_parser():
     parser.add_argument(
         "-e",
         "--show-eval-lines",
-        dest="show_eval_lines",
-        default=True,
         action="store_true",
         help="Show lines between evaluation blocks. Defaults to true.",
-    )
-    parser.add_argument(
-        "--no-show-eval-lines",
-        dest="show_eval_lines",
-        action="store_false",
-        help="Do not show lines between evaluation blocks",
     )
 
     # Flag for enabling/disabling plotting

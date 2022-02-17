@@ -42,7 +42,13 @@ from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
 from .transfer import Transfer
-from .util import load_ste_data, plot_blocks, plot_performance, plot_ste_data
+from .util import (
+    load_ste_data,
+    plot_evaluation_blocks,
+    plot_learning_blocks,
+    plot_raw,
+    plot_ste,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -779,27 +785,37 @@ class MetricsReport:
         show_eval_lines: bool = True,
         output_dir: str = "",
         task_colors: dict = {},
-        input_title: str = None,
     ) -> None:
 
-        if input_title is None:
-            input_title = Path(self.log_dir).name
-        plot_filename = input_title
+        log_dir_name = Path(self.log_dir).name
 
         if any(plot_type in plot_types for plot_type in ["all", "raw"]):
-            plot_blocks(
+            plot_raw(
                 self._log_data,
                 self.perf_measure,
                 self._unique_tasks,
                 task_colors=task_colors,
-                input_title=input_title,
+                input_title="Raw and Smoothed Performance\n" + log_dir_name,
                 output_dir=output_dir,
                 do_save_fig=save,
-                plot_filename=plot_filename + "_block",
+                plot_filename=log_dir_name + "_raw",
+            )
+
+        if any(plot_type in plot_types for plot_type in ["all", "eb"]):
+            plot_evaluation_blocks(
+                self._log_data,
+                unique_tasks=self._unique_tasks,
+                task_colors=task_colors,
+                x_axis_col=self.unit,
+                y_axis_col=self.perf_measure,
+                input_title="Evaluation Performance\n" + log_dir_name,
+                output_dir=output_dir,
+                do_save_fig=save,
+                plot_filename=log_dir_name + "_evaluation",
             )
 
         if any(plot_type in plot_types for plot_type in ["all", "lb"]):
-            plot_performance(
+            plot_learning_blocks(
                 self._log_data,
                 self.block_info,
                 unique_tasks=self._unique_tasks,
@@ -807,23 +823,19 @@ class MetricsReport:
                 show_eval_lines=show_eval_lines,
                 x_axis_col=self.unit,
                 y_axis_col=self.perf_measure,
-                input_title=input_title,
+                input_title="Learning Performance\n" + log_dir_name,
                 output_dir=output_dir,
                 do_save_fig=save,
-                plot_filename=plot_filename + "_perf",
+                plot_filename=log_dir_name + "_learning",
             )
 
         if any(plot_type in plot_types for plot_type in ["all", "ste"]):
-            if input_title is None:
-                input_title = "Performance Relative to STE\n" + Path(self.log_dir).name
-            plot_filename = Path(self.log_dir).name + "_ste"
-
             # Only send list of unique tasks with training data
             unique_tasks = self.block_info[
                 self.block_info["block_type"] == "train"
             ].task_name.unique()
 
-            plot_ste_data(
+            plot_ste(
                 self._log_data,
                 self.ste_data,
                 self.block_info,
@@ -832,8 +844,8 @@ class MetricsReport:
                 task_colors=task_colors,
                 perf_measure=self.perf_measure,
                 ste_averaging_method=self.ste_averaging_method,
-                input_title=input_title,
+                input_title="Performance Relative to STE\n" + log_dir_name,
                 output_dir=output_dir,
                 do_save=save,
-                plot_filename=plot_filename,
+                plot_filename=log_dir_name + "_ste",
             )

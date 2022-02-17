@@ -166,9 +166,10 @@ def store_ste_data(log_dir: Path, mode: str = "w") -> None:
 
 def plot_raw(
     dataframe: pd.DataFrame,
-    reward: str,
     unique_tasks: list,
     task_colors: dict = {},
+    x_axis_col: str = "exp_num",
+    y_axis_col: str = "reward",
     input_title: str = "",
     output_dir: str = "",
     do_save_fig: bool = False,
@@ -181,16 +182,18 @@ def plot_raw(
         reward (str): The column name of the metric to plot.
         unique_tasks (list): List of unique tasks in scenario.
         task_colors (dict): Dict of task names and colors for plotting. Defaults to {}.
+        x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
+        y_axis_col (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         input_title (str, optional): The plot title. Defaults to ''.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to False.
         plot_filename (str, optional): The filename to use for saving. Defaults to 'raw_plot'.
     """
 
-    reward_col_raw = reward + "_raw"
+    reward_col_raw = y_axis_col + "_raw"
 
-    if reward + "_smoothed" in dataframe.columns:
-        reward_col_smooth = reward + "_smoothed"
+    if y_axis_col + "_smoothed" in dataframe.columns:
+        reward_col_smooth = y_axis_col + "_smoothed"
     else:
         reward_col_smooth = None
 
@@ -207,14 +210,14 @@ def plot_raw(
 
     # Plot raw training data
     for task_name in unique_tasks:
-        x = df_train[df_train["task_name"] == task_name].exp_num
+        x = df_train[df_train["task_name"] == task_name][x_axis_col]
         y = df_train[df_train["task_name"] == task_name][reward_col_raw]
         ax.plot(x, y, ".", label=task_name, color=task_colors[task_name], markersize=4)
 
     # Plot smoothed training data
     if reward_col_smooth is not None:
         for _, group in df_train.groupby("block_num"):
-            ax.plot(group.exp_num, group[reward_col_smooth], "k")
+            ax.plot(group[x_axis_col], group[reward_col_smooth], "k")
 
     # Set plot title
     if Path(input_title).parent != Path("."):

@@ -792,9 +792,10 @@ class MetricsReport:
         if any(plot_type in plot_types for plot_type in ["all", "raw"]):
             plot_raw(
                 self._log_data,
-                self.perf_measure,
                 self._unique_tasks,
                 task_colors=task_colors,
+                x_axis_col=self.unit,
+                y_axis_col=self.perf_measure,
                 input_title="Raw and Smoothed Performance\n" + log_dir_name,
                 output_dir=output_dir,
                 do_save_fig=save,

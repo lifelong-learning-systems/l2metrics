@@ -69,7 +69,7 @@ def run() -> None:
         regime_metrics_df = pd.DataFrame()
         log_data_df = pd.DataFrame()
         task_colors = {}
-        cc = util.color_cycler()
+        cc = util.color_cycler
 
         # Iterate over all runs found in the directory
         dirs = [p for p in Path(args.log_dir).rglob("*") if p.is_dir()]

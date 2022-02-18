@@ -250,6 +250,7 @@ def plot_raw(
     ax.grid()
 
     # Enable plot legend
+    # TODO: Figure out why all tasks are showing in legend
     ax.legend(loc="center left", bbox_to_anchor=(1, 0.5), markerscale=2)
 
     if do_save_fig:
@@ -311,6 +312,7 @@ def plot_evaluation_blocks(
 
     for idx, task_cluster in enumerate(task_clusters):
         # Create subplot
+        # TODO: Set common y-axis limits
         ax = fig.add_subplot(len(task_clusters), 1, idx + 1)
 
         cluster_eval_data = df_test[df_test["task_name"].str.contains(task_cluster)]

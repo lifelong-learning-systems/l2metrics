@@ -350,7 +350,7 @@ def plot_learning_blocks(
     shade_test_blocks: bool = True,
     output_dir: str = "",
     do_save_fig: bool = False,
-    plot_filename: str = "performance_plot",
+    plot_filename: str = "learning_plot",
     fig=None,
 ) -> None:
     """Plots the learning block performance curves for the given DataFrame.
@@ -480,7 +480,7 @@ def plot_learning_blocks(
 
     if do_save_fig:
         logger.info(
-            f'Saving performance plot with name: {plot_filename.replace(" ", "_")}'
+            f'Saving learning plot with name: {plot_filename.replace(" ", "_")}'
         )
         fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + ".png"))
 

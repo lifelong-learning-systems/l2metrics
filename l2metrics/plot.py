@@ -27,6 +27,7 @@ from pathlib import Path
 from time import sleep
 from typing import List, Tuple, Union
 
+from tqdm import tqdm
 import l2logger.util as l2l
 import numpy as np
 import pandas as pd
@@ -95,6 +96,15 @@ def build_plot_parser():
         type=str,
         choices=["aware", "agnostic"],
         help="Mode for computing metrics with respect to task variants. Defaults to aware.",
+    )
+
+    # Flag for recursively calculating metrics on valid subdirectories within log directory
+    parser.add_argument(
+        "-R",
+        "--recursive",
+        action="store_true",
+        help="Recursively compute metrics on logs found in specified directory. \
+                            Defaults to false.",
     )
 
     # Choose application measure to use as performance column
@@ -484,18 +494,19 @@ def main() -> None:
             }
         data_range = temp_data_range
 
-    # Get metric fields
-    logger_info = l2l.read_logger_info(log_dir)
+    # # Get metric fields
+    # logger_info = l2l.read_logger_info(log_dir)
 
-    # Do a check to make sure the performance measure exists in logger info
-    if args.perf_measure not in logger_info["metrics_columns"]:
-        raise KeyError(
-            f"Performance measure ({args.perf_measure}) not found in valid metrics columns: "
-            f"{logger_info['metrics_columns']}"
-        )
+    # # Do a check to make sure the performance measure exists in logger info
+    # if args.perf_measure not in logger_info["metrics_columns"]:
+    #     raise KeyError(
+    #         f"Performance measure ({args.perf_measure}) not found in valid metrics columns: "
+    #         f"{logger_info['metrics_columns']}"
+    #     )
 
-    fig = plt.figure(figsize=(12, 6), constrained_layout=True)
-    fig.show()
+    # fig = plt.figure(figsize=(12, 6), constrained_layout=True)
+    # fig.show()
+    fig = None
 
     if args.live:
         while True:
@@ -504,17 +515,28 @@ def main() -> None:
             plt.pause(0.0001)
             sleep(args.interval)
     else:
-        plot(log_dir, data_range, fig, args)
-        plt.show()
+        if args.recursive:
+            dirs = [p for p in log_dir.glob("*") if p.is_dir()]
+            for dir in tqdm(dirs):
+                plt.close("all")
+                plot(dir, data_range, fig, args)
+        else:
+            plot(log_dir, data_range, fig, args)
+            plt.show()
 
 
 if __name__ == "__main__":
     # Configure logger
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    handler.setFormatter(formatter)
+    handler.setStream(tqdm)
+    handler.terminator = ""
+
+    logging.basicConfig(level=logging.INFO, handlers=[handler])
 
     try:
         main()

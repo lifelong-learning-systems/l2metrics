@@ -209,7 +209,21 @@ def build_plot_parser():
     return parser
 
 
-def plot(log_dir, data_range, fig, args):
+def plot(log_dir, data_range, fig, args) -> None:
+    # Get metric fields
+    try:
+        logger_info = l2l.read_logger_info(log_dir)
+    except FileNotFoundError as e:
+        print(f"{log_dir.name}: Logger info file not found!")
+        return
+
+    # # Do a check to make sure the performance measure exists in logger info
+    # if args.perf_measure not in logger_info["metrics_columns"]:
+    #     raise KeyError(
+    #         f"Performance measure ({args.perf_measure}) not found in valid metrics columns: "
+    #         f"{logger_info['metrics_columns']}"
+    #     )
+
     # Gets all data from the relevant log files
     log_data = l2l.read_log_data(log_dir)
 
@@ -493,16 +507,6 @@ def main() -> None:
                 "max": np.max([d["max"] for d in task_ranges]),
             }
         data_range = temp_data_range
-
-    # # Get metric fields
-    # logger_info = l2l.read_logger_info(log_dir)
-
-    # # Do a check to make sure the performance measure exists in logger info
-    # if args.perf_measure not in logger_info["metrics_columns"]:
-    #     raise KeyError(
-    #         f"Performance measure ({args.perf_measure}) not found in valid metrics columns: "
-    #         f"{logger_info['metrics_columns']}"
-    #     )
 
     # fig = plt.figure(figsize=(12, 6), constrained_layout=True)
     # fig.show()

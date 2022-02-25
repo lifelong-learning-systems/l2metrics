@@ -22,17 +22,13 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import argparse
 import json
 import logging
-from datetime import datetime as dt
 from pathlib import Path
 from time import sleep
-from typing import List, Tuple, Union
 
-from tqdm import tqdm
 import l2logger.util as l2l
 import numpy as np
-import pandas as pd
 from matplotlib import pyplot as plt
-from matplotlib.animation import FuncAnimation
+from tqdm import tqdm
 
 from ._localutil import smooth
 from .normalizer import Normalizer
@@ -508,6 +504,7 @@ def main() -> None:
             }
         data_range = temp_data_range
 
+    # TODO: Handle multiple plots live plotting
     # fig = plt.figure(figsize=(12, 6), constrained_layout=True)
     # fig.show()
     fig = None

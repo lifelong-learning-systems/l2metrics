@@ -71,8 +71,18 @@ def run() -> None:
         task_colors = {}
         cc = util.color_cycler
 
+        # Assign base filename
+        filename = args.output_dir / (args.output if args.output else "ll_metrics")
+
+        # Save settings used to run calculate metrics
+        if args.do_save_settings and args.ste_store_mode is None:
+            with open(str(filename) + "_settings.json", "w") as settings_file:
+                kwargs["log_dir"] = str(kwargs.get("log_dir", ""))
+                kwargs["output_dir"] = str(kwargs.get("output_dir", ""))
+                json.dump(kwargs, settings_file)
+
         # Iterate over all runs found in the directory
-        dirs = [p for p in Path(args.log_dir).rglob("*") if p.is_dir()]
+        dirs = [p for p in Path(args.log_dir).glob("*") if p.is_dir()]
         for dir in tqdm(dirs, desc=Path(args.log_dir).name):
             # Check if current path is log directory for single run
             if all(
@@ -120,35 +130,31 @@ def run() -> None:
                         )
                         plt.close("all")
 
-        # Assign base filename
-        filename = args.output_dir / (args.output if args.output else "ll_metrics")
-
-        # Save settings used to run calculate metrics
-        if args.do_save_settings and args.ste_store_mode is None:
-            with open(str(filename) + "_settings.json", "w") as settings_file:
-                kwargs["log_dir"] = str(kwargs.get("log_dir", ""))
-                kwargs["output_dir"] = str(kwargs.get("output_dir", ""))
-                json.dump(kwargs, settings_file)
-
-        # Save data
-        if args.do_save and args.ste_store_mode is None:
-            if not ll_metrics_df.empty:
-                with open(str(filename) + ".tsv", "w", newline="\n") as metrics_file:
-                    ll_metrics_df.set_index(["run_id"]).to_csv(metrics_file, sep="\t")
-            if ll_metrics_dicts:
-                with open(str(filename) + ".json", "w", newline="\n") as metrics_file:
-                    json.dump(ll_metrics_dicts, metrics_file)
-            if not regime_metrics_df.empty:
-                with open(
-                    str(filename) + "_regime.tsv", "w", newline="\n"
-                ) as metrics_file:
-                    regime_metrics_df.set_index(["run_id"]).to_csv(
-                        metrics_file, sep="\t"
-                    )
-            if not log_data_df.empty:
-                log_data_df.reset_index(drop=True).to_feather(
-                    str(filename) + "_data.feather"
-                )
+                    # Save data
+                    if args.do_save and args.ste_store_mode is None:
+                        if not ll_metrics_df.empty:
+                            with open(
+                                str(filename) + ".tsv", "w", newline="\n"
+                            ) as metrics_file:
+                                ll_metrics_df.set_index(["run_id"]).to_csv(
+                                    metrics_file, sep="\t"
+                                )
+                        if ll_metrics_dicts:
+                            with open(
+                                str(filename) + ".json", "w", newline="\n"
+                            ) as metrics_file:
+                                json.dump(ll_metrics_dicts, metrics_file)
+                        if not regime_metrics_df.empty:
+                            with open(
+                                str(filename) + "_regime.tsv", "w", newline="\n"
+                            ) as metrics_file:
+                                regime_metrics_df.set_index(["run_id"]).to_csv(
+                                    metrics_file, sep="\t"
+                                )
+                        if not log_data_df.empty:
+                            log_data_df.reset_index(drop=True).to_feather(
+                                str(filename) + "_data.feather"
+                            )
     else:
         if args.ste_store_mode:
             # Store STE data

@@ -107,9 +107,14 @@ def run() -> None:
                     regime_metrics_df = regime_metrics_df.append(
                         report.regime_metrics_df, ignore_index=True
                     )
-                    log_data_df = report._log_data
-                    log_data_df["run_id"] = dir.name
-                    log_data_df = log_data_df.append(log_data_df, ignore_index=True)
+                    log_data_df_temp = report._log_data
+                    log_data_df_temp["run_id"] = dir.name
+                    log_data_df_temp = log_data_df_temp.astype(
+                        {"worker_id": str}, errors="raise"
+                    )
+                    log_data_df = log_data_df.append(
+                        log_data_df_temp.copy(), ignore_index=True
+                    )
 
                     # Plot metrics
                     if args.do_plot:

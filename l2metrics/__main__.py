@@ -100,20 +100,20 @@ def run() -> None:
                     kwargs["log_dir"] = dir
                     report = MetricsReport(**kwargs)
                     report.calculate()
-                    ll_metrics_df = ll_metrics_df.append(
-                        report.ll_metrics_df, ignore_index=True
+                    ll_metrics_df = pd.concat(
+                        [ll_metrics_df, report.ll_metrics_df], ignore_index=True
                     )
                     ll_metrics_dicts.append(report.ll_metrics_dict)
-                    regime_metrics_df = regime_metrics_df.append(
-                        report.regime_metrics_df, ignore_index=True
+                    regime_metrics_df = pd.concat(
+                        [regime_metrics_df, report.regime_metrics_df], ignore_index=True
                     )
                     log_data_df_temp = report._log_data
                     log_data_df_temp["run_id"] = dir.name
                     log_data_df_temp = log_data_df_temp.astype(
                         {"worker_id": str}, errors="raise"
                     )
-                    log_data_df = log_data_df.append(
-                        log_data_df_temp.copy(), ignore_index=True
+                    log_data_df = pd.concat(
+                        [log_data_df, log_data_df_temp.copy()], ignore_index=True
                     )
 
                     # Plot metrics

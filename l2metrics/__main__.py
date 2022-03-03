@@ -82,7 +82,7 @@ def run() -> None:
                 json.dump(kwargs, settings_file)
 
         # Iterate over all runs found in the directory
-        dirs = [p for p in Path(args.log_dir).glob("*") if p.is_dir()]
+        dirs = [p for p in Path(args.log_dir).rglob("*") if p.is_dir()]
         for dir in tqdm(dirs, desc=Path(args.log_dir).name):
             # Check if current path is log directory for single run
             if all(

@@ -202,20 +202,22 @@ def init_parser():
         help="Specify output filename for plot and results. Defaults to None.",
     )
 
+    # Horizontal axis unit
+    parser.add_argument(
+        "-u",
+        "--unit",
+        default="exp_num",
+        type=str,
+        choices=["exp_num", "steps"],
+        help="Unit for plotting data. Defaults to exp_num.",
+    )
+
     # Flag for showing evaluation block lines
     parser.add_argument(
         "-e",
         "--show-eval-lines",
-        dest="show_eval_lines",
-        default=True,
         action="store_true",
         help="Show lines between evaluation blocks. Defaults to true.",
-    )
-    parser.add_argument(
-        "--no-show-eval-lines",
-        dest="show_eval_lines",
-        action="store_false",
-        help="Do not show lines between evaluation blocks",
     )
 
     # Flag for enabling/disabling plotting
@@ -232,6 +234,17 @@ def init_parser():
         dest="do_plot",
         action="store_false",
         help="Do not plot performance",
+    )
+
+    # Plot types to generate
+    parser.add_argument(
+        "-T",
+        "--plot-types",
+        default="all",
+        type=str,
+        nargs="+",
+        choices=["all", "raw", "eb", "lb", "ste"],
+        help="Specify which plot types to generate. Defaults to all.",
     )
 
     # Flag for enabling/disabling save

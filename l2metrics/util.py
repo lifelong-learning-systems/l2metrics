@@ -23,17 +23,40 @@ import logging
 import os
 import pickle
 from collections import OrderedDict
-from math import ceil
+from math import ceil, floor, sqrt
 from pathlib import Path
 from typing import List
 
 import l2logger.util as l2l
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
+import seaborn as sns
 
-# Get default color cycler
-color_cycler = plt.rcParams["axes.prop_cycle"]
+# Create color cycler
+color_cycler = [
+    "#1f77b4",
+    "#aec7e8",
+    "#ff7f0e",
+    "#ffbb78",
+    "#2ca02c",
+    "#98df8a",
+    "#d62728",
+    "#ff9896",
+    "#9467bd",
+    "#c5b0d5",
+    "#8c564b",
+    "#c49c94",
+    "#e377c2",
+    "#f7b6d2",
+    "#7f7f7f",
+    "#c7c7c7",
+    "#bcbd22",
+    "#dbdb8d",
+    "#17becf",
+    "#9edae5",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -163,36 +186,106 @@ def store_ste_data(log_dir: Path, mode: str = "w") -> None:
     logger.info(f"Stored STE data for {task_name[0]} in {log_dir.name}")
 
 
-def plot_blocks(
+def plot_raw(
     dataframe: pd.DataFrame,
-    reward: str,
     unique_tasks: list,
     task_colors: dict = {},
+    x_axis_col: str = "exp_num",
+    y_axis_col: str = "reward",
     input_title: str = "",
     output_dir: str = "",
     do_save_fig: bool = False,
-    plot_filename: str = "block_plot",
+    plot_filename: str = "raw_plot",
 ):
-    """Plot learning performance curves and evaluation blocks as separate plots.
+    """Plot raw learning performance curves with smoothed curve overlaid.
 
     Args:
         dataframe (pd.DataFrame): The performance data to plot.
         reward (str): The column name of the metric to plot.
         unique_tasks (list): List of unique tasks in scenario.
         task_colors (dict): Dict of task names and colors for plotting. Defaults to {}.
+        x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
+        y_axis_col (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         input_title (str, optional): The plot title. Defaults to ''.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to False.
-        plot_filename (str, optional): The filename to use for saving. Defaults to 'block_plot'.
+        plot_filename (str, optional): The filename to use for saving. Defaults to 'raw_plot'.
     """
 
-    reward_col = reward + "_raw"
+    reward_col_raw = y_axis_col + "_raw"
 
-    if reward + "_smoothed" in dataframe.columns:
-        reward_col_smooth = reward + "_smoothed"
+    if y_axis_col + "_smoothed" in dataframe.columns:
+        reward_col_smooth = y_axis_col + "_smoothed"
     else:
         reward_col_smooth = None
 
+    df_train = dataframe[dataframe.block_type == "train"]
+
+    fig = plt.figure(figsize=(12, 6), constrained_layout=True)
+    ax = fig.add_subplot(111)
+
+    # Assign colors for each task
+    if not task_colors:
+        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
+
+    # Plot raw training data
+    for task_name in unique_tasks:
+        x = df_train[df_train["task_name"] == task_name][x_axis_col]
+        y = df_train[df_train["task_name"] == task_name][reward_col_raw]
+        ax.plot(x, y, ".", label=task_name, color=task_colors[task_name], markersize=4)
+
+    # Plot smoothed training data
+    if reward_col_smooth is not None:
+        for _, group in df_train.groupby("block_num"):
+            ax.plot(group[x_axis_col], group[reward_col_smooth], "k")
+
+    # Set plot title
+    if Path(input_title).parent != Path("."):
+        _, input_title = os.path.split(input_title)
+
+    ax.set_title(input_title)
+    ax.xaxis.set_major_formatter(ticker.EngFormatter())
+    ax.set_xlabel("Experiences")
+    ax.set_ylabel("Raw Performance")
+    ax.grid()
+
+    # Enable plot legend
+    # TODO: Figure out why all tasks are showing in legend
+    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5), markerscale=2)
+
+    if do_save_fig:
+        logger.info(f'Saving raw plot with name: {plot_filename.replace(" ", "_")}')
+        fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + ".png"))
+
+
+def plot_evaluation_blocks(
+    dataframe: pd.DataFrame,
+    unique_tasks: list,
+    task_colors: dict = {},
+    x_axis_col: str = "exp_num",
+    y_axis_col: str = "reward",
+    input_title: str = "",
+    input_xlabel: str = "Experiences",
+    input_ylabel: str = "Performance",
+    output_dir: str = "",
+    do_save_fig: bool = False,
+    plot_filename: str = "eval_plot",
+) -> None:
+    """Plots the evaluation block data for the given DataFrame.
+
+    Args:
+        dataframe (pd.DataFrame): The performance data to plot.
+        unique_tasks (list): List of unique tasks in scenario.
+        task_colors (dict): Dict of task names and colors for plotting. Defaults to {}.
+        x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
+        y_axis_col (str, optional): The column name of the metric to plot. Defaults to 'reward'.
+        input_title (str, optional): The plot title. Defaults to ''.
+        input_xlabel (str, optional): The x-axis label. Defaults to 'Experiences'.
+        input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
+        output_dir (str, optional): Output directory of results. Defaults to ''.
+        do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to False.
+        plot_filename (str, optional): The filename to use for saving. Defaults to 'performance_plot'.
+    """
     # Use sleep evaluation blocks if they exist and filter out wake evaluation
     if "sleep" in dataframe["block_subtype"].to_numpy():
         dataframe = dataframe[
@@ -203,78 +296,46 @@ def plot_blocks(
         ]
 
     df_test = dataframe[dataframe.block_type == "test"]
-    df_train = dataframe[dataframe.block_type == "train"]
 
-    fig, axes = plt.subplots(
-        len(unique_tasks) + 1, 1, figsize=(12, 12), sharex=True, constrained_layout=True
-    )
-    ax0 = axes[0]
-    ax0.set_ylabel(reward_col + " (LX)")
-    ax0.grid()
-
-    task_idx = 1
-    xv_max = None  # Workaround for inconsistent # of samples
+    task_clusters = np.unique([task_name.split("_")[0] for task_name in unique_tasks])
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {
-            task: c["color"] for c, task in zip(color_cycler(), unique_tasks)
-        }
+        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
 
-    # Plot training and test data
-    for task_name in unique_tasks:
-        x = df_train[df_train["task_name"] == task_name].exp_num
-        y = df_train[df_train["task_name"] == task_name][reward_col]
-        ax0.plot(x, y, ".", label=task_name, color=task_colors[task_name], markersize=4)
+    # Initialize figure
+    fig = plt.figure(
+        figsize=(12, len(task_clusters) * 6),
+        constrained_layout=True,
+    )
+    fig.suptitle(input_title)
 
-        ax = axes[task_idx]
-        x = df_test[df_test["task_name"] == task_name].exp_num
-        y = df_test[df_test["task_name"] == task_name][reward_col]
-        ax.plot(x, y, ".", label=task_name, color=task_colors[task_name], markersize=4)
-        task_ex_block_data = df_test[df_test["task_name"] == task_name].groupby(
-            "block_num"
+    for idx, task_cluster in enumerate(task_clusters):
+        # Create subplot
+        # TODO: Set common y-axis limits
+        ax = fig.add_subplot(len(task_clusters), 1, idx + 1)
+
+        cluster_eval_data = df_test[df_test["task_name"].str.contains(task_cluster)]
+
+        sns.pointplot(
+            x="block_num",
+            y=y_axis_col,
+            hue="task_name",
+            palette=task_colors,
+            data=cluster_eval_data,
         )
-        xv = task_ex_block_data.exp_num.median()
-        if xv_max is None or len(xv) > len(xv_max):
-            xv_max = xv
-        ex_median = task_ex_block_data[reward_col].median()
-        ex_iqr_lower = task_ex_block_data[reward_col].quantile(0.25)
-        ex_iqr_upper = task_ex_block_data[reward_col].quantile(0.75)
-        ax.fill_between(
-            xv, ex_iqr_lower, ex_iqr_upper, color=task_colors[task_name], alpha=0.5
-        )
-        ax.plot(xv, ex_median, color=task_colors[task_name])
-        ax.set_ylabel(task_name + " (EX)")
+
         ax.grid()
-        task_idx += 1
-
-    # Plot smoothed training data
-    if reward_col_smooth is not None:
-        for _, group in df_train.groupby("block_num"):
-            ax0.plot(group.exp_num, group[reward_col_smooth], "k")
-
-    # Set plot title
-    if Path(input_title).parent != Path("."):
-        _, input_title = os.path.split(input_title)
-
-    ax0.set_title(input_title)
-
-    # Enable plot legend
-    ax0.legend()
-
-    # Set y-axis limits
-    if not df_test.empty:
-        plt.setp(
-            fig.axes,
-            ylim=(np.nanmin(df_test[reward_col]), np.nanmax(df_test[reward_col])),
-        )
+        ax.legend(loc="lower right")
 
     if do_save_fig:
-        logger.info(f'Saving block plot with name: {plot_filename.replace(" ", "_")}')
+        logger.info(
+            f'Saving evaluation plot with name: {plot_filename.replace(" ", "_")}'
+        )
         fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + ".png"))
 
 
-def plot_performance(
+def plot_learning_blocks(
     dataframe: pd.DataFrame,
     block_info: pd.DataFrame,
     unique_tasks: list,
@@ -289,9 +350,10 @@ def plot_performance(
     shade_test_blocks: bool = True,
     output_dir: str = "",
     do_save_fig: bool = False,
-    plot_filename: str = "performance_plot",
+    plot_filename: str = "learning_plot",
+    fig=None,
 ) -> None:
-    """Plots the performance curves for the given DataFrame.
+    """Plots the learning block performance curves for the given DataFrame.
 
     Args:
         dataframe (pd.DataFrame): The performance data to plot.
@@ -305,7 +367,7 @@ def plot_performance(
         input_ylabel (str, optional): The y-axis label. Defaults to 'Performance'.
         show_eval_lines (bool, optional): Flag for enabling lines between evaluation blocks to show
             changing slope of evaluation performance. Defaults to True.
-        show_block_boundary (bool, optional): Flag for enabling block boundaries. Defaults to True.
+        show_block_boundary (bool, optional): Flag for enabling block boundaries. Defaults to False.
         shade_test_blocks (bool, optional): Flag for enabling block shading. Defaults to True.
         output_dir (str, optional): Output directory of results. Defaults to ''.
         do_save_fig (bool, optional): Flag for enabling saving figure. Defaults to False.
@@ -313,7 +375,10 @@ def plot_performance(
     """
 
     # Initialize figure
-    fig = plt.figure(figsize=(12, 6))
+    if fig is None:
+        fig = plt.figure(figsize=(12, 6), constrained_layout=True)
+    else:
+        plt.clf()
     ax = fig.add_subplot(111)
 
     # Use sleep evaluation blocks if they exist and filter out wake evaluation
@@ -333,81 +398,99 @@ def plot_performance(
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {
-            task: c["color"] for c, task in zip(color_cycler(), unique_tasks)
-        }
+        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
 
-    # Loop through tasks and plot their performance curves
-    for task_name in unique_tasks:
-        if show_eval_lines:
-            eval_x_data = []
-            eval_y_data = []
-            (eval_line,) = ax.plot(
-                eval_x_data,
-                eval_y_data,
+    if show_eval_lines:
+        eval_x_data = {}
+        eval_y_data = {}
+        eval_lines = {}
+
+        for task_name in unique_tasks:
+            eval_x_data[task_name] = []
+            eval_y_data[task_name] = []
+            (eval_lines[task_name],) = ax.plot(
+                [],
+                [],
                 color=task_colors[task_name],
                 linestyle="--",
                 alpha=0.2,
             )
 
-        for _, row in block_info[block_info["task_name"] == task_name].iterrows():
-            regime_num = row["regime_num"]
-            block_type = row["block_type"]
+    # Initialize exp indices
+    lx_idx = 0
+    ex_idx = 0
 
-            # Get data for current regime
-            x = dataframe.loc[
-                dataframe["regime_num"] == regime_num, x_axis_col
-            ].to_numpy()
-            y = dataframe.loc[
-                dataframe["regime_num"] == regime_num, y_axis_col
-            ].to_numpy()
+    # Loop DataFrame and plot performance curves
+    for _, row in block_info.iterrows():
+        regime_num = row["regime_num"]
+        block_type = row["block_type"]
+        task_name = row["task_name"]
 
-            if show_block_boundary:
-                ax.axes.axvline(x[0], linewidth=1, linestyle=":")
+        # Get data for current regime
+        x = dataframe.loc[dataframe["regime_num"] == regime_num, x_axis_col].to_numpy()
+        y = dataframe.loc[dataframe["regime_num"] == regime_num, y_axis_col].to_numpy()
 
-            if shade_test_blocks and block_type == "test":
-                ax.axvspan(x[0], x[-1] + 1, alpha=0.1, facecolor="black")
-
-            if block_type == "test":
-                if show_eval_lines:
-                    x = list(range(x[0], x[0] + len(y)))
-                    eval_x_data.extend(x)
-                    eval_y_data.extend(np.nanmean(y) * np.ones(len(x)))
-                    eval_line.set_data(eval_x_data, eval_y_data)
-                    plt.draw()
-
-            # Match smoothed x and y length if data had NaNs
-            if len(x) != len(y):
-                x = list(range(x[0], x[0] + len(y)))
-
-            ax.scatter(
-                x, y, color=task_colors[task_name], marker="*", s=8, label=task_name
+        if show_block_boundary:
+            ax.axes.axvline(
+                x[0] - ex_idx, color="black", linewidth=0.5, linestyle="--", alpha=0.2
             )
+
+        if block_type == "test":
+            # if shade_test_blocks:
+            #     ax.axvspan(x[0], x[-1] + 1, alpha=0.1, facecolor="black")
+
+            if show_eval_lines:
+                eval_x_data[task_name].extend([lx_idx])
+                eval_y_data[task_name].extend([np.nanmean(y)])
+                eval_lines[task_name].set_data(
+                    eval_x_data[task_name], eval_y_data[task_name]
+                )
+                plt.draw()
+
+            ex_idx += x[-1] - x[0] + 1
+        else:
+            ax.scatter(
+                x - ex_idx,
+                y,
+                color=task_colors[task_name],
+                marker="*",
+                s=8,
+                label=task_name,
+            )
+
+            lx_idx += x[-1] - x[0] + 1
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys())
+    ax.legend(
+        by_label.values(),
+        by_label.keys(),
+        loc="center left",
+        bbox_to_anchor=(1, 0.5),
+        markerscale=2,
+    )
 
     if Path(input_title).parent != Path("."):
         _, input_title = os.path.split(input_title)
 
     # Want the saved figured to have a grid so do this before saving
     ax.set(xlabel=input_xlabel, ylabel=input_ylabel, title=input_title)
+    ax.xaxis.set_major_formatter(ticker.EngFormatter())
     ax.grid()
-    fig.tight_layout()
 
     if do_save_fig:
         logger.info(
-            f'Saving performance plot with name: {plot_filename.replace(" ", "_")}'
+            f'Saving learning plot with name: {plot_filename.replace(" ", "_")}'
         )
         fig.savefig(Path(output_dir) / (plot_filename.replace(" ", "_") + ".png"))
 
 
-def plot_ste_data(
+def plot_ste(
     dataframe: pd.DataFrame,
     ste_data: dict,
     block_info: pd.DataFrame,
     unique_tasks: list,
+    x_axis_col: str = "exp_num",
     task_colors: dict = {},
     perf_measure: str = "reward",
     ste_averaging_method: str = "metrics",
@@ -425,6 +508,7 @@ def plot_ste_data(
         ste_data (dict): STE data.
         block_info (pd.DataFrame): The block info of the DataFrame.
         unique_tasks (list): List of unique tasks in scenario.
+        x_axis_col (str, optional): The column name of the x-axis data. Defaults to 'exp_num'.
         task_colors (dict): Dict of task names and colors for plotting. Defaults to {}.
         perf_measure (str, optional): The column name of the metric to plot. Defaults to 'reward'.
         ste_averaging_method (str, optional): Method for handling STE metric averaging. Defaults to 'metrics'.
@@ -436,13 +520,18 @@ def plot_ste_data(
         plot_filename (str, optional): The filename to use for saving. Defaults to 'ste_plot'.
     """
 
-    # Initialize figure
-    fig = plt.figure(figsize=(12, 6))
-    fig.suptitle(input_title)
-
     # Calculate subplot dimensions
-    cols = min(len(unique_tasks), 2)
+    cols = ceil(sqrt(len(unique_tasks)))
+    if cols == 0:
+        return
     rows = ceil(len(unique_tasks) / cols)
+
+    # Initialize figure
+    fig = plt.figure(
+        figsize=(min(18, max(12, 6 * cols)), max(6, len(unique_tasks) // 2)),
+        constrained_layout=True,
+    )
+    fig.suptitle(input_title)
 
     # Initialize axis limits
     x_limit = 0
@@ -450,9 +539,7 @@ def plot_ste_data(
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {
-            task: c["color"] for c, task in zip(color_cycler(), unique_tasks)
-        }
+        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
 
     for index, task_name in enumerate(unique_tasks):
         # Get block info for task during training
@@ -468,76 +555,101 @@ def plot_ste_data(
         ].reset_index(drop=True)
 
         if len(task_data):
-            # Load STE data
+            # Create subplot
+            ax = fig.add_subplot(rows, cols, index + 1)
+
+            plt.scatter(
+                [],
+                [],
+                label=task_name,
+                color=task_colors[task_name],
+                marker="*",
+                s=8,
+            )
+            plt.scatter([], [], label="STE", color="orange", marker="*", s=8)
+
+            # Plot LL data
+            y_ll = task_data[perf_measure].to_numpy()
+
+            x_ll = []
+            last_exp = 0
+            mean_exp_diff = 0
+            for reg_idx, regime in enumerate(task_data["regime_num"].unique()):
+                x = task_data.loc[
+                    task_data["regime_num"] == regime, x_axis_col
+                ].to_numpy()
+                if reg_idx == 0:
+                    x_ll.extend(x - x[0])
+                else:
+                    # Draw line at block boundaries of task data
+                    ax.axes.axvline(
+                        x=x_ll[-1] + mean_exp_diff, color="black", linestyle="--"
+                    )
+
+                    x_ll.extend(x - (x[0] - last_exp) + mean_exp_diff)
+                last_exp = x_ll[-1]
+                mean_exp_diff = np.mean(np.diff(x))
+
+            ax.scatter(
+                x_ll, y_ll, color=task_colors[task_name], marker="*", s=8, zorder=3
+            )
+
             if ste_data.get(task_name):
-                # Create subplot
-                ax = fig.add_subplot(rows, cols, index + 1)
-
-                plt.scatter(
-                    [],
-                    [],
-                    label=task_name,
-                    color=task_colors[task_name],
-                    marker="*",
-                    s=8,
-                )
-                plt.scatter([], [], label="STE", color="orange", marker="*", s=8)
-
-                # Plot LL data
-                y_ll = task_data[perf_measure].to_numpy()
-                x_ll = list(range(0, len(y_ll)))
-                ax.scatter(
-                    x_ll, y_ll, color=task_colors[task_name], marker="*", s=8, zorder=3
-                )
+                x_ste = []
+                y_ste = []
 
                 # Get STE data
-                y_ste = [
-                    ste_data_df[ste_data_df["block_type"] == "train"][
-                        perf_measure
+                for ste_data_df in ste_data.get(task_name):
+                    x = ste_data_df[ste_data_df["block_type"] == "train"][
+                        x_axis_col
                     ].to_numpy()
-                    for ste_data_df in ste_data.get(task_name)
-                ]
+                    x_ste.append(x - x[0])
+                    y_ste.append(
+                        ste_data_df[ste_data_df["block_type"] == "train"][
+                            perf_measure
+                        ].to_numpy()
+                    )
 
                 if ste_averaging_method == "time":
                     # Average all the STE data together after truncating to same length
                     y_ste = np.array([x[: min(map(len, y_ste))] for x in y_ste]).mean(0)
-                    x_ste = list(range(0, len(y_ste)))
+                    x_ste = np.array([x[: min(map(len, x_ste))] for x in x_ste]).mean(0)
                     ax.scatter(x_ste, y_ste, color="orange", marker="*", s=8)
 
-                    x_limit = max(x_limit, len(y_ste), len(y_ll))
+                    x_limit = max(x_limit, np.nanmax(x_ste), np.nanmax(x_ll))
                     y_limit = (
                         np.nanmin([y_limit[0], np.nanmin(y_ste), np.nanmin(y_ll)]),
                         np.nanmax([y_limit[1], np.nanmax(y_ste), np.nanmax(y_ll)]),
                     )
+                    logger.warning("Time STE averaging method is deprecated")
                 else:
                     # Plot runs of STE data
-                    for y in y_ste:
-                        x = list(range(0, len(y)))
-                        ax.scatter(x, y, color="orange", marker="*", s=8)
-                        x_limit = max(x_limit, len(y), len(y_ll))
+                    for x, y in zip(x_ste, y_ste):
+                        ax.scatter(x, y, color="orange", marker="*", s=4)
+                        x_limit = max(x_limit, np.nanmax(x), np.nanmax(x_ll))
                         y_limit = (
                             np.nanmin([y_limit[0], np.nanmin(y), np.nanmin(y_ll)]),
                             np.nanmax([y_limit[1], np.nanmax(y), np.nanmax(y_ll)]),
                         )
-
-                # Draw line at block boundaries of task data
-                for x_val in task_data[task_data.regime_num.diff() != 0].index.tolist():
-                    ax.axes.axvline(x=x_val, color="black", linestyle="--")
-
-                ax.set(xlabel=input_xlabel, ylabel=input_ylabel)
-                ax.grid()
-                plt.legend()
             else:
+                x_limit = max(x_limit, np.nanmax(x_ll))
+                y_limit = (
+                    np.nanmin([y_limit[0], np.nanmin(y_ll)]),
+                    np.nanmax([y_limit[1], np.nanmax(y_ll)]),
+                )
+
                 logger.warning(f"STE data for task cannot be found: {task_name}")
+
+            ax.set(xlabel=input_xlabel, ylabel=input_ylabel)
+            ax.xaxis.set_major_formatter(ticker.EngFormatter())
+            ax.grid()
+            ax.legend(loc="lower right", markerscale=2)
         else:
             logger.warning(
                 f"Scenario does not contain training data for task: {task_name}"
             )
 
-    fig.subplots_adjust(wspace=0.3, hspace=0.4)
-
     plt.setp(fig.axes, xlim=(0, x_limit), ylim=y_limit)
-    fig.tight_layout()
 
     if do_save:
         logger.info(f'Saving STE plot with name: {plot_filename.replace(" ", "_")}')

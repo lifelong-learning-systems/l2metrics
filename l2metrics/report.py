@@ -42,7 +42,13 @@ from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
 from .transfer import Transfer
-from .util import load_ste_data, plot_blocks, plot_performance, plot_ste_data
+from .util import (
+    load_ste_data,
+    plot_evaluation_blocks,
+    plot_learning_blocks,
+    plot_raw,
+    plot_ste,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +76,7 @@ class MetricsReport:
         self.window_length = kwargs.get("window_length", None)
         self.clamp_outliers = kwargs.get("clamp_outliers", False)
         self.data_range = kwargs.get("data_range", None)
+        self.unit = kwargs.get("unit", "exp_num")
 
         # Modify data range based on variant mode
         if self.variant_mode == "agnostic" and self.data_range is not None:
@@ -187,6 +194,9 @@ class MetricsReport:
             self.normalize_data()
         else:
             self.normalizer = None
+
+        # Modify data for plotting unit
+        self.adjust_experience_units()
 
         # Adds default metrics
         self._add_default_metrics()
@@ -357,6 +367,25 @@ class MetricsReport:
                             window_len=self.window_length,
                             window=self.smoothing_method,
                         )
+
+    def adjust_experience_units(self) -> None:
+        if self.unit == "steps":
+            # Add steps column to log data
+            if "episode_step_count" in self._log_data.columns:
+                self._log_data["steps"] = self._log_data["episode_step_count"].cumsum()
+            else:
+                raise KeyError("Step information not available in logs")
+
+            # Add steps column to STE data
+            for task, ste_data in self.ste_data.items():
+                if ste_data is not None:
+                    for idx, ste_data_df in enumerate(ste_data):
+                        if "episode_step_count" in ste_data_df.columns:
+                            self.ste_data[task][idx]["steps"] = ste_data_df[
+                                "episode_step_count"
+                            ].cumsum()
+                        else:
+                            raise KeyError("Step information not available in logs")
 
     def log_summary(self) -> pd.DataFrame:
         # Get summary of log data
@@ -751,61 +780,73 @@ class MetricsReport:
 
     def plot(
         self,
+        plot_types: List[str] = ["all"],
         save: bool = False,
         show_eval_lines: bool = True,
         output_dir: str = "",
         task_colors: dict = {},
-        input_title: str = None,
     ) -> None:
 
-        if input_title is None:
-            input_title = Path(self.log_dir).name
-        plot_filename = input_title
+        log_dir_name = Path(self.log_dir).name
 
-        plot_blocks(
-            self._log_data,
-            self.perf_measure,
-            self._unique_tasks,
-            task_colors=task_colors,
-            input_title=input_title,
-            output_dir=output_dir,
-            do_save_fig=save,
-            plot_filename=plot_filename + "_block",
-        )
-        plot_performance(
-            self._log_data,
-            self.block_info,
-            unique_tasks=self._unique_tasks,
-            task_colors=task_colors,
-            show_eval_lines=show_eval_lines,
-            y_axis_col=self.perf_measure,
-            input_title=input_title,
-            output_dir=output_dir,
-            do_save_fig=save,
-            plot_filename=plot_filename + "_perf",
-        )
+        if any(plot_type in plot_types for plot_type in ["all", "raw"]):
+            plot_raw(
+                self._log_data,
+                self._unique_tasks,
+                task_colors=task_colors,
+                x_axis_col=self.unit,
+                y_axis_col=self.perf_measure,
+                input_title="Raw and Smoothed Performance\n" + log_dir_name,
+                output_dir=output_dir,
+                do_save_fig=save,
+                plot_filename=log_dir_name + "_raw",
+            )
 
-    def plot_ste_data(
-        self,
-        input_title: str = None,
-        save: bool = False,
-        output_dir: str = "",
-        task_colors: dict = {},
-    ) -> None:
-        if input_title is None:
-            input_title = "Performance Relative to STE\n" + Path(self.log_dir).name
-        plot_filename = Path(self.log_dir).name + "_ste"
+        if any(plot_type in plot_types for plot_type in ["all", "eb"]):
+            plot_evaluation_blocks(
+                self._log_data,
+                unique_tasks=self._unique_tasks,
+                task_colors=task_colors,
+                x_axis_col=self.unit,
+                y_axis_col=self.perf_measure,
+                input_title="Evaluation Performance\n" + log_dir_name,
+                output_dir=output_dir,
+                do_save_fig=save,
+                plot_filename=log_dir_name + "_evaluation",
+            )
 
-        plot_ste_data(
-            self._log_data,
-            self.ste_data,
-            self.block_info,
-            self._unique_tasks,
-            task_colors=task_colors,
-            perf_measure=self.perf_measure,
-            ste_averaging_method=self.ste_averaging_method,
-            input_title=input_title,
-            output_dir=output_dir,
-            do_save=save,
-            plot_filename=plot_filename,
-        )
+        if any(plot_type in plot_types for plot_type in ["all", "lb"]):
+            plot_learning_blocks(
+                self._log_data,
+                self.block_info,
+                unique_tasks=self._unique_tasks,
+                task_colors=task_colors,
+                show_eval_lines=show_eval_lines,
+                x_axis_col=self.unit,
+                y_axis_col=self.perf_measure,
+                input_title="Learning Performance\n" + log_dir_name,
+                output_dir=output_dir,
+                do_save_fig=save,
+                plot_filename=log_dir_name + "_learning",
+            )
+
+        if any(plot_type in plot_types for plot_type in ["all", "ste"]):
+            # Only send list of unique tasks with training data
+            unique_tasks = self.block_info[
+                self.block_info["block_type"] == "train"
+            ].task_name.unique()
+
+            plot_ste(
+                self._log_data,
+                self.ste_data,
+                self.block_info,
+                unique_tasks,
+                x_axis_col=self.unit,
+                task_colors=task_colors,
+                perf_measure=self.perf_measure,
+                ste_averaging_method=self.ste_averaging_method,
+                input_title="Performance Relative to STE\n" + log_dir_name,
+                output_dir=output_dir,
+                do_save=save,
+                plot_filename=log_dir_name + "_ste",
+            )

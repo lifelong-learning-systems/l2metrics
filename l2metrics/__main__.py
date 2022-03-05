@@ -62,6 +62,17 @@ def run() -> None:
         data_range = None
     kwargs["data_range"] = data_range
 
+    cols_to_store = [
+        "block_num",
+        "exp_num",
+        "block_type",
+        "task_name",
+        "timestamp",
+        "episode_step_count",
+        "reward",
+        "run_id",
+    ]
+
     # Check for recursive flag
     if args.recursive:
         ll_metrics_df = pd.DataFrame()
@@ -69,7 +80,17 @@ def run() -> None:
         regime_metrics_df = pd.DataFrame()
         log_data_df = pd.DataFrame()
         task_colors = {}
-        cc = util.color_cycler()
+        cc = util.color_cycler
+
+        # Assign base filename
+        filename = args.output_dir / (args.output if args.output else "ll_metrics")
+
+        # Save settings used to run calculate metrics
+        if args.do_save_settings and args.ste_store_mode is None:
+            with open(str(filename) + "_settings.json", "w") as settings_file:
+                kwargs["log_dir"] = str(kwargs.get("log_dir", ""))
+                kwargs["output_dir"] = str(kwargs.get("output_dir", ""))
+                json.dump(kwargs, settings_file)
 
         # Iterate over all runs found in the directory
         dirs = [p for p in Path(args.log_dir).rglob("*") if p.is_dir()]
@@ -90,69 +111,74 @@ def run() -> None:
                     kwargs["log_dir"] = dir
                     report = MetricsReport(**kwargs)
                     report.calculate()
-                    ll_metrics_df = ll_metrics_df.append(
-                        report.ll_metrics_df, ignore_index=True
+                    ll_metrics_df = pd.concat(
+                        [ll_metrics_df, report.ll_metrics_df], ignore_index=True
                     )
                     ll_metrics_dicts.append(report.ll_metrics_dict)
-                    regime_metrics_df = regime_metrics_df.append(
-                        report.regime_metrics_df, ignore_index=True
+                    regime_metrics_df = pd.concat(
+                        [regime_metrics_df, report.regime_metrics_df], ignore_index=True
                     )
-                    log_data_df = report._log_data
-                    log_data_df["run_id"] = dir.name
-                    log_data_df = log_data_df.append(log_data_df, ignore_index=True)
+                    log_data_df_temp = report._log_data
+                    log_data_df_temp["run_id"] = dir.name
+                    log_data_df_temp = log_data_df_temp.astype(
+                        {"worker_id": str}, errors="raise"
+                    )
+                    log_data_df_temp = log_data_df_temp.astype(
+                        {
+                            col: "int32"
+                            for col in log_data_df_temp.select_dtypes("int64").columns
+                        },
+                        errors="raise",
+                    )
+                    log_data_df = pd.concat(
+                        [log_data_df, log_data_df_temp[cols_to_store].copy()],
+                        ignore_index=True,
+                    )
 
                     # Plot metrics
                     if args.do_plot:
                         # Update task color dictionary
-                        for task_name, c in zip(
+                        for task_name, color in zip(
                             list(set(report._unique_tasks) - set(task_colors.keys())),
                             cc,
                         ):
-                            task_colors[task_name] = c["color"]
+                            task_colors[task_name] = color
 
                         # Generate plots
                         report.plot(
+                            plot_types=args.plot_types,
                             save=args.do_save,
                             show_eval_lines=args.show_eval_lines,
                             output_dir=str(args.output_dir),
                             task_colors=task_colors,
                         )
-                        report.plot_ste_data(
-                            save=args.do_save,
-                            output_dir=str(args.output_dir),
-                            task_colors=task_colors,
-                        )
                         plt.close("all")
 
-        # Assign base filename
-        filename = args.output_dir / (args.output if args.output else "ll_metrics")
-
-        # Save settings used to run calculate metrics
-        if args.do_save_settings and args.ste_store_mode is None:
-            with open(str(filename) + "_settings.json", "w") as settings_file:
-                kwargs["log_dir"] = str(kwargs.get("log_dir", ""))
-                kwargs["output_dir"] = str(kwargs.get("output_dir", ""))
-                json.dump(kwargs, settings_file)
-
-        # Save data
-        if args.do_save and args.ste_store_mode is None:
-            if not ll_metrics_df.empty:
-                with open(str(filename) + ".tsv", "w", newline="\n") as metrics_file:
-                    ll_metrics_df.set_index(["run_id"]).to_csv(metrics_file, sep="\t")
-            if ll_metrics_dicts:
-                with open(str(filename) + ".json", "w", newline="\n") as metrics_file:
-                    json.dump(ll_metrics_dicts, metrics_file)
-            if not regime_metrics_df.empty:
-                with open(
-                    str(filename) + "_regime.tsv", "w", newline="\n"
-                ) as metrics_file:
-                    regime_metrics_df.set_index(["run_id"]).to_csv(
-                        metrics_file, sep="\t"
-                    )
-            if not log_data_df.empty:
-                log_data_df.reset_index(drop=True).to_feather(
-                    str(filename) + "_data.feather"
-                )
+                    # Save data
+                    if args.do_save and args.ste_store_mode is None:
+                        if not ll_metrics_df.empty:
+                            with open(
+                                str(filename) + ".tsv", "w", newline="\n"
+                            ) as metrics_file:
+                                ll_metrics_df.set_index(["run_id"]).to_csv(
+                                    metrics_file, sep="\t"
+                                )
+                        if ll_metrics_dicts:
+                            with open(
+                                str(filename) + ".json", "w", newline="\n"
+                            ) as metrics_file:
+                                json.dump(ll_metrics_dicts, metrics_file)
+                        if not regime_metrics_df.empty:
+                            with open(
+                                str(filename) + "_regime.tsv", "w", newline="\n"
+                            ) as metrics_file:
+                                regime_metrics_df.set_index(["run_id"]).to_csv(
+                                    metrics_file, sep="\t"
+                                )
+                        if not log_data_df.empty:
+                            log_data_df.reset_index(drop=True).to_feather(
+                                str(filename) + "_data.feather"
+                            )
     else:
         if args.ste_store_mode:
             # Store STE data
@@ -179,11 +205,11 @@ def run() -> None:
             # Plot metrics
             if args.do_plot:
                 report.plot(
+                    plot_types=args.plot_types,
                     save=args.do_save,
                     show_eval_lines=args.show_eval_lines,
                     output_dir=str(args.output_dir),
                 )
-                report.plot_ste_data(save=args.do_save, output_dir=str(args.output_dir))
                 plt.show()
 
             # Save settings used to run calculate metrics

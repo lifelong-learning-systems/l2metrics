@@ -62,6 +62,17 @@ def run() -> None:
         data_range = None
     kwargs["data_range"] = data_range
 
+    cols_to_store = [
+        "block_num",
+        "exp_num",
+        "block_type",
+        "task_name",
+        "timestamp",
+        "episode_step_count",
+        "reward",
+        "run_id",
+    ]
+
     # Check for recursive flag
     if args.recursive:
         ll_metrics_df = pd.DataFrame()
@@ -112,8 +123,16 @@ def run() -> None:
                     log_data_df_temp = log_data_df_temp.astype(
                         {"worker_id": str}, errors="raise"
                     )
+                    log_data_df_temp = log_data_df_temp.astype(
+                        {
+                            col: "int32"
+                            for col in log_data_df_temp.select_dtypes("int64").columns
+                        },
+                        errors="raise",
+                    )
                     log_data_df = pd.concat(
-                        [log_data_df, log_data_df_temp.copy()], ignore_index=True
+                        [log_data_df, log_data_df_temp[cols_to_store].copy()],
+                        ignore_index=True,
                     )
 
                     # Plot metrics

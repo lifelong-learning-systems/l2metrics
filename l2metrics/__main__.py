@@ -62,17 +62,6 @@ def run() -> None:
         data_range = None
     kwargs["data_range"] = data_range
 
-    cols_to_store = [
-        "block_num",
-        "exp_num",
-        "block_type",
-        "task_name",
-        "timestamp",
-        "episode_step_count",
-        "reward",
-        "run_id",
-    ]
-
     # Check for recursive flag
     if args.recursive:
         ll_metrics_df = pd.DataFrame()
@@ -81,6 +70,18 @@ def run() -> None:
         log_data_df = pd.DataFrame()
         task_colors = {}
         cc = util.color_cycler
+
+        # Subset of log data columns to store
+        cols_to_store = [
+            "run_id",
+            "timestamp",
+            "block_num",
+            "block_type",
+            "exp_num",
+            "episode_step_count",
+            "task_name",
+            args.perf_measure,
+        ]
 
         # Assign base filename
         filename = args.output_dir / (args.output if args.output else "ll_metrics")
@@ -135,7 +136,12 @@ def run() -> None:
                         errors="raise",
                     )
                     log_data_df = pd.concat(
-                        [log_data_df, log_data_df_temp[cols_to_store].copy()],
+                        [
+                            log_data_df,
+                            log_data_df_temp[
+                                log_data_df_temp.columns.intersection(cols_to_store)
+                            ],
+                        ],
                         ignore_index=True,
                     )
 

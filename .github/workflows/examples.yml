@@ -32,3 +32,4 @@ jobs:
           python -m l2metrics -l ./examples/ste_task3_1_run1/ -s w
           python -m l2metrics -l ./examples/ste_task3_1_run2/ -s a
           python -m l2metrics -l ./examples/multi_task -p performance
+          python -m l2metrics -R -l ./examples -p performance

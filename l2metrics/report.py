@@ -724,9 +724,12 @@ class MetricsReport:
         with open(
             Path(output_dir) / (filename + "_metrics.json"), "w", newline="\n"
         ) as metrics_file:
+            logger.info(f'Saving metrics JSON with name: {filename + "_metrics.json"}')
             json.dump(self.ll_metrics_dict, metrics_file)
+
+        logger.info(f'Saving regime metrics TSV with name: {filename + "_regime.tsv"}')
         self.regime_metrics_df.to_csv(
-            Path(output_dir) / (filename + "_regime_metrics.tsv"), sep="\t"
+            Path(output_dir) / (filename + "_regime.tsv"), sep="\t"
         )
 
     def save_data(self, output_dir: str = "", filename: str = None) -> None:
@@ -744,6 +747,7 @@ class MetricsReport:
             filename = filename.replace(" ", "_")
 
         # Save data
+        logger.info(f'Saving log data with name: {filename + "_data.feather"}')
         self._log_data.reset_index(drop=True).to_feather(
             str(Path(output_dir) / (filename + "_data.feather"))
         )
@@ -776,6 +780,7 @@ class MetricsReport:
         settings_json["clamp_outliers"] = self.clamp_outliers
 
         with open(Path(output_dir) / (filename + "_settings.json"), "w") as outfile:
+            logger.info(f'Saving settings with name: {filename + "_settings.json"}')
             json.dump(settings_json, outfile)
 
     def plot(

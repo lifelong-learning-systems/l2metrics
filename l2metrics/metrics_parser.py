@@ -40,7 +40,8 @@ class MetricsParser:
             with open(file_name) as file:
                 self.data = json.load(file)
             self.dfs = [
-                pd.DataFrame(self.refactor_json(run_num)).fillna(value=np.nan) for run_num in self.data
+                pd.DataFrame(self.refactor_json(run_num)).fillna(value=np.nan)
+                for run_num in self.data
             ]
 
     def to_excel(self) -> None:

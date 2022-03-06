@@ -24,12 +24,13 @@ from functools import reduce
 from typing import List, Set, Tuple, Union
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 
 
 class MetricsParser:
-    dfs = None
+    dfs = []
     df_tsv = None
 
     def __init__(self, file_name, tsv: bool = False) -> None:
@@ -39,14 +40,14 @@ class MetricsParser:
             with open(file_name) as file:
                 self.data = json.load(file)
             self.dfs = [
-                pd.DataFrame(self.json_refactor(run_num)) for run_num in self.data
+                pd.DataFrame(self.refactor_json(run_num)).fillna(value=np.nan) for run_num in self.data
             ]
 
-    def toXL(self) -> None:
+    def to_excel(self) -> None:
         for idx, df in enumerate(self.dfs):
             df.to_excel(str(idx) + ".xlsx", header=True)
 
-    def listflatten(self, l: list) -> List:
+    def flatten_list(self, l: list) -> List:
         flat = []
         for subl in l:
             if isinstance(subl, list):
@@ -58,7 +59,7 @@ class MetricsParser:
         return flat
         # return [item for subl in l if subl for item in subl else None]
 
-    def dictflatten(self, d: list) -> Tuple[Set, dict]:
+    def flatten_dict(self, d: list) -> Tuple[Set, dict]:
         graph_titles = set()
         for d1 in d:
             if d1:
@@ -75,11 +76,11 @@ class MetricsParser:
                         graph_data[k].append(d1[k])
         return graph_titles, graph_data
 
-    def json_refactor(self, json: dict, parent: str = "root") -> dict:
+    def refactor_json(self, json: dict, parent: str = "root") -> dict:
         new_dict = {}
         for k, v in json.items():
             if isinstance(v, dict):
-                for k1, v1 in self.json_refactor(v, parent=k).items():
+                for k1, v1 in self.refactor_json(v, parent=k).items():
                     if isinstance(k1, tuple):
                         if isinstance(v1, list) and len(v1) != 1:
                             new_dict[tuple([parent]) + k1] = [v1]
@@ -96,40 +97,31 @@ class MetricsParser:
 
     # sourced from stackoverflow
     # link: https://stackoverflow.com/questions/7204805/how-to-merge-dictionaries-of-dictionaries
-    def mergedict(self, a, b, path=None) -> dict:
+    def merge_dict(self, a, b, path=None) -> dict:
         if path is None:
             path = []
         for key in b:
             if key in a:
                 if isinstance(a[key], dict) and isinstance(b[key], dict):
-                    self.mergedict(a[key], b[key], path + [str(key)])
+                    self.merge_dict(a[key], b[key], path + [str(key)])
             else:
                 a[key] = b[key]
         return a
 
-    def plotLine(self, data: list) -> None:
-        sns.lineplot(x=range(len(data)), y=data)
-
-    def plotHist(self, data: list) -> None:
-        sns.histplot(data)
-
-    def plotDist(self, data: list) -> None:
-        sns.distplot(data)
-
-    # -----------------------------------------------------
+    ##################################################
     # JSON methods
+    ##################################################
 
-    def df2dict_helper(self, key: list, val: any) -> dict:
+    def _df2dict_helper(self, key: list, val) -> dict:
         new_dict = {}
         if len(key) == 1:
             new_dict[key[0]] = val[0]
         else:
-            new_dict[key[0]] = self.df2dict_helper(key[1:], val)
+            new_dict[key[0]] = self._df2dict_helper(key[1:], val)
         return new_dict
 
     def df2dict(self, df: pd.DataFrame) -> dict:
         pre_new_dict = []
-        # print(df.columns)
         for col in df.columns:
             val = df[col]
             newcol = (
@@ -137,552 +129,583 @@ class MetricsParser:
             )
             if newcol[0] == "root":
                 newcol.pop(0)
-            pre_new_dict.append(self.df2dict_helper(newcol, val))
-        # pprint.pprint(pre_new_dict)
+            pre_new_dict.append(self._df2dict_helper(newcol, val))
         return reduce(
-            self.mergedict,
+            self.merge_dict,
             pre_new_dict,
         )
 
-    def getNormalizationDataRange_helper(
-        self, df: pd.DataFrame, task: str = None
-    ) -> Union[dict, Tuple[int, int]]:
-        # print(type(df),df.root)
+    def _get_normalization_data_range_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, dict, Tuple[int, int]]:
         try:
-            if task is None:
-                return self.df2dict(df.root.normalization_data_range)
-            else:
+            if task:
                 return (
                     df.root.normalization_data_range[task]["min"].iloc[0, 0],
                     df.root.normalization_data_range[task]["max"].iloc[0, 0],
                 )
-        except (KeyError, AttributeError) as e:
+            else:
+                return self.df2dict(df.root.normalization_data_range)
+        except (KeyError, AttributeError):
             pass
 
-    def getNormalizationDataRange(
-        self, task: str = None
-    ) -> List[Union[dict, Tuple[int, int]]]:
-        return [self.getNormalizationDataRange_helper(run, task) for run in self.dfs]
+    def get_normalization_data_range(
+        self, task: str = ""
+    ) -> List[Union[None, dict, Tuple[int, int]]]:
+        return [
+            self._get_normalization_data_range_helper(run, task) for run in self.dfs
+        ]
 
     # possible types: 'hist','dist','line'
-    def plotNormalizationDataRange(self, plottype: str, task: str = None):
+    def plot_normalization_data_range(self, plottype: str, task: str = "") -> None:
         if task:
             # normdatrange = self.flatten(self.getNormalizationDataRange(task))
-            normdatrange = [x for x in self.getNormalizationDataRange(task) if x]
-            fig, ax = plt.subplots(1, 2, figsize=(18, 10))
+            normdatrange = [x for x in self.get_normalization_data_range(task) if x]
+            _, axes = plt.subplots(1, 2, figsize=(12, 10), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([min for min, _ in normdatrange], ax=ax[0]).set(
+                sns.histplot([min for min, _ in normdatrange], ax=axes[0]).set(
                     title="Min"
                 )
-                sns.histplot([max for _, max in normdatrange], ax=ax[1]).set(
+                sns.histplot([max for _, max in normdatrange], ax=axes[1]).set(
                     title="Max"
                 )
             elif plottype == "dist":
-                sns.distplot([min for min, _ in normdatrange], ax=ax[0]).set(
+                sns.distplot([min for min, _ in normdatrange], ax=axes[0]).set(
                     title="Min"
                 )
-                sns.distplot([max for _, max in normdatrange], ax=ax[1]).set(
+                sns.distplot([max for _, max in normdatrange], ax=axes[1]).set(
                     title="Max"
                 )
             elif plottype == "line":
-                sns.lineplot(data=[min for min, _ in normdatrange], ax=ax[0]).set(
+                sns.lineplot(data=[min for min, _ in normdatrange], ax=axes[0]).set(
                     title="Min"
                 )
-                sns.lineplot(data=[max for _, max in normdatrange], ax=ax[1]).set(
+                sns.lineplot(data=[max for _, max in normdatrange], ax=axes[1]).set(
                     title="Max"
                 )
         else:
-            normdatrange = [x for x in self.getNormalizationDataRange(task) if x]
-            graph_titles, graph_data = self.dictflatten(normdatrange)
-            fig, ax = plt.subplots(len(graph_titles), 2, figsize=(18, 30))
+            normdatrange = [x for x in self.get_normalization_data_range(task) if x]
+            graph_titles, graph_data = self.flatten_dict(normdatrange)
+            _, axes = plt.subplots(
+                len(graph_titles), 2, figsize=(12, 10), constrained_layout=True
+            )
             if plottype == "hist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.histplot([min for min, _ in v], ax=ax[i][0]).set(
+                    sns.histplot([min for min, _ in v], ax=axes[i][0]).set(
                         title=k + " Min"
                     )
-                    sns.histplot([max for _, max in v], ax=ax[i][1]).set(
+                    sns.histplot([max for _, max in v], ax=axes[i][1]).set(
                         title=k + " Max"
                     )
                     i += 1
             elif plottype == "dist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.distplot([min for min, _ in v], ax=ax[i][0]).set(
+                    sns.distplot([min for min, _ in v], ax=axes[i][0]).set(
                         title=k + " Min"
                     )
-                    sns.distplot([max for _, max in v], ax=ax[i][1]).set(
+                    sns.distplot([max for _, max in v], ax=axes[i][1]).set(
                         title=k + " Max"
                     )
                     i += 1
             elif plottype == "line":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.lineplot(data=[min for min, _ in v], ax=ax[i][0]).set(
+                    sns.lineplot(data=[min for min, _ in v], ax=axes[i][0]).set(
                         title=k + " Min"
                     )
-                    sns.lineplot(data=[max for _, max in v], ax=ax[i][1]).set(
+                    sns.lineplot(data=[max for _, max in v], ax=axes[i][1]).set(
                         title=k + " Max"
                     )
                     i += 1
 
-    def getBackwardTransferRatio_helper(
-        self, df: pd.DataFrame, taska: str = None, taskb: str = None
-    ) -> Union[int, dict, list]:
+    def get_backward_transfer_ratio_helper(
+        self, df: pd.DataFrame, task_a: str = "", task_b: str = ""
+    ) -> Union[None, int, dict, list]:
         try:
-            if taska is None:
+            if not task_a:
                 return df.root.backward_transfer_ratio.iloc[0, 0]
-            elif taskb is None:
-                return self.df2dict(df.root.task_metrics[taska].backward_transfer_ratio)
+            elif not task_b:
+                return self.df2dict(
+                    df.root.task_metrics[task_a].backward_transfer_ratio
+                )
             else:
                 return (
-                    df.root.task_metrics[taska].backward_transfer_ratio[taskb].tolist()
+                    df.root.task_metrics[task_a]
+                    .backward_transfer_ratio[task_b]
+                    .tolist()
                 )
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getBackwardTransferRatio(
-        self, taska: str = None, taskb: str = None
-    ) -> List[Union[int, dict, list]]:
+    def get_backward_transfer_ratio(
+        self, task_a: str = "", task_b: str = ""
+    ) -> List[Union[None, int, dict, list]]:
         return [
-            self.getBackwardTransferRatio_helper(run, taska, taskb) for run in self.dfs
+            self.get_backward_transfer_ratio_helper(run, task_a, task_b)
+            for run in self.dfs
         ]
 
-    def plotBackwardTransferRatio(
-        self, plottype: str, taska: str = None, taskb: str = None
+    def plot_backward_transfer_ratio(
+        self, plottype: str, task_a: str = "", task_b: str = ""
     ):
-        if taska is None:
-            graph_data = [x for x in self.getBackwardTransferRatio() if x]
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+        if not task_a:
+            graph_data = [x for x in self.get_backward_transfer_ratio() if x]
+            _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([x for x in graph_data], ax=ax)
+                sns.histplot([x for x in graph_data], ax=axes)
             elif plottype == "dist":
-                sns.distplot([x for x in graph_data], ax=ax)
+                sns.distplot([x for x in graph_data], ax=axes)
             elif plottype == "line":
-                sns.lineplot(data=[x for x in graph_data], ax=ax)
-        elif taskb is None:
-            graph_titles, graph_data = self.dictflatten(
-                [x for x in self.getBackwardTransferRatio(taska) if x]
+                sns.lineplot(data=[x for x in graph_data], ax=axes)
+        elif not task_b:
+            graph_titles, graph_data = self.flatten_dict(
+                [x for x in self.get_backward_transfer_ratio(task_a) if x]
             )
             # print(graph_titles,graph_data)
-            fig, ax = plt.subplots(len(graph_titles), 1, figsize=(18, 5))
+            _, axes = plt.subplots(
+                len(graph_titles), 1, figsize=(12, 5), constrained_layout=True
+            )
             if plottype == "hist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.histplot(list(v), ax=ax[i]).set(title=k)
+                    sns.histplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
             elif plottype == "dist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.distplot(list(v), ax=ax[i]).set(title=k)
+                    sns.distplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
             elif plottype == "line":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.lineplot(data=list(v), ax=ax[i]).set(title=k)
+                    sns.lineplot(data=list(v), ax=axes[i]).set(title=k)
                     i += 1
         else:
-            graph_data = self.listflatten(
-                [x for x in self.getBackwardTransferRatio(taska, taskb) if x]
+            graph_data = self.flatten_list(
+                [x for x in self.get_backward_transfer_ratio(task_a, task_b) if x]
             )
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+            _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([x for x in graph_data], ax=ax)
+                sns.histplot([x for x in graph_data], ax=axes)
             elif plottype == "dist":
-                sns.distplot([x for x in graph_data], ax=ax)
+                sns.distplot([x for x in graph_data], ax=axes)
             elif plottype == "line":
-                sns.lineplot(data=[x for x in graph_data], ax=ax)
+                sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getForwardTransferRatio_helper(
-        self, df: pd.DataFrame, taska: str = None, taskb: str = None
-    ) -> Union[int, dict, list]:
+    def get_forward_transfer_ratio_helper(
+        self, df: pd.DataFrame, task_a: str = "", task_b: str = ""
+    ) -> Union[None, int, dict, list]:
         try:
-            if taska is None:
+            if not task_a:
                 return df.root.forward_transfer_ratio.iloc[0, 0]
-            elif taskb is None:
-                return self.df2dict(df.root.task_metrics[taska].forward_transfer_ratio)
+            elif not task_b:
+                return self.df2dict(df.root.task_metrics[task_a].forward_transfer_ratio)
             else:
                 return (
-                    df.root.task_metrics[taska]
-                    .forward_transfer_ratio[taskb]
+                    df.root.task_metrics[task_a]
+                    .forward_transfer_ratio[task_b]
                     .tolist()[0]
                 )
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getForwardTransferRatio(
-        self, taska: str = None, taskb: str = None
-    ) -> List[Union[int, dict, list]]:
+    def get_forward_transfer_ratio(
+        self, task_a: str = "", task_b: str = ""
+    ) -> List[Union[None, int, dict, list]]:
         return [
-            self.getForwardTransferRatio_helper(run, taska, taskb) for run in self.dfs
+            self.get_forward_transfer_ratio_helper(run, task_a, task_b)
+            for run in self.dfs
         ]
 
-    def plotForwardTransferRatio(
-        self, plottype: str, taska: str = None, taskb: str = None
+    def plot_forward_transfer_ratio(
+        self, plottype: str, task_a: str = "", task_b: str = ""
     ):
-        if taska is None:
-            graph_data = [x for x in self.getForwardTransferRatio() if x]
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+        if not task_a:
+            graph_data = [x for x in self.get_forward_transfer_ratio() if x]
+            _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([x for x in graph_data], ax=ax)
+                sns.histplot([x for x in graph_data], ax=axes)
             elif plottype == "dist":
-                sns.distplot([x for x in graph_data], ax=ax)
+                sns.distplot([x for x in graph_data], ax=axes)
             elif plottype == "line":
-                sns.lineplot(data=[x for x in graph_data], ax=ax)
-        elif taskb is None:
-            graph_titles, graph_data = self.dictflatten(
-                [x for x in self.getForwardTransferRatio(taska) if x]
+                sns.lineplot(data=[x for x in graph_data], ax=axes)
+        elif not task_b:
+            graph_titles, graph_data = self.flatten_dict(
+                [x for x in self.get_forward_transfer_ratio(task_a) if x]
             )
-            # print(graph_titles,graph_data)
-            fig, ax = plt.subplots(len(graph_titles), 1, figsize=(18, 5))
+            _, axes = plt.subplots(
+                len(graph_titles), 1, figsize=(12, 5), constrained_layout=True
+            )
             if plottype == "hist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.histplot(list(v), ax=ax[i]).set(title=k)
+                    sns.histplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
             elif plottype == "dist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.distplot(list(v), ax=ax[i]).set(title=k)
+                    sns.distplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
             elif plottype == "line":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.lineplot(list(v), ax=ax[i]).set(title=k)
+                    sns.lineplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
         else:
-            graph_data = self.listflatten(
-                [x for x in self.getForwardTransferRatio(taska, taskb) if x]
+            graph_data = self.flatten_list(
+                [x for x in self.get_forward_transfer_ratio(task_a, task_b) if x]
             )
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+            _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([x for x in graph_data], ax=ax)
+                sns.histplot([x for x in graph_data], ax=axes)
             elif plottype == "dist":
-                sns.distplot([x for x in graph_data], ax=ax)
+                sns.distplot([x for x in graph_data], ax=axes)
             elif plottype == "line":
-                sns.lineplot(data=[x for x in graph_data], ax=ax)
+                sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getBackwardTransferContrast_helper(
-        self, df: pd.DataFrame, taska: str = None, taskb: str = None
-    ) -> Union[int, dict, list]:
+    def get_backward_transfer_contrast_helper(
+        self, df: pd.DataFrame, task_a: str = "", task_b: str = ""
+    ) -> Union[None, int, dict, list]:
         try:
-            if taska is None:
+            if not task_a:
                 return df.root.backward_transfer_contrast.iloc[0, 0]
-            elif taskb is None:
+            elif not task_b:
                 return self.df2dict(
-                    df.root.task_metrics[taska].backward_transfer_contrast
+                    df.root.task_metrics[task_a].backward_transfer_contrast
                 )
             else:
                 return (
-                    df.root.task_metrics[taska]
-                    .backward_transfer_contrast[taskb]
+                    df.root.task_metrics[task_a]
+                    .backward_transfer_contrast[task_b]
                     .tolist()[0]
                 )
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getBackwardTransferContrast(
-        self, taska: str = None, taskb: str = None
-    ) -> List[Union[int, dict, list]]:
+    def get_backward_transfer_contrast(
+        self, task_a: str = "", task_b: str = ""
+    ) -> List[Union[None, int, dict, list]]:
         return [
-            self.getBackwardTransferContrast_helper(run, taska, taskb)
+            self.get_backward_transfer_contrast_helper(run, task_a, task_b)
             for run in self.dfs
         ]
 
-    def plotBackwardTransferContrast(
-        self, plottype: str, taska: str = None, taskb: str = None
+    def plot_backward_transfer_contrast(
+        self, plottype: str, task_a: str = "", task_b: str = ""
     ):
-        if taska is None:
-            graph_data = [x for x in self.getBackwardTransferContrast() if x]
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+        if not task_a:
+            graph_data = [x for x in self.get_backward_transfer_contrast() if x]
+            fig, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([x for x in graph_data], ax=ax)
+                sns.histplot([x for x in graph_data], ax=axes)
             elif plottype == "dist":
-                sns.distplot([x for x in graph_data], ax=ax)
+                sns.distplot([x for x in graph_data], ax=axes)
             elif plottype == "line":
-                sns.lineplot(data=[x for x in graph_data], ax=ax)
-        elif taskb is None:
-            graph_titles, graph_data = self.dictflatten(
-                [x for x in self.getBackwardTransferContrast(taska) if x]
+                sns.lineplot(data=[x for x in graph_data], ax=axes)
+        elif not task_b:
+            graph_titles, graph_data = self.flatten_dict(
+                [x for x in self.get_backward_transfer_contrast(task_a) if x]
             )
             # print(graph_titles,graph_data)
-            fig, ax = plt.subplots(len(graph_titles), 1, figsize=(18, 5))
+            _, axes = plt.subplots(
+                len(graph_titles), 1, figsize=(12, 5), constrained_layout=True
+            )
             if plottype == "hist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.histplot(list(v), ax=ax[i]).set(title=k)
+                    sns.histplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
             elif plottype == "dist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.distplot(list(v), ax=ax[i]).set(title=k)
+                    sns.distplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
             elif plottype == "line":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.lineplot(list(v), ax=ax[i]).set(title=k)
+                    sns.lineplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
         else:
-            graph_data = self.listflatten(
-                [x for x in self.getBackwardTransferContrast(taska, taskb) if x]
+            graph_data = self.flatten_list(
+                [x for x in self.get_backward_transfer_contrast(task_a, task_b) if x]
             )
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+            fig, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([x for x in graph_data], ax=ax)
+                sns.histplot([x for x in graph_data], ax=axes)
             elif plottype == "dist":
-                sns.distplot([x for x in graph_data], ax=ax)
+                sns.distplot([x for x in graph_data], ax=axes)
             elif plottype == "line":
-                sns.lineplot(data=[x for x in graph_data], ax=ax)
+                sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getForwardTransferContrast_helper(
-        self, df: pd.DataFrame, taska: str = None, taskb: str = None
-    ) -> Union[int, dict, list]:
+    def get_forward_transfer_contrast_helper(
+        self, df: pd.DataFrame, task_a: str = "", task_b: str = ""
+    ) -> Union[None, int, dict, list]:
         try:
-            if taska is None:
+            if not task_a:
                 return df.root.forward_transfer_contrast.iloc[0, 0]
-            elif taskb is None:
+            elif not task_b:
                 return self.df2dict(
-                    df.root.task_metrics[taska].forward_transfer_contrast
+                    df.root.task_metrics[task_a].forward_transfer_contrast
                 )
             else:
                 return (
-                    df.root.task_metrics[taska]
-                    .forward_transfer_contrast[taskb]
+                    df.root.task_metrics[task_a]
+                    .forward_transfer_contrast[task_b]
                     .tolist()[0]
                 )
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getForwardTransferContrast(
-        self, taska: str = None, taskb: str = None
-    ) -> List[Union[int, dict, list]]:
+    def get_forward_transfer_contrast(
+        self, task_a: str = "", task_b: str = ""
+    ) -> List[Union[None, int, dict, list]]:
         return [
-            self.getForwardTransferContrast_helper(run, taska, taskb)
+            self.get_forward_transfer_contrast_helper(run, task_a, task_b)
             for run in self.dfs
         ]
 
-    def plotForwardTransferContrast(
-        self, plottype: str, taska: str = None, taskb: str = None
+    def plot_forward_transfer_contrast(
+        self, plottype: str, task_a: str = "", task_b: str = ""
     ):
-        if taska is None:
-            graph_data = [x for x in self.getForwardTransferContrast() if x]
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+        if not task_a:
+            graph_data = [x for x in self.get_forward_transfer_contrast() if x]
+            _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([x for x in graph_data], ax=ax)
+                sns.histplot([x for x in graph_data], ax=axes)
             elif plottype == "dist":
-                sns.distplot([x for x in graph_data], ax=ax)
+                sns.distplot([x for x in graph_data], ax=axes)
             elif plottype == "line":
-                sns.lineplot(data=[x for x in graph_data], ax=ax)
-        elif taskb is None:
-            graph_titles, graph_data = self.dictflatten(
-                [x for x in self.getForwardTransferContrast(taska) if x]
+                sns.lineplot(data=[x for x in graph_data], ax=axes)
+        elif not task_b:
+            graph_titles, graph_data = self.flatten_dict(
+                [x for x in self.get_forward_transfer_contrast(task_a) if x]
             )
             # print(graph_titles,graph_data)
-            fig, ax = plt.subplots(len(graph_titles), 1, figsize=(18, 5))
+            _, axes = plt.subplots(
+                len(graph_titles), 1, figsize=(12, 5), constrained_layout=True
+            )
             if plottype == "hist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.histplot(list(v), ax=ax[i]).set(title=k)
+                    sns.histplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
             elif plottype == "dist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.distplot(list(v), ax=ax[i]).set(title=k)
+                    sns.distplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
             elif plottype == "line":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.lineplot(list(v), ax=ax[i]).set(title=k)
+                    sns.lineplot(list(v), ax=axes[i]).set(title=k)
                     i += 1
         else:
-            graph_data = self.listflatten(
-                [x for x in self.getForwardTransferContrast(taska, taskb) if x]
+            graph_data = self.flatten_list(
+                [x for x in self.get_forward_transfer_contrast(task_a, task_b) if x]
             )
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+            _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([x for x in graph_data], ax=ax)
+                sns.histplot([x for x in graph_data], ax=axes)
             elif plottype == "dist":
-                sns.distplot([x for x in graph_data], ax=ax)
+                sns.distplot([x for x in graph_data], ax=axes)
             elif plottype == "line":
-                sns.lineplot(data=[x for x in graph_data], ax=ax)
+                sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getMaintenanceValMRLEP_helper(self, df: pd.DataFrame, task: str) -> list:
+    def _get_maintenance_val_mrlep_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, list]:
         try:
-            if task is None:
+            if not task:
                 return [
                     df.root.task_metrics[t].maintenance_val_mrlep.iloc[0, 0]
-                    for t in self.getUniqueTaskNames()
+                    for t in self.get_json_task_names()
                 ]
             else:
                 return df.root.task_metrics[task].maintenance_val_mrlep.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getMaintenanceValMRLEP(self, task: str) -> List[list]:
+    def get_maintenance_val_mrlep(self, task: str) -> List[list]:
         return list(
             filter(
                 None,
-                [self.getMaintenanceValMRLEP_helper(run, task) for run in self.dfs],
+                [self._get_maintenance_val_mrlep_helper(run, task) for run in self.dfs],
             )
         )
 
-    def plotMaintenanceValMRLEP(self, plottype: str, task: str):
-        graph_data = self.listflatten(
-            [x for x in self.getMaintenanceValMRLEP(task) if x]
+    def plot_maintenance_val_mrlep(self, plottype: str, task: str) -> None:
+        graph_data = self.flatten_list(
+            [x for x in self.get_maintenance_val_mrlep(task) if x]
         )
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getMaintenanceValMRTLP_helper(self, df: pd.DataFrame, task: str) -> list:
+    def _get_maintenance_val_mrtlp_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, list]:
         try:
-            if task is None:
+            if not task:
                 return [
                     df.root.task_metrics[t].maintenance_val_mrtlp.iloc[0, 0]
-                    for t in self.getUniqueTaskNames()
+                    for t in self.get_json_task_names()
                 ]
             else:
                 return df.root.task_metrics[task].maintenance_val_mrtlp.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getMaintenanceValMRTLP(self, task: str) -> List[list]:
-        return [self.getMaintenanceValMRTLP_helper(run, task) for run in self.dfs]
+    def get_maintenance_val_mrtlp(self, task: str = "") -> List[Union[None, list]]:
+        return [self._get_maintenance_val_mrtlp_helper(run, task) for run in self.dfs]
 
-    def plotMaintenanceValMRTLP(self, plottype: str, task: str):
-        graph_data = self.listflatten(
-            [x for x in self.getMaintenanceValMRTLP(task) if x]
+    def plot_maintenance_val_mrtlp(self, plottype: str, task: str) -> None:
+        graph_data = self.flatten_list(
+            [x for x in self.get_maintenance_val_mrtlp(task) if x]
         )
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getRecoveryTimes_helper(self, df: pd.DataFrame, task: str) -> list:
+    def _get_recovery_times_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, list]:
         try:
-            if task is None:
+            if not task:
                 return [
                     df.root.task_metrics[t].recovery_times.iloc[0, 0]
-                    for t in self.getUniqueTaskNames()
+                    for t in self.get_json_task_names()
                 ]
             else:
                 return df.root.task_metrics[task].recovery_times.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getRecoveryTimes(self, task: str = None) -> List[list]:
-        return self.listflatten(
-            [self.getRecoveryTimes_helper(run, task) for run in self.dfs]
+    def get_recovery_times(self, task: str = "") -> List[list]:
+        return self.flatten_list(
+            [self._get_recovery_times_helper(run, task) for run in self.dfs]
         )
 
-    def plotRecoveryTimes(self, plottype: str, task: str = None):
-        graph_data = self.listflatten([x for x in self.getRecoveryTimes(task) if x])
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_recovery_times(self, plottype: str, task: str = "") -> None:
+        graph_data = self.flatten_list([x for x in self.get_recovery_times(task) if x])
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getPerfRecoveryRate_helper(self, df: pd.DataFrame, task: str = None) -> int:
+    def _get_perf_recovery_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, int]:
         try:
-            if task is None:
+            if not task:
                 return df.root.perf_recovery.iloc[0, 0]
             else:
                 return df.root.task_metrics[task].perf_recovery.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getPerfRecoveryRate(self, task: str = None) -> List[int]:
-        return [self.getPerfRecoveryRate_helper(run, task) for run in self.dfs]
+    def get_perf_recovery(self, task: str = "") -> List[Union[None, int]]:
+        return [self._get_perf_recovery_helper(run, task) for run in self.dfs]
 
-    def plotPerfRecoveryRate(self, plottype: str, task: str = None):
-        graph_data = [x for x in self.getPerfRecoveryRate(task) if x]
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_perf_recovery(self, plottype: str, task: str = "") -> None:
+        graph_data = [x for x in self.get_perf_recovery(task) if x]
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getPerfMaintenanceMRLEP_helper(self, df: pd.DataFrame, task: str = None) -> int:
+    def get_perf_maintenance_mrlep_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, int]:
         try:
-            if task is None:
+            if not task:
                 return df.root.perf_maintenance_mrlep.iloc[0, 0]
             else:
                 return df.root.task_metrics[task].perf_maintenance_mrlep.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getPerfMaintenanceMRLEP(self, task: str = None) -> List[int]:
-        return [self.getPerfMaintenanceMRLEP_helper(run, task) for run in self.dfs]
+    def get_perf_maintenance_mrlep(self, task: str = "") -> List[Union[None, int]]:
+        return [self.get_perf_maintenance_mrlep_helper(run, task) for run in self.dfs]
 
-    def plotPerfMaintenanceMRLEP(self, plottype: str, task: str = None):
-        graph_data = [x for x in self.getPerfMaintenanceMRLEP(task) if x]
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_perf_maintenance_mrlep(self, plottype: str, task: str = "") -> None:
+        graph_data = [x for x in self.get_perf_maintenance_mrlep(task) if x]
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getPerfMaintenanceMRTLP_helper(self, df: pd.DataFrame, task: str = None) -> int:
+    def get_perf_maintenance_mrtlp_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, int]:
         try:
-            if task is None:
+            if not task:
                 return df.root.perf_maintenance_mrtlp.iloc[0, 0]
             else:
                 return df.root.task_metrics[task].perf_maintenance_mrtlp.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getPerfMaintenanceMRTLP(self, task: str = None) -> List[int]:
-        return [self.getPerfMaintenanceMRTLP_helper(run, task) for run in self.dfs]
+    def get_perf_maintenance_mrtlp(self, task: str = "") -> List[Union[None, int]]:
+        return [self.get_perf_maintenance_mrtlp_helper(run, task) for run in self.dfs]
 
-    def plotPerfMaintenanceMRTLP(self, plottype: str, task: str = None):
-        graph_data = [x for x in self.getPerfMaintenanceMRTLP(task) if x]
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_perf_maintenance_mrtlp(self, plottype: str, task: str = "") -> None:
+        graph_data = [x for x in self.get_perf_maintenance_mrtlp(task) if x]
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getSTERelPerf_helper(self, df: pd.DataFrame, task: str = None) -> int:
+    def _get_ste_rel_perf_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, int]:
         try:
-            if task is None:
+            if not task:
                 return df.root.ste_rel_perf.iloc[0, 0]
             else:
                 return df.root.task_metrics[task].ste_rel_perf.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getSTERelPerf(self, task: str = None) -> List[int]:
-        return [self.getSTERelPerf_helper(run, task) for run in self.dfs]
+    def get_ste_rel_perf(self, task: str = "") -> List[Union[None, int]]:
+        return [self._get_ste_rel_perf_helper(run, task) for run in self.dfs]
 
-    def plotSTERelPerf(self, plottype: str, task: str = None):
-        graph_data = [x for x in self.getSTERelPerf(task) if x]
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_ste_rel_perf(self, plottype: str, task: str = "") -> None:
+        graph_data = [x for x in self.get_ste_rel_perf(task) if x]
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getSampleEfficiency_helper(self, df: pd.DataFrame, task: str = None) -> int:
+    def _get_sample_efficiency_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, dict, int]:
         try:
-            if task is None:
+            if not task:
                 return df.root.sample_efficiency.iloc[0, 0]
             elif task == "all":
                 # print({t:df.root.task_metrics[t].sample_efficiency.iloc[0,0] for t in df.root.task_metrics.columns.levels[0]})
@@ -692,86 +715,88 @@ class MetricsParser:
                 }
             else:
                 return df.root.task_metrics[task].sample_efficiency.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getSampleEfficiency(self, task: str = None) -> List[int]:
-        return [self.getSampleEfficiency_helper(run, task) for run in self.dfs]
+    def get_sample_efficiency(self, task: str = "") -> List[Union[None, dict, int]]:
+        return [self._get_sample_efficiency_helper(run, task) for run in self.dfs]
 
-    def plotSampleEfficiency(self, plottype: str, task: str = None):
+    def plot_sample_efficiency(self, plottype: str, task: str = "") -> None:
         if task == "all":
-            graph_titles, graph_data = self.dictflatten(
-                [x for x in self.getSampleEfficiency(task)]
+            graph_titles, graph_data = self.flatten_dict(
+                [x for x in self.get_sample_efficiency(task)]
             )
-            # print(self.getSampleEfficiency(task) )
-            # return
-            fig, ax = plt.subplots(len(graph_titles), 1, figsize=(18, 30))
+            _, axes = plt.subplots(
+                len(graph_titles), 1, figsize=(12, 10), constrained_layout=True
+            )
             if plottype == "hist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.histplot([x for x in v], ax=ax[i]).set(
+                    sns.histplot([x for x in v], ax=axes[i]).set(
                         title=k + " Sample Efficiency"
                     )
                     i += 1
             elif plottype == "dist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.distplot([x for x in v], ax=ax[i]).set(
+                    sns.distplot([x for x in v], ax=axes[i]).set(
                         title=k + " Sample Efficiency"
                     )
                     i += 1
             elif plottype == "line":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.lineplot(data=[x for x in v], ax=ax[i]).set(
+                    sns.lineplot(data=[x for x in v], ax=axes[i]).set(
                         title=k + " Sample Efficiency"
                     )
                     i += 1
         else:
-            graph_data = [x for x in self.getSampleEfficiency(task) if x]
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+            graph_data = [x for x in self.get_sample_efficiency(task) if x]
+            _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([x for x in graph_data], ax=ax)
+                sns.histplot([x for x in graph_data], ax=axes)
             elif plottype == "dist":
-                sns.distplot([x for x in graph_data], ax=ax)
+                sns.distplot([x for x in graph_data], ax=axes)
             elif plottype == "line":
-                sns.lineplot(data=[x for x in graph_data], ax=ax)
+                sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getRunID_helper(self, df: pd.DataFrame) -> str:
+    def _get_run_id_helper(self, df: pd.DataFrame) -> str:
         return df.root.run_id.iloc[0, 0]
 
-    def getRunID(self) -> List[str]:
-        return [self.getRunID_helper(run) for run in self.dfs]
+    def get_run_id(self) -> List[str]:
+        return [self._get_run_id_helper(run) for run in self.dfs]
 
-    def getComplexity_helper(self, df: pd.DataFrame) -> str:
+    def _get_complexity_helper(self, df: pd.DataFrame) -> str:
         return df.root.complexity.iloc[0, 0]
 
-    def getComplexity(self) -> List[str]:
-        return [self.getComplexity_helper(run) for run in self.dfs]
+    def get_complexity(self) -> List[str]:
+        return [self._get_complexity_helper(run) for run in self.dfs]
 
-    def getDifficulty_helper(self, df: pd.DataFrame) -> str:
+    def _get_difficulty_helper(self, df: pd.DataFrame) -> str:
         return df.root.difficulty.iloc[0, 0]
 
-    def getDifficulty(
+    def get_difficulty(
         self,
     ) -> List[str]:
-        return [self.getDifficulty_helper(run) for run in self.dfs]
+        return [self._get_difficulty_helper(run) for run in self.dfs]
 
-    def getScenarioType_helper(self, df: pd.DataFrame) -> str:
+    def _get_scenario_type_helper(self, df: pd.DataFrame) -> str:
         return df.root.scenario_type.iloc[0, 0]
 
-    def getScenarioType(self) -> List[str]:
-        return [self.getScenarioType_helper(run) for run in self.dfs]
+    def get_scenario_type(self) -> List[str]:
+        return [self._get_scenario_type_helper(run) for run in self.dfs]
 
-    def getMetricsColumn_helper(self, df: pd.DataFrame) -> str:
+    def _get_perf_measure_helper(self, df: pd.DataFrame) -> str:
         return df.root.metrics_column.iloc[0, 0]
 
-    def getMetricsColumn(self) -> List[str]:
-        return [self.getMetricsColumn_helper(run) for run in self.dfs]
+    def get_perf_measure(self) -> List[str]:
+        return [self._get_perf_measure_helper(run) for run in self.dfs]
 
-    def getMinMax_helper(self, df: pd.DataFrame, task: str = None) -> Tuple[int, int]:
+    def _get_min_max_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, Tuple[int, int], dict]:
         try:
-            if task is None:
+            if not task:
                 return df.root["min"].iloc[0, 0], df.root["max"].iloc[0, 0]
             elif task == "all":
                 return {
@@ -786,68 +811,80 @@ class MetricsParser:
                     df.root.task_metrics[task]["min"].iloc[0, 0],
                     df.root.task_metrics[task]["max"].iloc[0, 0],
                 )
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getMinMax(self, task: str = None) -> List[Union[List, Tuple[int, int]]]:
-        return [self.getMinMax_helper(run, task) for run in self.dfs]
+    def get_min_max(self, task: str = "") -> List[Union[None, Tuple[int, int], dict]]:
+        return [self._get_min_max_helper(run, task) for run in self.dfs]
 
-    def plotMinMax(self, plottype: str, task: str = None):
+    def plot_min_max(self, plottype: str, task: str = "") -> None:
         if task == "all":
-            graph_titles, graph_data = self.dictflatten(
-                [x for x in self.getMinMax(task) if x]
+            graph_titles, graph_data = self.flatten_dict(
+                [x for x in self.get_min_max(task) if x]
             )
-            fig, ax = plt.subplots(len(graph_titles), 2, figsize=(18, 30))
+            _, axes = plt.subplots(
+                len(graph_titles), 2, figsize=(12, 10), constrained_layout=True
+            )
             if plottype == "hist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.histplot([min for min, _ in v], ax=ax[i][0]).set(
+                    sns.histplot([min for min, _ in v], ax=axes[i][0]).set(
                         title=k + " Min"
                     )
-                    sns.histplot([max for _, max in v], ax=ax[i][1]).set(
+                    sns.histplot([max for _, max in v], ax=axes[i][1]).set(
                         title=k + " Max"
                     )
                     i += 1
             elif plottype == "dist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.distplot([min for min, _ in v], ax=ax[i][0]).set(
+                    sns.distplot([min for min, _ in v], ax=axes[i][0]).set(
                         title=k + " Min"
                     )
-                    sns.distplot([max for _, max in v], ax=ax[i][1]).set(
+                    sns.distplot([max for _, max in v], ax=axes[i][1]).set(
                         title=k + " Max"
                     )
                     i += 1
             elif plottype == "line":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.lineplot(data=[min for min, _ in v], ax=ax[i][0]).set(
+                    sns.lineplot(data=[min for min, _ in v], ax=axes[i][0]).set(
                         title=k + " Min"
                     )
-                    sns.lineplot(data=[max for _, max in v], ax=ax[i][1]).set(
+                    sns.lineplot(data=[max for _, max in v], ax=axes[i][1]).set(
                         title=k + " Max"
                     )
                     i += 1
         else:
-            graph_data = [x for x in self.getMinMax(task) if x]
-            fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+            graph_data = [x for x in self.get_min_max(task) if x]
+            _, axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([min for min, _ in graph_data], ax=ax[0]).set(title="Min")
-                sns.histplot([max for _, max in graph_data], ax=ax[1]).set(title="Max")
-            elif plottype == "dist":
-                sns.distplot([min for min, _ in graph_data], ax=ax[0]).set(title="Min")
-                sns.distplot([max for _, max in graph_data], ax=ax[1]).set(title="Max")
-            elif plottype == "line":
-                sns.lineplot(data=[min for min, _ in graph_data], ax=ax[0]).set(
+                sns.histplot([min for min, _ in graph_data], ax=axes[0]).set(
                     title="Min"
                 )
-                sns.lineplot(data=[max for _, max in graph_data], ax=ax[1]).set(
+                sns.histplot([max for _, max in graph_data], ax=axes[1]).set(
+                    title="Max"
+                )
+            elif plottype == "dist":
+                sns.distplot([min for min, _ in graph_data], ax=axes[0]).set(
+                    title="Min"
+                )
+                sns.distplot([max for _, max in graph_data], ax=axes[1]).set(
+                    title="Max"
+                )
+            elif plottype == "line":
+                sns.lineplot(data=[min for min, _ in graph_data], ax=axes[0]).set(
+                    title="Min"
+                )
+                sns.lineplot(data=[max for _, max in graph_data], ax=axes[1]).set(
                     title="Max"
                 )
 
-    def getNumLXEX_helper(self, df: pd.DataFrame, task: str = None) -> Tuple[int, int]:
+    def _get_num_lx_ex_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, Tuple[int, int], dict]:
         try:
-            if task is None:
+            if not task:
                 return df.root.num_lx.iloc[0, 0], df.root.num_ex.iloc[0, 0]
             elif task == "all":
                 return {
@@ -862,220 +899,240 @@ class MetricsParser:
                     df.root.task_metrics[task].num_lx.iloc[0, 0],
                     df.root.task_metrics[task].num_ex.iloc[0, 0],
                 )
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getNumLXEX(self, task: str = None) -> List[Union[List, Tuple[int, int]]]:
-        return [self.getNumLXEX_helper(run, task) for run in self.dfs]
+    def get_num_lx_ex(self, task: str = "") -> List[Union[None, Tuple[int, int], dict]]:
+        return [self._get_num_lx_ex_helper(run, task) for run in self.dfs]
 
-    def plotNumLXEX(self, plottype: str, task: str = None):
+    def plot_num_lx_ex(self, plottype: str, task: str = "") -> None:
         if task == "all":
-            graph_titles, graph_data = self.dictflatten(
-                [x for x in self.getNumLXEX(task) if x]
+            graph_titles, graph_data = self.flatten_dict(
+                [x for x in self.get_num_lx_ex(task) if x]
             )
-            fig, ax = plt.subplots(len(graph_titles), 2, figsize=(18, 30))
+            _, axes = plt.subplots(
+                len(graph_titles), 2, figsize=(12, 10), constrained_layout=True
+            )
             if plottype == "hist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.histplot([num_lx for num_lx, _ in v], ax=ax[i][0]).set(
+                    sns.histplot([num_lx for num_lx, _ in v], ax=axes[i][0]).set(
                         title=k + " Num_lx"
                     )
-                    sns.histplot([num_ex for _, num_ex in v], ax=ax[i][1]).set(
+                    sns.histplot([num_ex for _, num_ex in v], ax=axes[i][1]).set(
                         title=k + " Num_ex"
                     )
                     i += 1
             elif plottype == "dist":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.distplot([num_lx for num_lx, _ in v], ax=ax[i][0]).set(
+                    sns.distplot([num_lx for num_lx, _ in v], ax=axes[i][0]).set(
                         title=k + " Num_lx"
                     )
-                    sns.distplot([num_ex for _, num_ex in v], ax=ax[i][1]).set(
+                    sns.distplot([num_ex for _, num_ex in v], ax=axes[i][1]).set(
                         title=k + " Num_ex"
                     )
                     i += 1
             elif plottype == "line":
                 i = 0
                 for k, v in graph_data.items():
-                    sns.lineplot(data=[num_lx for num_lx, _ in v], ax=ax[i][0]).set(
+                    sns.lineplot(data=[num_lx for num_lx, _ in v], ax=axes[i][0]).set(
                         title=k + " Num_lx"
                     )
-                    sns.lineplot(data=[num_ex for _, num_ex in v], ax=ax[i][1]).set(
+                    sns.lineplot(data=[num_ex for _, num_ex in v], ax=axes[i][1]).set(
                         title=k + " Num_ex"
                     )
                     i += 1
         else:
-            graph_data = [x for x in self.getNumLXEX(task) if x]
-            fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+            graph_data = [x for x in self.get_num_lx_ex(task) if x]
+            _, axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)
             if plottype == "hist":
-                sns.histplot([num_lx for num_lx, _ in graph_data], ax=ax[0]).set(
+                sns.histplot([num_lx for num_lx, _ in graph_data], ax=axes[0]).set(
                     title="Num_lx"
                 )
-                sns.histplot([num_ex for _, num_ex in graph_data], ax=ax[1]).set(
+                sns.histplot([num_ex for _, num_ex in graph_data], ax=axes[1]).set(
                     title="Num_ex"
                 )
             elif plottype == "dist":
-                sns.distplot([num_lx for num_lx, _ in graph_data], ax=ax[0]).set(
+                sns.distplot([num_lx for num_lx, _ in graph_data], ax=axes[0]).set(
                     title="Num_lx"
                 )
-                sns.distplot([num_ex for _, num_ex in graph_data], ax=ax[1]).set(
+                sns.distplot([num_ex for _, num_ex in graph_data], ax=axes[1]).set(
                     title="Num_ex"
                 )
             elif plottype == "line":
-                sns.lineplot(data=[num_lx for num_lx, _ in graph_data], ax=ax[0]).set(
+                sns.lineplot(data=[num_lx for num_lx, _ in graph_data], ax=axes[0]).set(
                     title="Num_lx"
                 )
-                sns.lineplot(data=[num_ex for _, num_ex in graph_data], ax=ax[1]).set(
+                sns.lineplot(data=[num_ex for _, num_ex in graph_data], ax=axes[1]).set(
                     title="Num_ex"
                 )
 
-    def getSTERelPerfVals_helper(self, df: pd.DataFrame, task: str) -> list:
+    def _get_ste_rel_perf_vals_helper(
+        self, df: pd.DataFrame, task: str
+    ) -> Union[None, list]:
         try:
             return df.root.task_metrics[task].ste_rel_perf_vals.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getSTERelPerfVals(self, task: str) -> List[list]:
-        return [self.getSTERelPerfVals_helper(run, task) for run in self.dfs]
+    def get_ste_rel_perf_vals(self, task: str) -> List[Union[None, list]]:
+        return [self._get_ste_rel_perf_vals_helper(run, task) for run in self.dfs]
 
-    def plotSTERelPerfVals(self, plottype: str, task: str):
-        graph_data = self.listflatten([x for x in self.getSTERelPerfVals(task) if x])
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_ste_rel_perf_vals(self, plottype: str, task: str) -> None:
+        graph_data = self.flatten_list(
+            [x for x in self.get_ste_rel_perf_vals(task) if x]
+        )
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getSTESatVals_helper(self, df: pd.DataFrame, task: str) -> list:
+    def _get_ste_sat_vals_helper(
+        self, df: pd.DataFrame, task: str
+    ) -> Union[None, list]:
         try:
             return df.root.task_metrics[task].ste_saturation_vals.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getSTESatVals(self, task: str) -> List[list]:
-        return [self.getSTESatVals_helper(run, task) for run in self.dfs]
+    def get_ste_sat_vals(self, task: str) -> List[Union[None, list]]:
+        return [self._get_ste_sat_vals_helper(run, task) for run in self.dfs]
 
-    def plotSTESatVals(self, plottype: str, task: str):
-        graph_data = self.listflatten([x for x in self.getSTESatVals(task) if x])
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_ste_sat_vals(self, plottype: str, task: str) -> None:
+        graph_data = self.flatten_list([x for x in self.get_ste_sat_vals(task) if x])
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getSTEExp2SatVals_helper(self, df: pd.DataFrame, task: str) -> list:
+    def _get_ste_exp_to_sat_vals_helper(
+        self, df: pd.DataFrame, task: str
+    ) -> Union[None, list]:
         try:
             return df.root.task_metrics[task].ste_exp_to_sat_vals.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getSTEExp2SatVals(self, task: str) -> List[list]:
-        return [self.getSTEExp2SatVals_helper(run, task) for run in self.dfs]
+    def get_ste_exp_to_sat_vals(self, task: str) -> List[Union[None, list]]:
+        return [self._get_ste_exp_to_sat_vals_helper(run, task) for run in self.dfs]
 
-    def plotSTEExp2SatVals(self, plottype: str, task: str):
-        graph_data = self.listflatten([x for x in self.getSTEExp2SatVals(task) if x])
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_ste_exp_to_sat_vals(self, plottype: str, task: str) -> None:
+        graph_data = self.flatten_list(
+            [x for x in self.get_ste_exp_to_sat_vals(task) if x]
+        )
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getSESatVals_helper(self, df: pd.DataFrame, task: str) -> list:
+    def _get_se_sat_vals_helper(self, df: pd.DataFrame, task: str) -> Union[None, list]:
         try:
             return df.root.task_metrics[task].se_saturation_vals.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getSESatVals(self, task: str) -> List[list]:
-        return [self.getSESatVals_helper(run, task) for run in self.dfs]
+    def get_se_sat_vals(self, task: str) -> List[Union[None, list]]:
+        return [self._get_se_sat_vals_helper(run, task) for run in self.dfs]
 
-    def plotSESatVals(self, plottype: str, task: str):
-        graph_data = self.listflatten([x for x in self.getSESatVals(task) if x])
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_se_sat_vals(self, plottype: str, task: str) -> None:
+        graph_data = self.flatten_list([x for x in self.get_se_sat_vals(task) if x])
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getSEExp2SatVals_helper(self, df: pd.DataFrame, task: str) -> list:
+    def _get_se_exp_to_sat_vals_helper(
+        self, df: pd.DataFrame, task: str
+    ) -> Union[None, list]:
         try:
             return df.root.task_metrics[task].se_exp_to_sat_vals.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getSEExp2SatVals(self, task: str) -> List[list]:
-        return [self.getSEExp2SatVals_helper(run, task) for run in self.dfs]
+    def get_se_exp_to_sat_vals(self, task: str) -> List[Union[None, list]]:
+        return [self._get_se_exp_to_sat_vals_helper(run, task) for run in self.dfs]
 
-    def plotSEExp2SatVals(self, plottype: str, task: str):
-        graph_data = self.listflatten([x for x in self.getSEExp2SatVals(task) if x])
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_se_exp_to_sat_vals(self, plottype: str, task: str) -> None:
+        graph_data = self.flatten_list(
+            [x for x in self.get_se_exp_to_sat_vals(task) if x]
+        )
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getSampleEfficiencyVals_helper(self, df: pd.DataFrame, task: str) -> list:
+    def _get_sample_efficiency_vals_helper(
+        self, df: pd.DataFrame, task: str
+    ) -> Union[None, list]:
         try:
             return df.root.task_metrics[task].sample_efficiency_vals.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getSampleEfficiencyVals(self, task: str) -> List[list]:
-        return [self.getSampleEfficiencyVals_helper(run, task) for run in self.dfs]
+    def get_sample_efficiency_vals(self, task: str) -> List[Union[None, list]]:
+        return [self._get_sample_efficiency_vals_helper(run, task) for run in self.dfs]
 
-    def plotSampleEfficiencyVals(self, plottype: str, task: str):
-        graph_data = self.listflatten(
-            [x for x in self.getSampleEfficiencyVals(task) if x]
+    def plot_sample_efficiency_vals(self, plottype: str, task: str) -> None:
+        graph_data = self.flatten_list(
+            [x for x in self.get_sample_efficiency_vals(task) if x]
         )
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getSETaskSat_helper(self, df: pd.DataFrame, task: str):
+    def _get_se_task_sat_helper(self, df: pd.DataFrame, task: str) -> Union[None, list]:
         try:
             return df.root.task_metrics[task].se_task_saturation.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getSETaskSat(self, task: str):
-        return [self.getSETaskSat_helper(run, task) for run in self.dfs]
+    def get_se_task_sat(self, task: str) -> List[Union[None, list]]:
+        return [self._get_se_task_sat_helper(run, task) for run in self.dfs]
 
-    def plotSETaskSat(self, plottype: str, task: str):
-        graph_data = [x for x in self.getSETaskSat(task) if x]
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_se_task_sat(self, plottype: str, task: str) -> None:
+        graph_data = [x for x in self.get_se_task_sat(task) if x]
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getSETaskEPS2Sat_helper(self, df: pd.DataFrame, task: str):
+    def _get_se_task_exp_to_sat_helper(
+        self, df: pd.DataFrame, task: str
+    ) -> Union[None, list]:
         try:
             return df.root.task_metrics[task].se_task_exp_to_sat.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getSETaskEPS2Sat(self, task: str):
-        return [self.getSETaskEPS2Sat_helper(run, task) for run in self.dfs]
+    def get_se_task_exp_to_sat(self, task: str) -> List[Union[None, list]]:
+        return [self._get_se_task_exp_to_sat_helper(run, task) for run in self.dfs]
 
-    def plotSETaskEPS2Sat(self, plottype: str, task: str):
-        graph_data = [x for x in self.getSETaskEPS2Sat(task) if x]
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_se_task_exp_to_sat(self, plottype: str, task: str) -> None:
+        graph_data = [x for x in self.get_se_task_exp_to_sat(task) if x]
+        fig, ax = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
             sns.histplot([x for x in graph_data], ax=ax)
         elif plottype == "dist":
@@ -1083,60 +1140,63 @@ class MetricsParser:
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=ax)
 
-    def getRuntime_helper(self, df: pd.DataFrame):
+    def _get_runtime_helper(self, df: pd.DataFrame) -> Union[None, int]:
         try:
             return df.root.runtime.iloc[0, 0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getRuntime(self):
-        return [self.getRuntime_helper(run) for run in self.dfs]
+    def get_runtime(self) -> List[Union[None, int]]:
+        return [self._get_runtime_helper(run) for run in self.dfs]
 
-    def plotRuntime(self, plottype: str):
-        graph_data = [x for x in self.getRuntime() if x]
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    def plot_runtime(self, plottype: str) -> None:
+        graph_data = [x for x in self.get_runtime() if x]
+        _, axes = plt.subplots(1, 1, figsize=(10, 5), constrained_layout=True)
         if plottype == "hist":
-            sns.histplot([x for x in graph_data], ax=ax)
+            sns.histplot([x for x in graph_data], ax=axes)
         elif plottype == "dist":
-            sns.distplot([x for x in graph_data], ax=ax)
+            sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
-            sns.lineplot(data=[x for x in graph_data], ax=ax)
+            sns.lineplot(data=[x for x in graph_data], ax=axes)
 
-    def getUniqueTaskNames_helper(self, df: pd.DataFrame):
+    def _get_json_task_names_helper(self, df: pd.DataFrame) -> Union[None, list]:
         try:
             return df.root.task_metrics.columns.levels[0]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
-    def getUniqueTaskNames(self):
-        return set(
-            self.listflatten(
-                [list(self.getUniqueTaskNames_helper(run)) for run in self.dfs]
+    def get_json_task_names(self) -> list:
+        return list(
+            set(
+                self.flatten_list(
+                    [list(self._get_json_task_names_helper(run)) for run in self.dfs]
+                )
             )
         )
 
-    # ----------------------------------------------------------------------------
+    ##################################################
     # TSV methods
+    ##################################################
 
-    def getRegime(self):
+    def get_regime(self):
         return self.df_tsv.regime_num
 
-    def getRegimeByTask(self, task: str):
+    def get_regime_by_task(self, task: str):
         return self.df_tsv[self.df_tsv.task_name == task].regime_num
 
-    def getRegimeByBlockType(self, blktype: str = None, subtype: str = None):
-        if subtype and blktype:
+    def get_regime_by_block_type(self, block_type: str = "", subtype: str = ""):
+        if subtype and block_type:
             return self.df_tsv[
-                (self.df_tsv.block_type == blktype)
+                (self.df_tsv.block_type == block_type)
                 & (self.df_tsv.block_subtype == subtype)
             ].regime_num
         elif subtype:
             return self.df_tsv[self.df_tsv.block_subtype == subtype].regime_num
         else:
-            return self.df_tsv[self.df_tsv.block_type == blktype].regime_num
+            return self.df_tsv[self.df_tsv.block_type == block_type].regime_num
 
-    def getTermPerf(self, runID: str):
-        return self.df_tsv[self.df_tsv.run_id == runID].term_perf
+    def get_term_perf(self, run_id: str):
+        return self.df_tsv[self.df_tsv.run_id == run_id].term_perf
 
-    def getTaskNamesUnique(self):
+    def get_tsv_task_names(self):
         return list(self.df_tsv.task_name.unique())

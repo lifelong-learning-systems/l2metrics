@@ -115,6 +115,11 @@ def run() -> None:
                     kwargs["log_dir"] = dir
                     logger.info(f"Starting metrics report for {dir.name}")
                     report = MetricsReport(**kwargs)
+
+                    # Add noise to log data if mean or standard deviation is specified
+                    if args.noise[0] or args.noise[1]:
+                        report.add_noise(mean=args.noise[0], std=args.noise[1])
+
                     report.calculate()
                     ll_metrics_df = pd.concat(
                         [ll_metrics_df, report.ll_metrics_df], ignore_index=True

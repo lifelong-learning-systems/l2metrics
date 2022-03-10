@@ -312,7 +312,6 @@ def plot_evaluation_blocks(
 
     for idx, task_cluster in enumerate(task_clusters):
         # Create subplot
-        # TODO: Set common y-axis limits
         ax = fig.add_subplot(len(task_clusters), 1, idx + 1)
 
         cluster_eval_data = df_test[df_test["task_name"].str.contains(task_cluster)]
@@ -327,6 +326,10 @@ def plot_evaluation_blocks(
 
         ax.grid()
         ax.legend(loc="lower right")
+
+    # Set common y-axis limits if data is normalized
+    if any("normalized" in col for col in df_test.columns):
+        plt.setp(fig.axes, ylim=(0, 101))
 
     if do_save_fig:
         logger.info(

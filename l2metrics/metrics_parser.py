@@ -1175,6 +1175,45 @@ class MetricsParser:
             )
         )
 
+    def plot_l2metrics_dist(self) -> None:
+        _, axes = plt.subplots(2, 3, figsize=(12, 8), constrained_layout=True)
+
+        vals = self.get_perf_recovery()
+        sns.distplot(vals, ax=axes[0, 0])
+        mean_val = np.nanmean(vals)
+        axes[0, 0].axvline(x=mean_val, color="r", linestyle="--")
+        axes[0, 0].set(title=f"Performance Recovery, σ = {mean_val:.2f}")
+
+        vals = self.get_perf_maintenance_mrlep()
+        sns.distplot(vals, ax=axes[0, 1])
+        mean_val = np.nanmean(vals)
+        axes[0, 1].axvline(x=mean_val, color="r", linestyle="--")
+        axes[0, 1].set(title=f"Performance Maintenance, σ = {mean_val:.2f}")
+
+        vals = self.get_forward_transfer_ratio()
+        sns.distplot(vals, ax=axes[0, 2])
+        mean_val = np.nanmean(vals)
+        axes[0, 2].axvline(x=mean_val, color="r", linestyle="--")
+        axes[0, 2].set(title=f"Forward Transfer, σ = {mean_val:.2f}")
+
+        vals = self.get_backward_transfer_ratio()
+        sns.distplot(vals, ax=axes[1, 0])
+        mean_val = np.nanmean(vals)
+        axes[1, 0].axvline(x=mean_val, color="r", linestyle="--")
+        axes[1, 0].set(title=f"Backward Transfer, σ = {mean_val:.2f}")
+
+        vals = self.get_ste_rel_perf()
+        sns.distplot(vals, ax=axes[1, 1])
+        mean_val = np.nanmean(vals)
+        axes[1, 1].axvline(x=mean_val, color="r", linestyle="--")
+        axes[1, 1].set(title=f"Relative Performance, σ = {mean_val:.2f}")
+
+        vals = self.get_sample_efficiency()
+        sns.distplot(vals, ax=axes[1, 2])
+        mean_val = np.nanmean(vals)
+        axes[1, 2].axvline(x=mean_val, color="r", linestyle="--")
+        axes[1, 2].set(title=f"Sample Efficiency, σ = {mean_val:.2f}")
+
     ##################################################
     # TSV methods
     ##################################################

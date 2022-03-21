@@ -316,16 +316,17 @@ def plot_evaluation_blocks(
 
         cluster_eval_data = df_test[df_test["task_name"].str.contains(task_cluster)]
 
-        sns.pointplot(
-            x="block_num",
-            y=y_axis_col,
-            hue="task_name",
-            palette=task_colors,
-            data=cluster_eval_data,
-        )
+        if not cluster_eval_data.empty:
+            sns.pointplot(
+                x="block_num",
+                y=y_axis_col,
+                hue="task_name",
+                palette=task_colors,
+                data=cluster_eval_data,
+            )
 
-        ax.grid()
-        ax.legend(loc="lower right")
+            ax.grid()
+            ax.legend(loc="lower right")
 
     # Set common y-axis limits if data is normalized
     if any("normalized" in col for col in df_test.columns):

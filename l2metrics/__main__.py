@@ -69,7 +69,7 @@ def run() -> None:
         regime_metrics_df = pd.DataFrame()
         log_data_df = pd.DataFrame()
         task_colors = {}
-        cc = util.color_cycler
+        cc = util.color_cycler()
 
         # Subset of log data columns to store
         cols_to_store = [
@@ -161,7 +161,7 @@ def run() -> None:
                             list(set(report._unique_tasks) - set(task_colors.keys())),
                             cc,
                         ):
-                            task_colors[task_name] = color
+                            task_colors[task_name] = color["color"]
 
                         # Generate plots
                         report.plot(

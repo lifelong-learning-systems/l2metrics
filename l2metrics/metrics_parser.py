@@ -136,6 +136,10 @@ class MetricsParser:
             pre_new_dict,
         )
 
+    ##################################################
+    # Normalization Data Range
+    ##################################################
+
     def _get_normalization_data_range_helper(
         self, df: pd.DataFrame, task: str = ""
     ) -> Union[None, dict, Tuple[int, int]]:
@@ -151,11 +155,16 @@ class MetricsParser:
             pass
 
     def get_normalization_data_range(
-        self, task: str = ""
+        self, task: str = "", run_id: str = ""
     ) -> List[Union[None, dict, Tuple[int, int]]]:
-        return [
-            self._get_normalization_data_range_helper(run, task) for run in self.dfs
-        ]
+        if not run_id:
+            return [
+                self._get_normalization_data_range_helper(run, task) for run in self.dfs
+            ]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_normalization_data_range_helper(run, task)
 
     # possible types: 'hist','dist','line'
     def plot_normalization_data_range(self, plottype: str, task: str = "") -> None:
@@ -221,6 +230,10 @@ class MetricsParser:
                     )
                     i += 1
 
+    ##################################################
+    # Backward Transfer Ratio
+    ##################################################
+
     def get_backward_transfer_ratio_helper(
         self, df: pd.DataFrame, task_a: str = "", task_b: str = ""
     ) -> Union[None, int, dict, list]:
@@ -241,12 +254,17 @@ class MetricsParser:
             pass
 
     def get_backward_transfer_ratio(
-        self, task_a: str = "", task_b: str = ""
+        self, task_a: str = "", task_b: str = "", run_id: str = ""
     ) -> List[Union[None, int, dict, list]]:
-        return [
-            self.get_backward_transfer_ratio_helper(run, task_a, task_b)
-            for run in self.dfs
-        ]
+        if not run_id:
+            return [
+                self.get_backward_transfer_ratio_helper(run, task_a, task_b)
+                for run in self.dfs
+            ]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self.get_backward_transfer_ratio_helper(run, task_a, task_b)
 
     def plot_backward_transfer_ratio(
         self, plottype: str, task_a: str = "", task_b: str = ""
@@ -295,6 +313,10 @@ class MetricsParser:
             elif plottype == "line":
                 sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Forward Transfer Ratio
+    ##################################################
+
     def get_forward_transfer_ratio_helper(
         self, df: pd.DataFrame, task_a: str = "", task_b: str = ""
     ) -> Union[None, int, dict, list]:
@@ -313,12 +335,17 @@ class MetricsParser:
             pass
 
     def get_forward_transfer_ratio(
-        self, task_a: str = "", task_b: str = ""
+        self, task_a: str = "", task_b: str = "", run_id: str = ""
     ) -> List[Union[None, int, dict, list]]:
-        return [
-            self.get_forward_transfer_ratio_helper(run, task_a, task_b)
-            for run in self.dfs
-        ]
+        if not run_id:
+            return [
+                self.get_forward_transfer_ratio_helper(run, task_a, task_b)
+                for run in self.dfs
+            ]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self.get_forward_transfer_ratio_helper(run, task_a, task_b)
 
     def plot_forward_transfer_ratio(
         self, plottype: str, task_a: str = "", task_b: str = ""
@@ -366,6 +393,10 @@ class MetricsParser:
             elif plottype == "line":
                 sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Backward Transfer Contrast
+    ##################################################
+
     def get_backward_transfer_contrast_helper(
         self, df: pd.DataFrame, task_a: str = "", task_b: str = ""
     ) -> Union[None, int, dict, list]:
@@ -386,12 +417,19 @@ class MetricsParser:
             pass
 
     def get_backward_transfer_contrast(
-        self, task_a: str = "", task_b: str = ""
+        self, task_a: str = "", task_b: str = "", run_id: str = ""
     ) -> List[Union[None, int, dict, list]]:
-        return [
-            self.get_backward_transfer_contrast_helper(run, task_a, task_b)
-            for run in self.dfs
-        ]
+        if not run_id:
+            return [
+                self.get_backward_transfer_contrast_helper(run, task_a, task_b)
+                for run in self.dfs
+            ]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self.get_backward_transfer_contrast_helper(
+                        run, task_a, task_b
+                    )
 
     def plot_backward_transfer_contrast(
         self, plottype: str, task_a: str = "", task_b: str = ""
@@ -440,6 +478,10 @@ class MetricsParser:
             elif plottype == "line":
                 sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Forward Transfer Contrast
+    ##################################################
+
     def get_forward_transfer_contrast_helper(
         self, df: pd.DataFrame, task_a: str = "", task_b: str = ""
     ) -> Union[None, int, dict, list]:
@@ -460,12 +502,19 @@ class MetricsParser:
             pass
 
     def get_forward_transfer_contrast(
-        self, task_a: str = "", task_b: str = ""
+        self, task_a: str = "", task_b: str = "", run_id: str = ""
     ) -> List[Union[None, int, dict, list]]:
-        return [
-            self.get_forward_transfer_contrast_helper(run, task_a, task_b)
-            for run in self.dfs
-        ]
+        if not run_id:
+            return [
+                self.get_forward_transfer_contrast_helper(run, task_a, task_b)
+                for run in self.dfs
+            ]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self.get_forward_transfer_contrast_helper(
+                        run, task_a, task_b
+                    )
 
     def plot_forward_transfer_contrast(
         self, plottype: str, task_a: str = "", task_b: str = ""
@@ -514,6 +563,10 @@ class MetricsParser:
             elif plottype == "line":
                 sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Maintenance Values MRLEP
+    ##################################################
+
     def _get_maintenance_val_mrlep_helper(
         self, df: pd.DataFrame, task: str = ""
     ) -> Union[None, list]:
@@ -528,13 +581,21 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_maintenance_val_mrlep(self, task: str) -> List[list]:
-        return list(
-            filter(
-                None,
-                [self._get_maintenance_val_mrlep_helper(run, task) for run in self.dfs],
+    def get_maintenance_val_mrlep(self, task: str, run_id: str = "") -> List[list]:
+        if not run_id:
+            return list(
+                filter(
+                    None,
+                    [
+                        self._get_maintenance_val_mrlep_helper(run, task)
+                        for run in self.dfs
+                    ],
+                )
             )
-        )
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return list(self._get_maintenance_val_mrlep_helper(run, task))
 
     def plot_maintenance_val_mrlep(self, plottype: str, task: str) -> None:
         graph_data = self.flatten_list(
@@ -547,6 +608,10 @@ class MetricsParser:
             sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
+
+    ##################################################
+    # Maintenance Values MRTLP
+    ##################################################
 
     def _get_maintenance_val_mrtlp_helper(
         self, df: pd.DataFrame, task: str = ""
@@ -562,8 +627,17 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_maintenance_val_mrtlp(self, task: str = "") -> List[Union[None, list]]:
-        return [self._get_maintenance_val_mrtlp_helper(run, task) for run in self.dfs]
+    def get_maintenance_val_mrtlp(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, list]]:
+        if not run_id:
+            return [
+                self._get_maintenance_val_mrtlp_helper(run, task) for run in self.dfs
+            ]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_maintenance_val_mrtlp_helper(run, task)
 
     def plot_maintenance_val_mrtlp(self, plottype: str, task: str) -> None:
         graph_data = self.flatten_list(
@@ -576,6 +650,10 @@ class MetricsParser:
             sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
+
+    ##################################################
+    # Recovery Times
+    ##################################################
 
     def _get_recovery_times_helper(
         self, df: pd.DataFrame, task: str = ""
@@ -591,10 +669,15 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_recovery_times(self, task: str = "") -> List[list]:
-        return self.flatten_list(
-            [self._get_recovery_times_helper(run, task) for run in self.dfs]
-        )
+    def get_recovery_times(self, task: str = "", run_id: str = "") -> List[list]:
+        if not run_id:
+            return self.flatten_list(
+                [self._get_recovery_times_helper(run, task) for run in self.dfs]
+            )
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_recovery_times_helper(run, task)
 
     def plot_recovery_times(self, plottype: str, task: str = "") -> None:
         graph_data = self.flatten_list([x for x in self.get_recovery_times(task) if x])
@@ -605,6 +688,10 @@ class MetricsParser:
             sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
+
+    ##################################################
+    # Performance Recovery
+    ##################################################
 
     def _get_perf_recovery_helper(
         self, df: pd.DataFrame, task: str = ""
@@ -617,8 +704,15 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_perf_recovery(self, task: str = "") -> List[Union[None, int]]:
-        return [self._get_perf_recovery_helper(run, task) for run in self.dfs]
+    def get_perf_recovery(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, int]]:
+        if not run_id:
+            return [self._get_perf_recovery_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_perf_recovery_helper(run, task)
 
     def plot_perf_recovery(self, plottype: str, task: str = "") -> None:
         graph_data = [x for x in self.get_perf_recovery(task) if x]
@@ -629,6 +723,10 @@ class MetricsParser:
             sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
+
+    ##################################################
+    # Performance Maintenance MRLEP
+    ##################################################
 
     def get_perf_maintenance_mrlep_helper(
         self, df: pd.DataFrame, task: str = ""
@@ -641,8 +739,17 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_perf_maintenance_mrlep(self, task: str = "") -> List[Union[None, int]]:
-        return [self.get_perf_maintenance_mrlep_helper(run, task) for run in self.dfs]
+    def get_perf_maintenance_mrlep(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, int]]:
+        if not run_id:
+            return [
+                self.get_perf_maintenance_mrlep_helper(run, task) for run in self.dfs
+            ]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self.get_perf_maintenance_mrlep_helper(run, task)
 
     def plot_perf_maintenance_mrlep(self, plottype: str, task: str = "") -> None:
         graph_data = [x for x in self.get_perf_maintenance_mrlep(task) if x]
@@ -653,6 +760,10 @@ class MetricsParser:
             sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
+
+    ##################################################
+    # Performance Maintenance MRTLP
+    ##################################################
 
     def get_perf_maintenance_mrtlp_helper(
         self, df: pd.DataFrame, task: str = ""
@@ -665,8 +776,17 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_perf_maintenance_mrtlp(self, task: str = "") -> List[Union[None, int]]:
-        return [self.get_perf_maintenance_mrtlp_helper(run, task) for run in self.dfs]
+    def get_perf_maintenance_mrtlp(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, int]]:
+        if not run_id:
+            return [
+                self.get_perf_maintenance_mrtlp_helper(run, task) for run in self.dfs
+            ]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self.get_perf_maintenance_mrtlp_helper(run, task)
 
     def plot_perf_maintenance_mrtlp(self, plottype: str, task: str = "") -> None:
         graph_data = [x for x in self.get_perf_maintenance_mrtlp(task) if x]
@@ -677,6 +797,10 @@ class MetricsParser:
             sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
+
+    ##################################################
+    # Relative Performance
+    ##################################################
 
     def _get_ste_rel_perf_helper(
         self, df: pd.DataFrame, task: str = ""
@@ -689,8 +813,15 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_ste_rel_perf(self, task: str = "") -> List[Union[None, int]]:
-        return [self._get_ste_rel_perf_helper(run, task) for run in self.dfs]
+    def get_ste_rel_perf(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, int]]:
+        if not run_id:
+            return [self._get_ste_rel_perf_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_ste_rel_perf_helper(run, task)
 
     def plot_ste_rel_perf(self, plottype: str, task: str = "") -> None:
         graph_data = [x for x in self.get_ste_rel_perf(task) if x]
@@ -701,6 +832,10 @@ class MetricsParser:
             sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
+
+    ##################################################
+    # Sample Efficiency
+    ##################################################
 
     def _get_sample_efficiency_helper(
         self, df: pd.DataFrame, task: str = ""
@@ -719,8 +854,15 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_sample_efficiency(self, task: str = "") -> List[Union[None, dict, int]]:
-        return [self._get_sample_efficiency_helper(run, task) for run in self.dfs]
+    def get_sample_efficiency(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, dict, int]]:
+        if not run_id:
+            return [self._get_sample_efficiency_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_sample_efficiency_helper(run, task)
 
     def plot_sample_efficiency(self, plottype: str, task: str = "") -> None:
         if task == "all":
@@ -761,17 +903,29 @@ class MetricsParser:
             elif plottype == "line":
                 sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Run ID
+    ##################################################
+
     def _get_run_id_helper(self, df: pd.DataFrame) -> str:
         return df.root.run_id.iloc[0, 0]
 
     def get_run_id(self) -> List[str]:
         return [self._get_run_id_helper(run) for run in self.dfs]
 
+    ##################################################
+    # Complexity
+    ##################################################
+
     def _get_complexity_helper(self, df: pd.DataFrame) -> str:
         return df.root.complexity.iloc[0, 0]
 
     def get_complexity(self) -> List[str]:
         return [self._get_complexity_helper(run) for run in self.dfs]
+
+    ##################################################
+    # Difficulty
+    ##################################################
 
     def _get_difficulty_helper(self, df: pd.DataFrame) -> str:
         return df.root.difficulty.iloc[0, 0]
@@ -781,17 +935,29 @@ class MetricsParser:
     ) -> List[str]:
         return [self._get_difficulty_helper(run) for run in self.dfs]
 
+    ##################################################
+    # Scenario Type
+    ##################################################
+
     def _get_scenario_type_helper(self, df: pd.DataFrame) -> str:
         return df.root.scenario_type.iloc[0, 0]
 
     def get_scenario_type(self) -> List[str]:
         return [self._get_scenario_type_helper(run) for run in self.dfs]
 
+    ##################################################
+    # Performance Measure
+    ##################################################
+
     def _get_perf_measure_helper(self, df: pd.DataFrame) -> str:
         return df.root.metrics_column.iloc[0, 0]
 
     def get_perf_measure(self) -> List[str]:
         return [self._get_perf_measure_helper(run) for run in self.dfs]
+
+    ##################################################
+    # Min and Max
+    ##################################################
 
     def _get_min_max_helper(
         self, df: pd.DataFrame, task: str = ""
@@ -815,8 +981,15 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_min_max(self, task: str = "") -> List[Union[None, Tuple[int, int], dict]]:
-        return [self._get_min_max_helper(run, task) for run in self.dfs]
+    def get_min_max(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, Tuple[int, int], dict]]:
+        if not run_id:
+            return [self._get_min_max_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_min_max_helper(run, task)
 
     def plot_min_max(self, plottype: str, task: str = "") -> None:
         if task == "all":
@@ -881,6 +1054,10 @@ class MetricsParser:
                     title="Max"
                 )
 
+    ##################################################
+    # Number of Experiences
+    ##################################################
+
     def _get_num_lx_ex_helper(
         self, df: pd.DataFrame, task: str = ""
     ) -> Union[None, Tuple[int, int], dict]:
@@ -903,8 +1080,15 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_num_lx_ex(self, task: str = "") -> List[Union[None, Tuple[int, int], dict]]:
-        return [self._get_num_lx_ex_helper(run, task) for run in self.dfs]
+    def get_num_lx_ex(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, Tuple[int, int], dict]]:
+        if not run_id:
+            return [self._get_num_lx_ex_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_num_lx_ex_helper(run, task)
 
     def plot_num_lx_ex(self, plottype: str, task: str = "") -> None:
         if task == "all":
@@ -969,6 +1153,10 @@ class MetricsParser:
                     title="Num_ex"
                 )
 
+    ##################################################
+    # Relative Performance Values
+    ##################################################
+
     def _get_ste_rel_perf_vals_helper(
         self, df: pd.DataFrame, task: str
     ) -> Union[None, list]:
@@ -977,8 +1165,15 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_ste_rel_perf_vals(self, task: str) -> List[Union[None, list]]:
-        return [self._get_ste_rel_perf_vals_helper(run, task) for run in self.dfs]
+    def get_ste_rel_perf_vals(
+        self, task: str, run_id: str = ""
+    ) -> List[Union[None, list]]:
+        if not run_id:
+            return [self._get_ste_rel_perf_vals_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_ste_rel_perf_vals_helper(run, task)
 
     def plot_ste_rel_perf_vals(self, plottype: str, task: str) -> None:
         graph_data = self.flatten_list(
@@ -992,6 +1187,10 @@ class MetricsParser:
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # STE Saturation Values
+    ##################################################
+
     def _get_ste_sat_vals_helper(
         self, df: pd.DataFrame, task: str
     ) -> Union[None, list]:
@@ -1000,8 +1199,13 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_ste_sat_vals(self, task: str) -> List[Union[None, list]]:
-        return [self._get_ste_sat_vals_helper(run, task) for run in self.dfs]
+    def get_ste_sat_vals(self, task: str, run_id: str = "") -> List[Union[None, list]]:
+        if not run_id:
+            return [self._get_ste_sat_vals_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_ste_sat_vals_helper(run, task)
 
     def plot_ste_sat_vals(self, plottype: str, task: str) -> None:
         graph_data = self.flatten_list([x for x in self.get_ste_sat_vals(task) if x])
@@ -1013,6 +1217,10 @@ class MetricsParser:
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # STE Experience to Saturation Values
+    ##################################################
+
     def _get_ste_exp_to_sat_vals_helper(
         self, df: pd.DataFrame, task: str
     ) -> Union[None, list]:
@@ -1021,8 +1229,15 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_ste_exp_to_sat_vals(self, task: str) -> List[Union[None, list]]:
-        return [self._get_ste_exp_to_sat_vals_helper(run, task) for run in self.dfs]
+    def get_ste_exp_to_sat_vals(
+        self, task: str, run_id: str = ""
+    ) -> List[Union[None, list]]:
+        if not run_id:
+            return [self._get_ste_exp_to_sat_vals_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_ste_exp_to_sat_vals_helper(run, task)
 
     def plot_ste_exp_to_sat_vals(self, plottype: str, task: str) -> None:
         graph_data = self.flatten_list(
@@ -1036,14 +1251,23 @@ class MetricsParser:
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Sample Efficiency Saturation Values
+    ##################################################
+
     def _get_se_sat_vals_helper(self, df: pd.DataFrame, task: str) -> Union[None, list]:
         try:
             return df.root.task_metrics[task].se_saturation_vals.iloc[0, 0]
         except (KeyError, AttributeError):
             pass
 
-    def get_se_sat_vals(self, task: str) -> List[Union[None, list]]:
-        return [self._get_se_sat_vals_helper(run, task) for run in self.dfs]
+    def get_se_sat_vals(self, task: str, run_id: str = "") -> List[Union[None, list]]:
+        if not run_id:
+            return [self._get_se_sat_vals_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_se_sat_vals_helper(run, task)
 
     def plot_se_sat_vals(self, plottype: str, task: str) -> None:
         graph_data = self.flatten_list([x for x in self.get_se_sat_vals(task) if x])
@@ -1055,6 +1279,10 @@ class MetricsParser:
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Sample Efficiency Experience to Saturation Values
+    ##################################################
+
     def _get_se_exp_to_sat_vals_helper(
         self, df: pd.DataFrame, task: str
     ) -> Union[None, list]:
@@ -1063,8 +1291,15 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_se_exp_to_sat_vals(self, task: str) -> List[Union[None, list]]:
-        return [self._get_se_exp_to_sat_vals_helper(run, task) for run in self.dfs]
+    def get_se_exp_to_sat_vals(
+        self, task: str, run_id: str = ""
+    ) -> List[Union[None, list]]:
+        if not run_id:
+            return [self._get_se_exp_to_sat_vals_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_se_exp_to_sat_vals_helper(run, task)
 
     def plot_se_exp_to_sat_vals(self, plottype: str, task: str) -> None:
         graph_data = self.flatten_list(
@@ -1078,6 +1313,10 @@ class MetricsParser:
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Sample Efficiency Values
+    ##################################################
+
     def _get_sample_efficiency_vals_helper(
         self, df: pd.DataFrame, task: str
     ) -> Union[None, list]:
@@ -1086,8 +1325,17 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_sample_efficiency_vals(self, task: str) -> List[Union[None, list]]:
-        return [self._get_sample_efficiency_vals_helper(run, task) for run in self.dfs]
+    def get_sample_efficiency_vals(
+        self, task: str, run_id: str = ""
+    ) -> List[Union[None, list]]:
+        if not run_id:
+            return [
+                self._get_sample_efficiency_vals_helper(run, task) for run in self.dfs
+            ]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_sample_efficiency_vals_helper(run, task)
 
     def plot_sample_efficiency_vals(self, plottype: str, task: str) -> None:
         graph_data = self.flatten_list(
@@ -1101,14 +1349,23 @@ class MetricsParser:
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Sample Efficiency Task Saturation Values
+    ##################################################
+
     def _get_se_task_sat_helper(self, df: pd.DataFrame, task: str) -> Union[None, list]:
         try:
             return df.root.task_metrics[task].se_task_saturation.iloc[0, 0]
         except (KeyError, AttributeError):
             pass
 
-    def get_se_task_sat(self, task: str) -> List[Union[None, list]]:
-        return [self._get_se_task_sat_helper(run, task) for run in self.dfs]
+    def get_se_task_sat(self, task: str, run_id: str = "") -> List[Union[None, list]]:
+        if not run_id:
+            return [self._get_se_task_sat_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_se_task_sat_helper(run, task)
 
     def plot_se_task_sat(self, plottype: str, task: str) -> None:
         graph_data = [x for x in self.get_se_task_sat(task) if x]
@@ -1120,6 +1377,10 @@ class MetricsParser:
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Sample Efficiency Task Experience to Saturation Values
+    ##################################################
+
     def _get_se_task_exp_to_sat_helper(
         self, df: pd.DataFrame, task: str
     ) -> Union[None, list]:
@@ -1128,8 +1389,15 @@ class MetricsParser:
         except (KeyError, AttributeError):
             pass
 
-    def get_se_task_exp_to_sat(self, task: str) -> List[Union[None, list]]:
-        return [self._get_se_task_exp_to_sat_helper(run, task) for run in self.dfs]
+    def get_se_task_exp_to_sat(
+        self, task: str, run_id: str = ""
+    ) -> List[Union[None, list]]:
+        if not run_id:
+            return [self._get_se_task_exp_to_sat_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_se_task_exp_to_sat_helper(run, task)
 
     def plot_se_task_exp_to_sat(self, plottype: str, task: str) -> None:
         graph_data = [x for x in self.get_se_task_exp_to_sat(task) if x]
@@ -1140,6 +1408,10 @@ class MetricsParser:
             sns.distplot([x for x in graph_data], ax=ax)
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=ax)
+
+    ##################################################
+    # Runtime
+    ##################################################
 
     def _get_runtime_helper(self, df: pd.DataFrame) -> Union[None, int]:
         try:
@@ -1160,6 +1432,10 @@ class MetricsParser:
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
 
+    ##################################################
+    # Task Names
+    ##################################################
+
     def _get_json_task_names_helper(self, df: pd.DataFrame) -> Union[None, list]:
         try:
             return df.root.task_metrics.columns.levels[0]
@@ -1174,6 +1450,10 @@ class MetricsParser:
                 )
             )
         )
+
+    ##################################################
+    # L2Metrics Distribution Plot
+    ##################################################
 
     def plot_l2metrics_dist(self) -> None:
         _, axes = plt.subplots(2, 3, figsize=(12, 8), constrained_layout=True)

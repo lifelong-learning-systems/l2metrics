@@ -745,8 +745,11 @@ def test_plotting_units(unit):
 
     with patch("argparse.ArgumentParser.parse_args") as mock_args:
         mock_args.return_value = args
-        with pytest.raises(KeyError):
+        if unit == "exp_num":
             run()
+        elif unit == "steps":
+            with pytest.raises(KeyError):
+                run()
     mock_args.assert_called
 
 

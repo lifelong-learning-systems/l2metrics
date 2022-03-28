@@ -34,6 +34,8 @@ from tabulate import tabulate
 from ._localutil import smooth
 from .block_saturation import BlockSaturation
 from .core import Metric
+from .average_eval_performance import AvgEvalPerf
+from .average_train_performance import AvgTrainPerf
 from .normalizer import Normalizer
 from .performance_maintenance import PerformanceMaintenance
 from .performance_recovery import PerformanceRecovery
@@ -229,6 +231,8 @@ class MetricsReport:
         self.add(RecoveryTime(self.perf_measure))
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure, self.maintenance_method))
+        self.add(AvgTrainPerf(self.perf_measure, self.aggregation_method))
+        self.add(AvgEvalPerf(self.perf_measure, self.aggregation_method))
         self.add(Transfer(self.perf_measure, self.transfer_method))
         self.add(
             STERelativePerf(self.perf_measure, self.ste_data, self.ste_averaging_method)

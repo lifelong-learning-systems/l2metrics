@@ -30,25 +30,24 @@ from .core import Metric
 logger = logging.getLogger(__name__)
 
 
-class PerformanceMaintenance(Metric):
-    name = "Performance Maintenance"
-    capability = "adapting_to_new_tasks"
+class AvgEvalPerf(Metric):
+    name = "Average Eval Performance"
+    capability = "adapt_to_new_tasks"
     requires = {"syllabus_type": "agent"}
     description = (
-        "Calculates the average difference between the most recent"
-        "terminal learning performance of a task and each evaluation performance"
+        "Calculates the average performance over all eval blocks"
     )
 
-    def __init__(self, perf_measure: str, method: str = "mrlep") -> None:
+    def __init__(self, perf_measure: str, method: str = "mean") -> None:
         super().__init__()
         self.perf_measure = perf_measure
 
         # Check for valid method
-        if method not in ["mrtlp", "mrlep", "both"]:
-            raise KeyError(f"Invalid performance maintenance method: {method}")
+        if method not in ["mean", "median"]:
+            raise KeyError(f"Invalid averaging method: {method}")
         else:
-            self.do_mrtlp = method in ["mrtlp", "both"]
-            self.do_mrlep = method in ["mrlep", "both"]
+            self.do_mean = method == "mean"
+            self.do_median = method == "median"
 
     def validate(self, block_info: pd.DataFrame) -> None:
         # Initialize variables for checking block type format

@@ -34,9 +34,7 @@ class AvgEvalPerf(Metric):
     name = "Average Eval Performance"
     capability = "adapt_to_new_tasks"
     requires = {"syllabus_type": "agent"}
-    description = (
-        "Calculates the average performance over all eval blocks"
-    )
+    description = "Calculates the average performance over all eval blocks"
 
     def __init__(self, perf_measure: str, method: str = "mean") -> None:
         super().__init__()

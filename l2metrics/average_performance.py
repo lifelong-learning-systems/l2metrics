@@ -129,6 +129,9 @@ class AvgPerf(Metric):
                 ].mean()
                 avg_perf[test_regime] = test_perf
 
-        metrics_df = fill_metrics_df(avg_perf, "avg_perf", metrics_df)
+        # Note: creating separate columns for train and eval
+        # that contain the same data - this is a patch
+        metrics_df = fill_metrics_df(avg_perf, "avg_train_perf", metrics_df)
+        metrics_df = fill_metrics_df(avg_perf, "avg_eval_perf", metrics_df)
 
         return metrics_df

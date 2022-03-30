@@ -34,8 +34,7 @@ from tabulate import tabulate
 from ._localutil import smooth
 from .block_saturation import BlockSaturation
 from .core import Metric
-from .average_eval_performance import AvgEvalPerf
-from .average_train_performance import AvgTrainPerf
+from .average_performance import AvgPerf
 from .normalizer import Normalizer
 from .performance_maintenance import PerformanceMaintenance
 from .performance_recovery import PerformanceRecovery
@@ -98,7 +97,7 @@ class MetricsReport:
             self.data_range = temp_data_range
 
         # Initialize list of LL metrics
-        self.task_metrics = ["perf_recovery", "avg_train_perf"]
+        self.task_metrics = ["perf_recovery", "avg_train_perf", "avg_eval_perf"]
         if self.maintenance_method in ["mrlep", "both"]:
             self.task_metrics.extend(["perf_maintenance_mrlep"])
         if self.maintenance_method in ["mrtlp", "both"]:
@@ -231,8 +230,7 @@ class MetricsReport:
         self.add(RecoveryTime(self.perf_measure))
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure, self.maintenance_method))
-        self.add(AvgTrainPerf(self.perf_measure, self.aggregation_method))
-        # self.add(AvgEvalPerf(self.perf_measure, self.aggregation_method))
+        self.add(AvgPerf(self.perf_measure, self.aggregation_method))
         self.add(Transfer(self.perf_measure, self.transfer_method))
         self.add(
             STERelativePerf(self.perf_measure, self.ste_data, self.ste_averaging_method)
@@ -502,7 +500,7 @@ class MetricsReport:
         num_tasks = len(self._unique_tasks)
         self.task_metrics_df["recovery_times"] = [[]] * num_tasks
         self.task_metrics_df["avg_train_perf"] = [[]] * num_tasks
-        # self.task_metrics_df["avg_eval_perf"] = [[]] * num_tasks
+        self.task_metrics_df["avg_eval_perf"] = [[]] * num_tasks
         if self.maintenance_method in ["mrlep", "both"]:
             self.task_metrics_df["maintenance_val_mrlep"] = [[]] * num_tasks
         if self.maintenance_method in ["mrtlp", "both"]:
@@ -567,6 +565,17 @@ class MetricsReport:
                         self.task_metrics_df.at[task, "recovery_times"] = list(
                             tm["recovery_time"].dropna().to_numpy(dtype=float)
                         )
+                    elif metric in ["avg_train_perf", "avg_eval_perf"]:
+                        if metric == "avg_train_perf":
+                            train_perf = self._metrics_df[
+                                self._metrics_df["block_type"] == "train"
+                            ]["avg_train_perf"].mean()
+                            self.task_metrics_df.at[task, metric] = train_perf
+                        elif metric == "avg_eval_perf":
+                            eval_perf = self._metrics_df[
+                                self._metrics_df["block_type"] == "test"
+                            ]["avg_eval_perf"].mean()
+                            self.task_metrics_df.at[task, metric] = eval_perf
                     elif metric in ["perf_maintenance_mrtlp", "perf_maintenance_mrlep"]:
                         pm = tm[metric].dropna().to_numpy(dtype=float)
                         self.task_metrics_df.at[task, metric] = (

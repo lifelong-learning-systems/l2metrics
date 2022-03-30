@@ -30,13 +30,13 @@ from .core import Metric
 logger = logging.getLogger(__name__)
 
 
-class AvgTrainPerf(Metric):
-    name = "Average Train Performance"
+class AvgPerf(Metric):
+    name = "Average Performance"
     capability = "adapt_to_new_tasks"
     requires = {"syllabus_type": "agent"}
     description = (
-        "Calculates the average performance over all train blocks,"
-        "effectively computing an area under the performance curve for each"
+        "Calculates the average performance over all blocks,"
+        "effectively computing an area under the performance curve for training blocks"
     )
 
     def __init__(self, perf_measure: str, method: str = "mean") -> None:
@@ -95,7 +95,7 @@ class AvgTrainPerf(Metric):
         reward_col = "reward_raw"
 
         # Initialize metric columns
-        avg_train_perf = {}
+        avg_perf = {}
 
         # Get unique tasks in scenario
         unique_tasks = block_info_df.task_name.unique()
@@ -108,14 +108,27 @@ class AvgTrainPerf(Metric):
                 & (block_info_df["block_type"] == "train")
             ]["regime_num"].to_numpy()
 
+            test_regs = block_info_df[
+                (block_info_df["task_name"] == task)
+                & (block_info_df["block_type"] == "test")
+            ]["regime_num"].to_numpy()
+
             # Iterate over training regimes
             for training_regime in training_regs:
                 # Get performance of current training regime
                 training_perf = dataframe[reward_col][
                     dataframe["regime_num"] == training_regime
                 ].mean()
-                avg_train_perf[training_regime] = training_perf
+                avg_perf[training_regime] = training_perf
 
-        metrics_df = fill_metrics_df(avg_train_perf, "avg_train_perf", metrics_df)
+            # Iterate over evaluation regimes
+            for test_regime in test_regs:
+                # Get performance of current test regime
+                test_perf = dataframe[reward_col][
+                    dataframe["regime_num"] == test_regime
+                ].mean()
+                avg_perf[test_regime] = test_perf
+
+        metrics_df = fill_metrics_df(avg_perf, "avg_perf", metrics_df)
 
         return metrics_df

@@ -92,7 +92,7 @@ class AvgPerf(Metric):
             block_info_df = block_info.copy()
 
         # Set reward column
-        reward_col = "reward_raw"
+        reward_col = "reward"
 
         # Initialize metric columns
         avg_perf = {}

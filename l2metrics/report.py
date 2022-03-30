@@ -98,7 +98,7 @@ class MetricsReport:
             self.data_range = temp_data_range
 
         # Initialize list of LL metrics
-        self.task_metrics = ["perf_recovery"]
+        self.task_metrics = ["perf_recovery", "avg_train_perf"]
         if self.maintenance_method in ["mrlep", "both"]:
             self.task_metrics.extend(["perf_maintenance_mrlep"])
         if self.maintenance_method in ["mrtlp", "both"]:
@@ -501,6 +501,8 @@ class MetricsReport:
         # Initialize certain task metrics data objects
         num_tasks = len(self._unique_tasks)
         self.task_metrics_df["recovery_times"] = [[]] * num_tasks
+        self.task_metrics_df["avg_train_perf"] = [[]] * num_tasks
+        # self.task_metrics_df["avg_eval_perf"] = [[]] * num_tasks
         if self.maintenance_method in ["mrlep", "both"]:
             self.task_metrics_df["maintenance_val_mrlep"] = [[]] * num_tasks
         if self.maintenance_method in ["mrtlp", "both"]:

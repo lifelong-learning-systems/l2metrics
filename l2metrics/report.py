@@ -232,7 +232,7 @@ class MetricsReport:
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure, self.maintenance_method))
         self.add(AvgTrainPerf(self.perf_measure, self.aggregation_method))
-        self.add(AvgEvalPerf(self.perf_measure, self.aggregation_method))
+        # self.add(AvgEvalPerf(self.perf_measure, self.aggregation_method))
         self.add(Transfer(self.perf_measure, self.transfer_method))
         self.add(
             STERelativePerf(self.perf_measure, self.ste_data, self.ste_averaging_method)

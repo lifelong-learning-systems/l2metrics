@@ -91,106 +91,31 @@ class AvgTrainPerf(Metric):
         else:
             block_info_df = block_info.copy()
 
+        # Set reward column
+        reward_col = "reward_raw"
+
         # Initialize metric columns
-        maintenance_values_mrtlp = {}
-        maintenance_values_mrlep = {}
-        pm_values_mrtlp = {}
-        pm_values_mrlep = {}
+        avg_train_perf = {}
 
         # Get unique tasks in scenario
         unique_tasks = block_info_df.task_name.unique()
 
         # Iterate over tasks
         for task in unique_tasks:
-            # Get training and test regimes
+            # Get training regimes
             training_regs = block_info_df[
                 (block_info_df["task_name"] == task)
                 & (block_info_df["block_type"] == "train")
             ]["regime_num"].to_numpy()
 
-            test_regs = block_info_df[
-                (block_info_df["task_name"] == task)
-                & (block_info_df["block_type"] == "test")
-            ]["regime_num"].to_numpy()
+            # Iterate over training regimes
+            for training_regime in training_regs:
+                # Get performance of current training regime
+                training_perf = dataframe[reward_col][
+                    dataframe["regime_num"] == training_regime
+                ].mean()
+                avg_train_perf[training_regime] = training_perf
 
-            # Get reference test regimes
-            ref_test_regs = np.array(
-                [
-                    test_regs[np.argmax(test_regs > x)]
-                    for x in training_regs
-                    if np.any(test_regs > x)
-                ]
-            )
-
-            # Iterate over test regimes
-            for test_regime in test_regs:
-                # Check that current test block occurred after last reference test
-                if (
-                    np.any(test_regime > ref_test_regs)
-                    and test_regime not in ref_test_regs
-                ):
-                    # Get performance of current test regime
-                    test_perf = metrics_df["term_perf"][test_regime]
-
-                    if self.do_mrtlp:
-                        ref_regime = training_regs[test_regime > training_regs][-1]
-                        mrtlp = metrics_df["term_perf"][ref_regime]
-                        maintenance_values_mrtlp[test_regime] = test_perf - mrtlp
-                    if self.do_mrlep:
-                        ref_regime = ref_test_regs[test_regime > ref_test_regs][-1]
-                        mrlep = metrics_df["term_perf"][ref_regime]
-                        maintenance_values_mrlep[test_regime] = test_perf - mrlep
-
-        if self.do_mrtlp and maintenance_values_mrtlp:
-            # Fill metrics dataframe with most recent terminal learning performance differences
-            metrics_df = fill_metrics_df(
-                maintenance_values_mrtlp, "maintenance_val_mrtlp", metrics_df
-            )
-
-            # Iterate over task performance differences for performance maintenance
-            for task in unique_tasks:
-                # Get the task maintenance values
-                m = metrics_df[metrics_df["task_name"] == task][
-                    "maintenance_val_mrtlp"
-                ].to_numpy(dtype=float)
-
-                # Remove NaNs
-                m = m[~np.isnan(m)]
-
-                # Calculate performance maintenance value
-                if m.size:
-                    pm_values_mrtlp[
-                        block_info_df.index[block_info_df["task_name"] == task][-1]
-                    ] = np.mean(m)
-
-            metrics_df = fill_metrics_df(
-                pm_values_mrtlp, "perf_maintenance_mrtlp", metrics_df
-            )
-
-        if self.do_mrlep and maintenance_values_mrlep:
-            # Fill metrics dataframe with most recent terminal learning performance differences
-            metrics_df = fill_metrics_df(
-                maintenance_values_mrlep, "maintenance_val_mrlep", metrics_df
-            )
-
-            # Iterate over task performance differences for performance maintenance
-            for task in unique_tasks:
-                # Get the task maintenance values
-                m = metrics_df[metrics_df["task_name"] == task][
-                    "maintenance_val_mrlep"
-                ].to_numpy(dtype=float)
-
-                # Remove NaNs
-                m = m[~np.isnan(m)]
-
-                # Calculate performance maintenance value
-                if m.size:
-                    pm_values_mrlep[
-                        block_info_df.index[block_info_df["task_name"] == task][-1]
-                    ] = np.mean(m)
-
-            metrics_df = fill_metrics_df(
-                pm_values_mrlep, "perf_maintenance_mrlep", metrics_df
-            )
+        metrics_df = fill_metrics_df(avg_train_perf, "avg_train_perf", metrics_df)
 
         return metrics_df

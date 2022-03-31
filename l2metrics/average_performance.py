@@ -39,16 +39,9 @@ class AvgPerf(Metric):
         "effectively computing an area under the performance curve for training blocks"
     )
 
-    def __init__(self, perf_measure: str, method: str = "mean") -> None:
+    def __init__(self, perf_measure: str) -> None:
         super().__init__()
         self.perf_measure = perf_measure
-
-        # Check for valid method
-        if method not in ["mean", "median"]:
-            raise KeyError(f"Invalid averaging method: {method}")
-        else:
-            self.do_mean = method == "mean"
-            self.do_median = method == "median"
 
     def validate(self, block_info: pd.DataFrame) -> None:
         # Initialize variables for checking block type format
@@ -91,9 +84,6 @@ class AvgPerf(Metric):
         else:
             block_info_df = block_info.copy()
 
-        # Set reward column
-        reward_col = "reward"
-
         # Initialize metric columns
         avg_perf = {}
 
@@ -116,7 +106,7 @@ class AvgPerf(Metric):
             # Iterate over training regimes
             for training_regime in training_regs:
                 # Get performance of current training regime
-                training_perf = dataframe[reward_col][
+                training_perf = dataframe[self.perf_measure][
                     dataframe["regime_num"] == training_regime
                 ].mean()
                 avg_perf[training_regime] = training_perf
@@ -124,7 +114,7 @@ class AvgPerf(Metric):
             # Iterate over evaluation regimes
             for test_regime in test_regs:
                 # Get performance of current test regime
-                test_perf = dataframe[reward_col][
+                test_perf = dataframe[self.perf_measure][
                     dataframe["regime_num"] == test_regime
                 ].mean()
                 avg_perf[test_regime] = test_perf

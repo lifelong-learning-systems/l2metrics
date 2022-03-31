@@ -699,11 +699,11 @@ class MetricsReport:
                     # Aggregate metric values
                     if self.aggregation_method == "mean":
                         self.lifetime_metrics_df[metric] = [
-                            np.nanmean(metric_vals.astype(np.float))
+                            np.nanmean(metric_vals.astype(float))
                         ]
                     elif self.aggregation_method == "median":
                         self.lifetime_metrics_df[metric] = [
-                            np.nanmedian(metric_vals.astype(np.float))
+                            np.nanmedian(metric_vals.astype(float))
                         ]
 
     def report(self) -> None:

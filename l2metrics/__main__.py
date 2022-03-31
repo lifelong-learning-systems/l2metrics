@@ -242,7 +242,8 @@ def run() -> None:
                     show_eval_lines=args.show_eval_lines,
                     output_dir=str(args.output_dir),
                 )
-                plt.show()
+                if not args.do_save:
+                    plt.show()
 
             # Save settings used to run calculate metrics
             if args.do_save_settings:

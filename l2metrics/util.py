@@ -229,7 +229,9 @@ def plot_raw(
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
+        task_colors = {
+            task: color["color"] for color, task in zip(color_cycler, unique_tasks)
+        }
 
     # Plot raw training data
     for task_name in unique_tasks:
@@ -304,7 +306,9 @@ def plot_evaluation_blocks(
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
+        task_colors = {
+            task: color["color"] for color, task in zip(color_cycler, unique_tasks)
+        }
 
     # Initialize figure
     fig = plt.figure(
@@ -405,7 +409,9 @@ def plot_learning_blocks(
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
+        task_colors = {
+            task: color["color"] for color, task in zip(color_cycler, unique_tasks)
+        }
 
     if show_eval_lines:
         eval_x_data = {}
@@ -546,7 +552,9 @@ def plot_ste(
 
     # Assign colors for each task
     if not task_colors:
-        task_colors = {task: color for color, task in zip(color_cycler, unique_tasks)}
+        task_colors = {
+            task: color["color"] for color, task in zip(color_cycler, unique_tasks)
+        }
 
     for index, task_name in enumerate(unique_tasks):
         # Get block info for task during training

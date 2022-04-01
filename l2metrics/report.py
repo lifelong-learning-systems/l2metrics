@@ -499,8 +499,8 @@ class MetricsReport:
         # Initialize certain task metrics data objects
         num_tasks = len(self._unique_tasks)
         self.task_metrics_df["recovery_times"] = [[]] * num_tasks
-        self.task_metrics_df["avg_train_perf"] = [[]] * num_tasks
-        self.task_metrics_df["avg_eval_perf"] = [[]] * num_tasks
+        self.task_metrics_df["avg_train_perf_vals"] = [[]] * num_tasks
+        self.task_metrics_df["avg_eval_perf_vals"] = [[]] * num_tasks
         if self.maintenance_method in ["mrlep", "both"]:
             self.task_metrics_df["maintenance_val_mrlep"] = [[]] * num_tasks
         if self.maintenance_method in ["mrtlp", "both"]:
@@ -565,17 +565,18 @@ class MetricsReport:
                         self.task_metrics_df.at[task, "recovery_times"] = list(
                             tm["recovery_time"].dropna().to_numpy(dtype=float)
                         )
-                    elif metric in ["avg_train_perf", "avg_eval_perf"]:
-                        if metric == "avg_train_perf":
-                            train_perf = self._metrics_df[
-                                self._metrics_df["block_type"] == "train"
-                            ]["avg_train_perf"].mean()
-                            self.task_metrics_df.at[task, metric] = train_perf
-                        elif metric == "avg_eval_perf":
-                            eval_perf = self._metrics_df[
-                                self._metrics_df["block_type"] == "test"
-                            ]["avg_eval_perf"].mean()
-                            self.task_metrics_df.at[task, metric] = eval_perf
+                    elif metric == "avg_train_perf":
+                        train_perf = tm[metric].dropna().to_numpy(dtype=float)
+                        self.task_metrics_df.at[task, metric] = train_perf.mean()
+                        self.task_metrics_df.at[task, "avg_train_perf_vals"] = list(
+                            train_perf
+                        )
+                    elif metric == "avg_eval_perf":
+                        eval_perf = tm[metric].dropna().to_numpy(dtype=float)
+                        self.task_metrics_df.at[task, metric] = eval_perf.mean()
+                        self.task_metrics_df.at[task, "avg_eval_perf_vals"] = list(
+                            eval_perf
+                        )
                     elif metric in ["perf_maintenance_mrtlp", "perf_maintenance_mrlep"]:
                         pm = tm[metric].dropna().to_numpy(dtype=float)
                         self.task_metrics_df.at[task, metric] = (

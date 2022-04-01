@@ -94,6 +94,12 @@ class SampleEfficiency(Metric):
                 ]
 
                 if len(task_data):
+                    slope, intercept = np.polyfit(
+                        task_data["exp_num"],
+                        task_data[self.perf_measure],
+                        1,
+                    )
+
                     # Get STE data
                     ste_data = self.ste_data.get(task)
 
@@ -158,10 +164,20 @@ class SampleEfficiency(Metric):
                             se_exp_to_sat[task_data["regime_num"].iloc[-1]] = [
                                 ste_exp_to_sat / task_exp_to_sat
                             ]
-                            sample_efficiency[task_data["regime_num"].iloc[-1]] = [
-                                (task_saturation / ste_saturation)
-                                * (ste_exp_to_sat / task_exp_to_sat)
-                            ]
+
+                            # Check for valid sample efficiency
+                            if task_saturation < (ste_saturation * 0.2) or slope < 0:
+                                logger.warning(
+                                    f"Cannot compute {self.name} for task {task} - Training curve violates assumptions"
+                                )
+                                sample_efficiency[task_data["regime_num"].iloc[-1]] = [
+                                    0
+                                ]
+                            else:
+                                sample_efficiency[task_data["regime_num"].iloc[-1]] = [
+                                    (task_saturation / ste_saturation)
+                                    * (ste_exp_to_sat / task_exp_to_sat)
+                                ]
                         elif self.ste_averaging_method == "metrics":
                             se_ste_saturation_vals = []
                             se_ste_exp_to_sat_vals = []
@@ -199,10 +215,21 @@ class SampleEfficiency(Metric):
                                 se_exp_to_sat_vals.append(
                                     ste_exp_to_sat / task_exp_to_sat
                                 )
-                                sample_efficiency_vals.append(
-                                    (task_saturation / ste_saturation)
-                                    * (ste_exp_to_sat / task_exp_to_sat)
-                                )
+
+                                # Check for valid sample efficiency
+                                if (
+                                    task_saturation < (ste_saturation * 0.2)
+                                    or slope < 0
+                                ):
+                                    logger.warning(
+                                        f"Cannot compute {self.name} for task {task} - Training curve violates assumptions"
+                                    )
+                                    sample_efficiency_vals.append(0)
+                                else:
+                                    sample_efficiency_vals.append(
+                                        (task_saturation / ste_saturation)
+                                        * (ste_exp_to_sat / task_exp_to_sat)
+                                    )
 
                             se_ste_saturation[
                                 task_data["regime_num"].iloc[-1]

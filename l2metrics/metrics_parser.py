@@ -39,10 +39,15 @@ class MetricsParser:
         else:
             with open(file_name) as file:
                 self.data = json.load(file)
-            self.dfs = [
-                pd.DataFrame(self.refactor_json(run_num)).fillna(value=np.nan)
-                for run_num in self.data
-            ]
+            if isinstance(self.data, list):
+                self.dfs = [
+                    pd.DataFrame(self.refactor_json(run_num)).fillna(value=np.nan)
+                    for run_num in self.data
+                ]
+            elif isinstance(self.data, dict):
+                self.dfs = [
+                    pd.DataFrame(self.refactor_json(self.data)).fillna(value=np.nan)
+                ]
 
     def to_excel(self) -> None:
         for idx, df in enumerate(self.dfs):
@@ -723,6 +728,112 @@ class MetricsParser:
             sns.distplot([x for x in graph_data], ax=axes)
         elif plottype == "line":
             sns.lineplot(data=[x for x in graph_data], ax=axes)
+
+    ##################################################
+    # Average Training Performance
+    ##################################################
+
+    def _get_avg_train_perf_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, int]:
+        try:
+            if not task:
+                return df.root.avg_train_perf.iloc[0, 0]
+            else:
+                return df.root.task_metrics[task].avg_train_perf.iloc[0, 0]
+        except (KeyError, AttributeError):
+            pass
+
+    def get_avg_train_perf(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, int]]:
+        if not run_id:
+            return [self._get_avg_train_perf_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_avg_train_perf_helper(run, task)
+
+    ##################################################
+    # Average Training Performance Values
+    ##################################################
+
+    def _get_avg_train_perf_vals_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, int]:
+        try:
+            if not task:
+                return [
+                    df.root.task_metrics[task].avg_train_perf_vals.iloc[0, 0]
+                    for task in self.get_json_task_names()
+                ]
+            else:
+                return df.root.task_metrics[task].avg_train_perf_vals.iloc[0, 0]
+        except (KeyError, AttributeError):
+            pass
+
+    def get_avg_train_perf_vals(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, int]]:
+        if not run_id:
+            return [self._get_avg_train_perf_vals_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_avg_train_perf_vals_helper(run, task)
+
+    ##################################################
+    # Average Evaluation Performance
+    ##################################################
+
+    def _get_avg_eval_perf_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, int]:
+        try:
+            if not task:
+                return df.root.avg_eval_perf.iloc[0, 0]
+            else:
+                return df.root.task_metrics[task].avg_eval_perf.iloc[0, 0]
+        except (KeyError, AttributeError):
+            pass
+
+    def get_avg_eval_perf(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, int]]:
+        if not run_id:
+            return [self._get_avg_eval_perf_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_avg_eval_perf_helper(run, task)
+
+    ##################################################
+    # Average Evaluation Performance Values
+    ##################################################
+
+    def _get_avg_eval_perf_vals_helper(
+        self, df: pd.DataFrame, task: str = ""
+    ) -> Union[None, int]:
+        try:
+            if not task:
+                return [
+                    df.root.task_metrics[task].avg_eval_perf_vals.iloc[0, 0]
+                    for task in self.get_json_task_names()
+                ]
+            else:
+                return df.root.task_metrics[task].avg_eval_perf_vals.iloc[0, 0]
+        except (KeyError, AttributeError):
+            pass
+
+    def get_avg_eval_perf_vals(
+        self, task: str = "", run_id: str = ""
+    ) -> List[Union[None, int]]:
+        if not run_id:
+            return [self._get_avg_eval_perf_vals_helper(run, task) for run in self.dfs]
+        else:
+            for run in self.dfs:
+                if run_id == run.root.run_id.iloc[0, 0]:
+                    return self._get_avg_eval_perf_vals_helper(run, task)
 
     ##################################################
     # Performance Maintenance MRLEP

@@ -102,6 +102,7 @@ def run() -> None:
             for p in Path(args.log_dir).rglob("*")
             if p.is_dir() and (p / "logger_info.json").exists()
         ]
+        dirs.sort()
         for dir in tqdm(dirs, desc=Path(args.log_dir).name):
             # Check if current path is log directory for single run
             if all(
@@ -157,10 +158,11 @@ def run() -> None:
                     # Plot metrics
                     if args.do_plot:
                         # Update task color dictionary
-                        for task_name, color in zip(
-                            list(set(report._unique_tasks) - set(task_colors.keys())),
-                            cc,
-                        ):
+                        new_tasks = list(
+                            set(report._unique_tasks) - set(task_colors.keys())
+                        )
+                        new_tasks.sort()
+                        for task_name, color in zip(new_tasks, cc):
                             task_colors[task_name] = color["color"]
 
                         # Generate plots

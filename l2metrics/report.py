@@ -479,6 +479,11 @@ class MetricsReport:
         self.regime_metrics_df = pd.concat(
             [self.regime_metrics_df, self._metrics_df[regime_metrics]], axis=1
         )
+        self.regime_metrics_df["avg_perf"] = (
+            self._metrics_df[["avg_train_perf", "avg_eval_perf"]]
+            .bfill(axis=1)
+            .iloc[:, 0]
+        )
         if "task_params" in self.block_info_keys_to_include:
             if self.regime_metrics_df["task_params"].size:
                 self.regime_metrics_df["task_params"] = (
@@ -745,7 +750,7 @@ class MetricsReport:
 
         logger.info(f'Saving regime metrics TSV with name: {filename + "_regime.tsv"}')
         self.regime_metrics_df.to_csv(
-            Path(output_dir) / (filename + "_regime.tsv"), sep="\t"
+            Path(output_dir) / (filename + "_regime.tsv"), sep="\t", index=False
         )
 
     def save_data(self, output_dir: str = "", filename: str = None) -> None:

@@ -52,6 +52,7 @@ def run() -> None:
     # Create output directory if it doesn't exist
     if (args.do_save or args.do_save_settings) and args.ste_store_mode is None:
         args.output_dir.mkdir(parents=True, exist_ok=True)
+        (args.output_dir / "plots").mkdir(parents=True, exist_ok=True)
 
     # Load data range data for normalization and standardize names to lowercase
     if args.data_range_file:
@@ -170,7 +171,7 @@ def run() -> None:
                             plot_types=args.plot_types,
                             save=args.do_save,
                             show_eval_lines=args.show_eval_lines,
-                            output_dir=str(args.output_dir),
+                            output_dir=str(Path(args.output_dir) / "plots"),
                             task_colors=task_colors,
                         )
                         plt.close("all")
@@ -242,7 +243,7 @@ def run() -> None:
                     plot_types=args.plot_types,
                     save=args.do_save,
                     show_eval_lines=args.show_eval_lines,
-                    output_dir=str(args.output_dir),
+                    output_dir=str(Path(args.output_dir) / "plots"),
                 )
                 if not args.do_save:
                     plt.show()

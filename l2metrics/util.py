@@ -304,22 +304,28 @@ def plot_evaluation_blocks(
 
     task_clusters = np.unique([task_name.split("_")[0] for task_name in unique_tasks])
 
+    # Calculate subplot dimensions
+    cols = ceil(sqrt(len(task_clusters)))
+    if cols == 0:
+        return
+    rows = ceil(len(task_clusters) / cols)
+
+    # Initialize figure
+    fig = plt.figure(
+        figsize=(min(18, max(12, 6 * cols)), max(6, len(task_clusters) // 2)),
+        constrained_layout=True,
+    )
+    fig.suptitle(input_title)
+
     # Assign colors for each task
     if not task_colors:
         task_colors = {
             task: color["color"] for color, task in zip(color_cycler, unique_tasks)
         }
 
-    # Initialize figure
-    fig = plt.figure(
-        figsize=(12, len(task_clusters) * 6),
-        constrained_layout=True,
-    )
-    fig.suptitle(input_title)
-
     for idx, task_cluster in enumerate(task_clusters):
         # Create subplot
-        ax = fig.add_subplot(len(task_clusters), 1, idx + 1)
+        ax = fig.add_subplot(rows, cols, idx + 1)
 
         cluster_eval_data = df_test[df_test["task_name"].str.contains(task_cluster)]
 

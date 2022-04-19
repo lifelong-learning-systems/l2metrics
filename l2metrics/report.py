@@ -578,10 +578,14 @@ class MetricsReport:
                         )
                     elif metric == "avg_eval_perf":
                         eval_perf = tm[metric].dropna().to_numpy(dtype=float)
-                        self.task_metrics_df.at[task, metric] = eval_perf.mean()
-                        self.task_metrics_df.at[task, "avg_eval_perf_vals"] = list(
-                            eval_perf
-                        )
+                        if len(eval_perf):
+                            self.task_metrics_df.at[task, metric] = eval_perf.mean()
+                            self.task_metrics_df.at[task, "avg_eval_perf_vals"] = list(
+                                eval_perf
+                            )
+                        else:
+                            self.task_metrics_df.at[task, metric] = np.NaN
+                            self.task_metrics_df.at[task, "avg_eval_perf_vals"] = []
                     elif metric in ["perf_maintenance_mrtlp", "perf_maintenance_mrlep"]:
                         pm = tm[metric].dropna().to_numpy(dtype=float)
                         self.task_metrics_df.at[task, metric] = (

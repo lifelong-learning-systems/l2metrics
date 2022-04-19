@@ -68,7 +68,9 @@ def test_invalid_log_dir():
 def test_invalid_perf_measure():
     # Test the default arguments except for log directory
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "reward"
     args.recursive = False
     args.ste_store_mode = None
@@ -104,7 +106,9 @@ def test_invalid_perf_measure():
 def test_store_single_ste():
     # Test storing single STE run
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "ste_task1_1_run1"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ste_logs" / "ste_task1_1_run1"
+    )
     args.perf_measure = "reward"
     args.recursive = False
     args.ste_store_mode = "w"
@@ -139,7 +143,7 @@ def test_store_single_ste():
 def test_store_recursive_ste():
     # Test storing single STE run
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples"
+    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "ste_logs"
     args.perf_measure = "reward"
     args.recursive = True
     args.ste_store_mode = "a"
@@ -174,7 +178,9 @@ def test_store_recursive_ste():
 def test_default_args():
     # Test the default arguments except for log directory and performace measure
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -245,7 +251,9 @@ def test_recursive():
 def test_variant_mode(variant_mode):
     # Test the different arguments for variant mode
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -281,7 +289,9 @@ def test_variant_mode(variant_mode):
 def test_ste_averaging_method(ste_averaging_method):
     # Test the different arguments for STE averaging method
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -317,7 +327,9 @@ def test_ste_averaging_method(ste_averaging_method):
 def test_aggregation_method(aggregation_method):
     # Test the different arguments for aggregation method
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -353,7 +365,9 @@ def test_aggregation_method(aggregation_method):
 def test_maintenance_method(maintenance_method):
     # Test the different arguments for maintenance method
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -389,7 +403,9 @@ def test_maintenance_method(maintenance_method):
 def test_transfer_method(transfer_method):
     # Test the different arguments for transfer method
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -425,7 +441,9 @@ def test_transfer_method(transfer_method):
 def test_normalization_method(normalization_method):
     # Test the different arguments for normalization method
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -463,7 +481,9 @@ def test_normalization_method(normalization_method):
 def test_smoothing_method(smoothing_method):
     # Test the different arguments for smoothing method
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -499,7 +519,9 @@ def test_smoothing_method(smoothing_method):
 def test_smooth_eval_data(smooth_eval_data):
     # Test the different arguments for smooth_eval_data
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -535,7 +557,9 @@ def test_smooth_eval_data(smooth_eval_data):
 def test_window_length(window_length):
     # Test the different arguments for window length
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -571,7 +595,9 @@ def test_window_length(window_length):
 def test_clamp_outliers(clamp_outliers):
     # Test the different arguments for clamping outliers
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -610,7 +636,9 @@ def test_clamp_outliers(clamp_outliers):
 def test_data_range_file(data_range_file):
     # Test the different arguments for data range file
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -646,7 +674,9 @@ def test_data_range_file(data_range_file):
 def test_noise(noise):
     # Test the different arguments for noise
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -681,7 +711,9 @@ def test_noise(noise):
 def test_output():
     # Test output argument
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -717,7 +749,9 @@ def test_output():
 def test_plotting_units(unit):
     # Test the different arguments for plotting units
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -757,7 +791,9 @@ def test_plotting_units(unit):
 def test_show_eval_lines(show_eval_lines):
     # Test the different arguments for showing evaluation lines in plots
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -793,7 +829,9 @@ def test_show_eval_lines(show_eval_lines):
 def test_do_plot(do_plot):
     # Test the different arguments for enabling/disabling plotting
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -829,7 +867,9 @@ def test_do_plot(do_plot):
 def test_plot_types(plot_type):
     # Test the different arguments for plot types
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -865,7 +905,9 @@ def test_plot_types(plot_type):
 def test_do_save(do_save):
     # Test the different arguments for enabling/disabling save
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -904,7 +946,9 @@ def test_do_save(do_save):
 def test_load_settings(load_settings):
     # Test the different arguments for loading settings from JSON
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None
@@ -940,7 +984,9 @@ def test_load_settings(load_settings):
 def test_do_save_settings(do_save_settings):
     # Test the different arguments for enabling/disabling save settings
     args = argparse.Namespace()
-    args.log_dir = filepath.parent.resolve() / ".." / "examples" / "multi_task"
+    args.log_dir = (
+        filepath.parent.resolve() / ".." / "examples" / "ll_logs" / "multi_task"
+    )
     args.perf_measure = "performance"
     args.recursive = False
     args.ste_store_mode = None

@@ -52,6 +52,7 @@ def run() -> None:
     # Create output directory if it doesn't exist
     if (args.do_save or args.do_save_settings) and args.ste_store_mode is None:
         args.output_dir.mkdir(parents=True, exist_ok=True)
+    if args.do_plot and args.ste_store_mode is None:
         (args.output_dir / "plots").mkdir(parents=True, exist_ok=True)
 
     # Load data range data for normalization and standardize names to lowercase
@@ -222,6 +223,10 @@ def run() -> None:
             logger.info(f"Starting metrics report for {Path(args.log_dir).name}")
             report = MetricsReport(**kwargs)
 
+            # Save settings used to calculate metrics
+            if args.do_save_settings:
+                report.save_settings(output_dir=args.output_dir, filename=args.output)
+
             # Add noise to log data if mean or standard deviation is specified
             if args.noise[0] or args.noise[1]:
                 report.add_noise(mean=args.noise[0], std=args.noise[1])
@@ -248,16 +253,14 @@ def run() -> None:
                 if not args.do_save:
                     plt.show()
 
-            # Save settings used to run calculate metrics
-            if args.do_save_settings:
-                report.save_settings(output_dir=args.output_dir, filename=args.output)
+                plt.close("all")
 
 
 if __name__ == "__main__":
     # Configure logger
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+        fmt="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     handler.setFormatter(formatter)

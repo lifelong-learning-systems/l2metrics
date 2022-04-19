@@ -4,7 +4,7 @@
 
 # Data files
 data/
-results/
+tests/results/
 analysis/
 
 # Byte-compiled / optimized / DLL files

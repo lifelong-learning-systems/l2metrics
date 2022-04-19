@@ -1,5 +1,5 @@
 {
-    "log_dir": "multi_task",
+    "log_dir": "ll_logs\\multi_task",
     "perf_measure": "performance",
     "variant_mode": "aware",
     "ste_averaging_method": "metrics",

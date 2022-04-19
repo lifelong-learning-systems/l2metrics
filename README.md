@@ -1,6 +1,6 @@
 # Lifelong Learning Metrics (L2Metrics)
 
-![logo](https://github.com/darpa-l2m/l2metrics/blob/main/docs/apl_small_vertical_blue.png)
+![APL Logo](https://github.com/lifelong-learning-systems/l2metrics/raw/main/docs/apl_small_horizontal_blue.png)
 
 ## Table of Contents
 
@@ -31,6 +31,8 @@ Lifelong Learning Metrics (L2Metrics) is a Python library containing foundationa
 The L2Metrics library supports the following lifelong learning metrics as defined in the [Lifelong Learning Metrics for L2M specification](https://arxiv.org/abs/2201.08278):
 
 - Performance Recovery (PR)
+- Mean Evaluation Performance (MEP)
+- Mean Training Performance (MTP)
 - Performance Maintenance (PM)
 - Forward Transfer (FT)
 - Backward Transfer (BT)
@@ -39,7 +41,7 @@ The L2Metrics library supports the following lifelong learning metrics as define
 
 ## Data Preprocessing
 
-Refer to the [Data Processing README](https://github.com/darpa-l2m/l2metrics/blob/main/docs/data_preprocessing.md) for details on the data preprocessing methods in this library.
+Refer to the [Data Processing README](https://github.com/lifelong-learning-systems/l2metrics/blob/main/docs/data_preprocessing.md) for details on the data preprocessing methods in this library.
 
 ## Requirements
 
@@ -76,8 +78,8 @@ pip install -U pip wheel
 #### 3. Clone the L2Logger and L2Metrics repositories
 
 ```bash
-git clone https://github.com/darpa-l2m/l2logger.git
-git clone https://github.com/darpa-l2m/l2metrics.git
+git clone https://github.com/lifelong-learning-systems/l2logger.git
+git clone https://github.com/lifelong-learning-systems/l2metrics.git
 ```
 
 #### 4. Install the L2Logger and L2Metrics packages
@@ -89,22 +91,22 @@ pip install -e <path_to_l2metrics>
 
 ## Usage
 
-To calculate metrics on the performance of your system, you must first generate log files in accordance with the L2Logger format version 1.1. Please refer to the L2Logger documentation for more details on how to generate compatible logs.
+To calculate metrics on the performance of your system, you must first generate log files in accordance with the L2Logger format version 1.1. Please refer to the [L2Logger documentation](https://github.com/lifelong-learning-systems/l2logger/blob/release/docs/interface.md) for more details on how to generate compatible logs.
 
-Once these logs are generated, you'll need to store Single-Task Expert (STE) data and pass the log directories as command-line arguments to compute STE-related metrics. Several example files are included to get you started:
+Once these logs are generated, you'll need to store Single-Task Expert (STE) data and pass the log directories as command-line arguments in order to compute STE-related metrics. Several example files are included to get you started:
 
 - Example STE and LL log directories:
-  - `./examples/ste_task1_1_run1/` (STE)
-  - `./examples/ste_task2_1_run1/` (STE)
-  - `./examples/ste_task3_1_run1/` (STE)
-  - `./examples/ste_task3_1_run2/` (STE)
-  - `./examples/multi_task/` (LL)
+  - `./examples/ste_logs/ste_task1_1_run1/`
+  - `./examples/ste_logs/ste_task2_1_run1/`
+  - `./examples/ste_logs/ste_task3_1_run1/`
+  - `./examples/ste_logs/ste_task3_1_run2/`
+  - `./examples/ll_logs/multi_task/`
 - Example `settings.json` file for configuring command-line arguments
 - Example `data_range.json` file to show how the user can specify task normalization ranges
 
 ### Command-Line Execution
 
-Refer to the [Command-Line README](https://github.com/darpa-l2m/l2metrics/blob/main/docs/command_line.md) for more information on how to run L2Metrics from the command line.
+Refer to the [Command-Line README](https://github.com/lifelong-learning-systems/l2metrics/blob/main/docs/command_line.md) for more information on how to run L2Metrics from the command line.
 
 ### Storing Single-Task Expert Data
 
@@ -135,17 +137,19 @@ python -m l2metrics.clear_ste
 To generate a metrics plot and report with default settings, run the following command from the `l2metrics/examples` directory:
 
 ```bash
-python -m l2metrics -l ./multi_task -p performance
+python -m l2metrics -l ./ll_logs/multi_task -p performance
 ```
 
-The default output files are saved in the current working directory and defined below:
+The default output files are saved in the current working directory under `results/` and defined below:
 
 - `multi_task_data.feather`: The log data DataFrame containing raw and preprocessed data.
 - `multi_task_metrics.json`: The lifetime and task-level metrics of the run.
 - `multi_task_settings.json`: The settings used to generate the metrics report.
-- `multi_task_block.png`: The block plot with separate subplots for evaluation blocks.
-- `multi_task_perf.png`: The performance plot.
-- `multi_task_ste.png`: The performance relative to STE plot.
+- `multi_task_regime.tsv`: The regime-level metrics of the run.
+- `plots/multi_task_evaluation.png`: Evaluation block [point plots](https://seaborn.pydata.org/generated/seaborn.pointplot.html) grouped by task labels (i.e., task variants appear on the same subplot).
+- `plots/multi_task_learning.png`: Plot showing smoothed, normalized learning curves for the lifetime.
+- `plots/multi_task_raw.png`: Plot showing raw training reward values with smoothed curve overlaid.
+- `plots/multi_task_ste.png`: Plot showing concatenated learning curves compared to stored STE runs.
 
 If you wish to generate a metrics report with modified settings (e.g., disabling normalization or aggregating lifetime metrics with the mean operator), you can either modify the arguments on the command line or specify a JSON file containing the desired settings. The settings loaded from the JSON file will take precedence over any arguments specified on the command line.
 
@@ -163,7 +167,7 @@ python -m l2metrics -l <path/to/directory/containing/multiple/runs> -R
 
 ### Log Data
 
-Refer to the [Log Data README](https://github.com/darpa-l2m/l2metrics/blob/main/docs/log_data.md) for more information on how to interface with the raw and preprocessed log data from the scenario.
+Refer to the [Log Data README](https://github.com/lifelong-learning-systems/l2metrics/blob/main/docs/log_data.md) for more information on how to interface with the raw and preprocessed log data from the scenario.
 
 ### Output Settings File
 
@@ -171,7 +175,7 @@ If saving of L2Metrics settings is enabled, the framework will generate a JSON f
 
 ```json
 {
-  "log_dir": "multi_task",
+  "log_dir": "ll_logs\\multi_task",
   "perf_measure": "performance",
   "variant_mode": "aware",
   "ste_averaging_method": "metrics",
@@ -189,49 +193,55 @@ If saving of L2Metrics settings is enabled, the framework will generate a JSON f
 
 The metrics module will print the lifetime metrics to the console when it has successfully completed execution. The following table shows an example of a metrics report output:
 
-| perf_recovery | perf_maintenance_mrlep | forward_transfer_ratio | backward_transfer_ratio | ste_rel_perf | sample_efficiency |
-| ------------- | ---------------------- | ---------------------- | ----------------------- | ------------ | ----------------- |
-| -2.0          | 3.86                   | 12.63                  | 1.08                    | 1.11         | 0.91              |
+| perf_recovery | avg_train_perf | avg_eval_perf | perf_maintenance_mrlep | forward_transfer_ratio | backward_transfer_ratio | ste_rel_perf | sample_efficiency |
+| ------------- | -------------- | ------------- | ---------------------- | ---------------------- | ----------------------- | ------------ | ----------------- |
+| -2.00         | 83.82          | 78.52         | 3.86                   | 12.63                  | 1.08                    | 1.11         | 0.91              |
 
 If saving is enabled, the framework will also generate a JSON file containing lifetime and task-level metrics for the scenario. Please refer to the [File Description README](https://github.com/darpa-l2m/l2metrics/blob/main/docs/file_descriptions.md#metrics-json-file) for more information on the format of this file.
 
-### Block Plot
+### Evaluation Plot
 
-The resulting block plot from example run should look like this:
+The resulting evaluation plot from example run should look like this:
 
-![diagram](examples/multi_task_block.png)
+![Evaluation Plot](https://github.com/lifelong-learning-systems/l2metrics/raw/main/examples/results/plots/multi_task_evaluation.png)
 
-The plot separates learning/training experiences from evaluation experiences. The top subplot shows the raw training data with a smoothed black curve overlaid. The subsequent subplots show the evaluation data for each individual task with 25% and 75% quantile ranges.
+This figure shows point plots for all tasks in the lifetime grouped by task label (i.e., task variants are shown on the same subplot). The points are the mean values in the evaluation blocks and the lines extending from each point show the 95% confidence intervals. The x-axis represents the block number in the lifetime.
 
 ### Performance Plot
 
-The output figure of performance over experiences should look like this:
+The resulting learning plot from example run should look like this:
 
-![diagram](examples/multi_task_perf.png)
+![Performance Plot](https://github.com/lifelong-learning-systems/l2metrics/raw/main/examples/results/plots/multi_task_learning.png)
 
-The white areas represent blocks in which learning is occurring while the gray areas represent evaluation blocks. The dashed lines in the plot show the slopes between each task's evaluation blocks.
+This figure shows the pre-processed (smoothed, normalized, clamped, etc.) learning curves across the lifetime. The dashed lines in the plot show the slopes between each task's evaluation blocks.
 
-**Note**: The performance values shown in the evaluation blocks are an average over the whole block, resulting in a flat line for each task.
+### Raw Performance Plot
 
-### Performance Relative to STE plot
+The resulting raw performance plot from example run should look like this:
+
+![Raw Performance Plot](https://github.com/lifelong-learning-systems/l2metrics/raw/main/examples/results/plots/multi_task_raw.png)
+
+This figure shows the raw reward values from learning blocks with the smoothed curves overlaid in black. The values in this figure are not normalized, even if that option is enabled.
+
+### Performance Relative to STE Plot
 
 The framework should also produce a performance relative to STE plot shown below, where the task performance curves are generated by concatenating all the training data from the scenario:
 
-![diagram](examples/multi_task_ste.png)
+![STE Plot](https://github.com/lifelong-learning-systems/l2metrics/raw/main/examples/results/plots/multi_task_ste.png)
 
-The black dashed lines indicate the block boundaries where task performance was stitched together.
+The vertical black dashed lines indicate the block boundaries where task performance was stitched together.
 
 ### Custom Metrics
 
-See documentation in the examples folder at [examples/README.md](./examples/README.md) for more details on how to implement custom metrics.
+See documentation in the examples folder at [examples/README.md](https://github.com/lifelong-learning-systems/l2metrics/blob/main/examples/README.md) for more details on how to implement custom metrics.
 
 ## Changelog
 
-See [CHANGELOG.md](./CHANGELOG.md) for a list of notable changes to the project.
+See [CHANGELOG.md](https://github.com/lifelong-learning-systems/l2metrics/blob/main/CHANGELOG.md) for a list of notable changes to the project.
 
 ## License
 
-See [LICENSE](LICENSE) for license information.
+See [LICENSE](https://github.com/lifelong-learning-systems/l2metrics/blob/main/LICENSE) for license information.
 
 ## Acknowledgements
 

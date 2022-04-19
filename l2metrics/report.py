@@ -34,6 +34,7 @@ from tabulate import tabulate
 from ._localutil import smooth
 from .block_saturation import BlockSaturation
 from .core import Metric
+from .average_performance import AvgPerf
 from .normalizer import Normalizer
 from .performance_maintenance import PerformanceMaintenance
 from .performance_recovery import PerformanceRecovery
@@ -42,7 +43,13 @@ from .sample_efficiency import SampleEfficiency
 from .ste_relative_performance import STERelativePerf
 from .terminal_performance import TerminalPerformance
 from .transfer import Transfer
-from .util import load_ste_data, plot_blocks, plot_performance, plot_ste_data
+from .util import (
+    load_ste_data,
+    plot_evaluation_blocks,
+    plot_learning_blocks,
+    plot_raw,
+    plot_ste,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +77,7 @@ class MetricsReport:
         self.window_length = kwargs.get("window_length", None)
         self.clamp_outliers = kwargs.get("clamp_outliers", False)
         self.data_range = kwargs.get("data_range", None)
+        self.unit = kwargs.get("unit", "exp_num")
 
         # Modify data range based on variant mode
         if self.variant_mode == "agnostic" and self.data_range is not None:
@@ -89,7 +97,7 @@ class MetricsReport:
             self.data_range = temp_data_range
 
         # Initialize list of LL metrics
-        self.task_metrics = ["perf_recovery"]
+        self.task_metrics = ["perf_recovery", "avg_train_perf", "avg_eval_perf"]
         if self.maintenance_method in ["mrlep", "both"]:
             self.task_metrics.extend(["perf_maintenance_mrlep"])
         if self.maintenance_method in ["mrtlp", "both"]:
@@ -188,6 +196,9 @@ class MetricsReport:
         else:
             self.normalizer = None
 
+        # Modify data for plotting unit
+        self.adjust_experience_units()
+
         # Adds default metrics
         self._add_default_metrics()
 
@@ -219,6 +230,7 @@ class MetricsReport:
         self.add(RecoveryTime(self.perf_measure))
         self.add(PerformanceRecovery(self.perf_measure))
         self.add(PerformanceMaintenance(self.perf_measure, self.maintenance_method))
+        self.add(AvgPerf(self.perf_measure))
         self.add(Transfer(self.perf_measure, self.transfer_method))
         self.add(
             STERelativePerf(self.perf_measure, self.ste_data, self.ste_averaging_method)
@@ -358,6 +370,25 @@ class MetricsReport:
                             window=self.smoothing_method,
                         )
 
+    def adjust_experience_units(self) -> None:
+        if self.unit == "steps":
+            # Add steps column to log data
+            if "episode_step_count" in self._log_data.columns:
+                self._log_data["steps"] = self._log_data["episode_step_count"].cumsum()
+            else:
+                raise KeyError("Step information not available in logs")
+
+            # Add steps column to STE data
+            for task, ste_data in self.ste_data.items():
+                if ste_data is not None:
+                    for idx, ste_data_df in enumerate(ste_data):
+                        if "episode_step_count" in ste_data_df.columns:
+                            self.ste_data[task][idx]["steps"] = ste_data_df[
+                                "episode_step_count"
+                            ].cumsum()
+                        else:
+                            raise KeyError("Step information not available in logs")
+
     def log_summary(self) -> pd.DataFrame:
         # Get summary of log data
         task_experiences = {"task_name": [], "LX": [], "EX": []}
@@ -399,8 +430,8 @@ class MetricsReport:
         # Append scenario information to metrics dataframe
         self.ll_metrics_df = self.lifetime_metrics_df.copy()
         if self.ll_metrics_df.empty:
-            self.ll_metrics_df = self.ll_metrics_df.append(
-                pd.Series([np.nan]), ignore_index=True
+            self.ll_metrics_df = pd.concat(
+                [self.ll_metrics_df, pd.Series([np.nan])], ignore_index=True
             )
         self.regime_metrics_df["run_id"] = Path(self.log_dir).name
         self.ll_metrics_df["run_id"] = Path(self.log_dir).name
@@ -448,6 +479,11 @@ class MetricsReport:
         self.regime_metrics_df = pd.concat(
             [self.regime_metrics_df, self._metrics_df[regime_metrics]], axis=1
         )
+        self.regime_metrics_df["avg_perf"] = (
+            self._metrics_df[["avg_train_perf", "avg_eval_perf"]]
+            .bfill(axis=1)
+            .iloc[:, 0]
+        )
         if "task_params" in self.block_info_keys_to_include:
             if self.regime_metrics_df["task_params"].size:
                 self.regime_metrics_df["task_params"] = (
@@ -468,6 +504,8 @@ class MetricsReport:
         # Initialize certain task metrics data objects
         num_tasks = len(self._unique_tasks)
         self.task_metrics_df["recovery_times"] = [[]] * num_tasks
+        self.task_metrics_df["avg_train_perf_vals"] = [[]] * num_tasks
+        self.task_metrics_df["avg_eval_perf_vals"] = [[]] * num_tasks
         if self.maintenance_method in ["mrlep", "both"]:
             self.task_metrics_df["maintenance_val_mrlep"] = [[]] * num_tasks
         if self.maintenance_method in ["mrtlp", "both"]:
@@ -532,6 +570,22 @@ class MetricsReport:
                         self.task_metrics_df.at[task, "recovery_times"] = list(
                             tm["recovery_time"].dropna().to_numpy(dtype=float)
                         )
+                    elif metric == "avg_train_perf":
+                        train_perf = tm[metric].dropna().to_numpy(dtype=float)
+                        self.task_metrics_df.at[task, metric] = train_perf.mean()
+                        self.task_metrics_df.at[task, "avg_train_perf_vals"] = list(
+                            train_perf
+                        )
+                    elif metric == "avg_eval_perf":
+                        eval_perf = tm[metric].dropna().to_numpy(dtype=float)
+                        if len(eval_perf):
+                            self.task_metrics_df.at[task, metric] = eval_perf.mean()
+                            self.task_metrics_df.at[task, "avg_eval_perf_vals"] = list(
+                                eval_perf
+                            )
+                        else:
+                            self.task_metrics_df.at[task, metric] = np.NaN
+                            self.task_metrics_df.at[task, "avg_eval_perf_vals"] = []
                     elif metric in ["perf_maintenance_mrtlp", "perf_maintenance_mrlep"]:
                         pm = tm[metric].dropna().to_numpy(dtype=float)
                         self.task_metrics_df.at[task, metric] = (
@@ -655,11 +709,11 @@ class MetricsReport:
                     # Aggregate metric values
                     if self.aggregation_method == "mean":
                         self.lifetime_metrics_df[metric] = [
-                            np.nanmean(metric_vals.astype(np.float))
+                            np.nanmean(metric_vals.astype(float))
                         ]
                     elif self.aggregation_method == "median":
                         self.lifetime_metrics_df[metric] = [
-                            np.nanmedian(metric_vals.astype(np.float))
+                            np.nanmedian(metric_vals.astype(float))
                         ]
 
     def report(self) -> None:
@@ -695,9 +749,12 @@ class MetricsReport:
         with open(
             Path(output_dir) / (filename + "_metrics.json"), "w", newline="\n"
         ) as metrics_file:
+            logger.info(f'Saving metrics JSON with name: {filename + "_metrics.json"}')
             json.dump(self.ll_metrics_dict, metrics_file)
+
+        logger.info(f'Saving regime metrics TSV with name: {filename + "_regime.tsv"}')
         self.regime_metrics_df.to_csv(
-            Path(output_dir) / (filename + "_regime_metrics.tsv"), sep="\t"
+            Path(output_dir) / (filename + "_regime.tsv"), sep="\t", index=False
         )
 
     def save_data(self, output_dir: str = "", filename: str = None) -> None:
@@ -715,6 +772,7 @@ class MetricsReport:
             filename = filename.replace(" ", "_")
 
         # Save data
+        logger.info(f'Saving log data with name: {filename + "_data.feather"}')
         self._log_data.reset_index(drop=True).to_feather(
             str(Path(output_dir) / (filename + "_data.feather"))
         )
@@ -747,65 +805,78 @@ class MetricsReport:
         settings_json["clamp_outliers"] = self.clamp_outliers
 
         with open(Path(output_dir) / (filename + "_settings.json"), "w") as outfile:
+            logger.info(f'Saving settings with name: {filename + "_settings.json"}')
             json.dump(settings_json, outfile)
 
     def plot(
         self,
+        plot_types: List[str] = ["all"],
         save: bool = False,
         show_eval_lines: bool = True,
         output_dir: str = "",
         task_colors: dict = {},
-        input_title: str = None,
     ) -> None:
 
-        if input_title is None:
-            input_title = Path(self.log_dir).name
-        plot_filename = input_title
+        log_dir_name = Path(self.log_dir).name
 
-        plot_blocks(
-            self._log_data,
-            self.perf_measure,
-            self._unique_tasks,
-            task_colors=task_colors,
-            input_title=input_title,
-            output_dir=output_dir,
-            do_save_fig=save,
-            plot_filename=plot_filename + "_block",
-        )
-        plot_performance(
-            self._log_data,
-            self.block_info,
-            unique_tasks=self._unique_tasks,
-            task_colors=task_colors,
-            show_eval_lines=show_eval_lines,
-            y_axis_col=self.perf_measure,
-            input_title=input_title,
-            output_dir=output_dir,
-            do_save_fig=save,
-            plot_filename=plot_filename + "_perf",
-        )
+        if any(plot_type in plot_types for plot_type in ["all", "raw"]):
+            plot_raw(
+                self._log_data,
+                self._unique_tasks,
+                task_colors=task_colors,
+                x_axis_col=self.unit,
+                y_axis_col=self.perf_measure,
+                input_title="Raw and Smoothed Performance\n" + log_dir_name,
+                output_dir=output_dir,
+                do_save_fig=save,
+                plot_filename=log_dir_name + "_raw",
+            )
 
-    def plot_ste_data(
-        self,
-        input_title: str = None,
-        save: bool = False,
-        output_dir: str = "",
-        task_colors: dict = {},
-    ) -> None:
-        if input_title is None:
-            input_title = "Performance Relative to STE\n" + Path(self.log_dir).name
-        plot_filename = Path(self.log_dir).name + "_ste"
+        if any(plot_type in plot_types for plot_type in ["all", "eb"]):
+            plot_evaluation_blocks(
+                self._log_data,
+                unique_tasks=self._unique_tasks,
+                task_colors=task_colors,
+                x_axis_col=self.unit,
+                y_axis_col=self.perf_measure,
+                input_title="Evaluation Performance\n" + log_dir_name,
+                output_dir=output_dir,
+                do_save_fig=save,
+                plot_filename=log_dir_name + "_evaluation",
+            )
 
-        plot_ste_data(
-            self._log_data,
-            self.ste_data,
-            self.block_info,
-            self._unique_tasks,
-            task_colors=task_colors,
-            perf_measure=self.perf_measure,
-            ste_averaging_method=self.ste_averaging_method,
-            input_title=input_title,
-            output_dir=output_dir,
-            do_save=save,
-            plot_filename=plot_filename,
-        )
+        if any(plot_type in plot_types for plot_type in ["all", "lb"]):
+            plot_learning_blocks(
+                self._log_data,
+                self.block_info,
+                unique_tasks=self._unique_tasks,
+                task_colors=task_colors,
+                show_eval_lines=show_eval_lines,
+                x_axis_col=self.unit,
+                y_axis_col=self.perf_measure,
+                input_title="Learning Performance\n" + log_dir_name,
+                output_dir=output_dir,
+                do_save_fig=save,
+                plot_filename=log_dir_name + "_learning",
+            )
+
+        if any(plot_type in plot_types for plot_type in ["all", "ste"]):
+            # Only send list of unique tasks with training data
+            unique_tasks = self.block_info[
+                self.block_info["block_type"] == "train"
+            ].task_name.unique()
+
+            plot_ste(
+                self._log_data,
+                self.ste_data,
+                self.block_info,
+                unique_tasks,
+                x_axis_col=self.unit,
+                task_colors=task_colors,
+                perf_measure=self.perf_measure,
+                ste_averaging_method=self.ste_averaging_method,
+                input_title="Performance Relative to STE\n" + log_dir_name,
+                output_dir=output_dir,
+                do_save=save,
+                plot_filename=log_dir_name + "_ste",
+            )

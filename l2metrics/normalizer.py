@@ -48,7 +48,7 @@ class Normalizer:
 
         Args:
             perf_measure (str): Name of column to use for metrics calculations.
-            data (pd.DataFrame, optional): Reference data for calculating data range. Assumed
+            data (pd.DataFrame): Reference data for calculating data range. Assumed
                 DataFrame with task name as index and one column of performance data.
             ste_data (dict, optional): The STE data for computing quantiles. Defaults to {}.
             data_range (defaultdict, optional): Dictionary object for data range. Defaults to None.

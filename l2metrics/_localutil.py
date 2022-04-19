@@ -229,7 +229,7 @@ def fill_metrics_df(
 
     if not dict_key:
         metrics_df[metric_string_name] = np.full_like(
-            metrics_df["regime_num"], np.nan, dtype=np.object
+            metrics_df["regime_num"], np.nan, dtype=object
         )
         for idx in data.keys():
             metrics_df.at[idx, metric_string_name] = data[idx]

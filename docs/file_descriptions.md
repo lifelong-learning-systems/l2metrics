@@ -1,13 +1,13 @@
 # File Descriptions
 
-## Metrics TSV File
+## Lifetime Metrics TSV File
 
 The TSV file lists all the computed LL metrics from the scenarios found in the specified evaluation directory. The headers in the file are as follows:
 
-- `sg_name`: Name of system group, extracted from the evaluation directory
-- `agent_config`: Corresponding agent configuration of scenario
 - `run_id`: Run ID or scenario name, extracted from scenario directory name
 - `perf_recovery`: Lifetime performance recovery
+- `avg_train_perf`: Lifetime mean training performance
+- `avg_eval_perf`: Lifetime mean evaluation performance
 - `perf_maintenance_mrlep`: Lifetime performance maintenance, most recent learning evaluation performance
 - `perf_maintenance_mrtlp`: Lifetime performance maintenance, most recent terminal learning performance
 - `forward_transfer_ratio`: Lifetime forward transfer, ratio
@@ -26,11 +26,14 @@ The TSV file lists all the computed LL metrics from the scenarios found in the s
 - `num_ex`: Total number of EXs in scenario
 - `runtime`: Total runtime, in seconds, calculated as difference between max and min timestamps in log data
 
-## Metrics JSON File
+## Lifetime Metrics JSON File
 
 The JSON file lists all the task-level metrics in addition to all the computed LL metrics from the scenario found in the specified evaluation directory. This file is JSON formatted due to the complex nested structures and varying object types corresponding to each metric. The task-level metrics reported for each scenario are as follows:
 
+- `run_id`: Run ID or scenario name, extracted from scenario directory name
 - `perf_recovery`: Task performance recovery
+- `avg_train_perf`: Lifetime mean training performance
+- `avg_eval_perf`: Lifetime mean evaluation performance
 - `perf_maintenance_mrlep`: Task performance maintenance, most recent learning evaluation performance
 - `perf_maintenance_mrtlp`: Task performance maintenance, most recent terminal learning performance
 - `forward_transfer_ratio`: List of task forward transfer, ratio
@@ -50,3 +53,20 @@ The JSON file lists all the task-level metrics in addition to all the computed L
 - `num_ex`: Total number of task EXs in scenario
 - `runtime`: Total runtime, in seconds, calculated as difference between max and min timestamps in log data
 - `normalization_data_range`: Task data ranges used for normalization
+
+## Regime Metrics TSV File
+
+The regime metrics TSV file includes the block summary of lifetimes in addition to the regime-level metrics as separate columns. The headers in the file as as follows:
+
+- `run_id`
+- `block_num`
+- `block_type`
+- `block_subtype`
+- `task_name`
+- `regime_num`
+- `task_params`
+- `saturation`: Regime saturation value
+- `exp_to_sat`: Number of experience to saturation
+- `term_perf`: Terminal performance of regime, defined as the mean of the last 10% of training values or the mean of all values in evaluation blocks
+- `exp_to_term_perf`: Number of experiences to terminal performance, defined as the 90% index of training blocks or 50% for evaluation blocks
+- `avg_perf`: Average performance of the values in the regime

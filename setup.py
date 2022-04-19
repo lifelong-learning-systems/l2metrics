@@ -35,8 +35,8 @@ setup(
     author_email="Eric.Nguyen@jhuapl.edu, Megan.Baker@jhuapl.edu",
     license="MIT",
     python_requires=">=3.7",
-    url="https://github.com/darpa-l2m/l2metrics",
-    download_url="https://github.com/darpa-l2m/l2metrics/archive/v3.0.0.tar.gz",
+    url="https://github.com/lifelong-learning-systems/l2metrics",
+    download_url="https://github.com/lifelong-learning-systems/l2metrics/archive/v3.1.0.tar.gz",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: MIT License",

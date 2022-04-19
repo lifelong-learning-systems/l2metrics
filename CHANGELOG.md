@@ -2,6 +2,22 @@
 
 All notable changes to this repository are documented here. We are using [Semantic Versioning for Documents](https://semverdoc.org/), in which a version number has the format `major.minor.patch`.
 
+## 3.1.0 - 2022-04-19
+
+- Updated logging statements and format
+- Filter directory list in recursive mode for more accurate progress bar
+- Added metrics parser module for parsing JSON metrics output
+- Updated plot appearance
+- Replaced deprecated pandas append with concatenate
+- Used 20-color cycler for plots
+- Added tests for metrics report argument parser
+- Added violation checks for sample efficiency metric (positive slope and STE threshold)
+- Implemented new metrics: mean training and evaluation performance
+- Ensured deterministic order of processing in recursive mode for consistent task coloring
+- Save plots in a different subdirectory within results directory
+- Re-organized example logs and results
+- Updated README and documentation
+
 ## 3.0.0 - 2022-01-28
 
 - Enforced black formatting

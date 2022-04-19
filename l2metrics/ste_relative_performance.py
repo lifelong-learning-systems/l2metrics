@@ -34,12 +34,11 @@ class STERelativePerf(Metric):
     name = "Performance relative to STE"
     capability = "adapt_to_new_tasks"
     requires = {"syllabus_type": "agent"}
-    description = "Calculates the performance of each task relative to it's corresponding single-task expert"
+    description = "Calculates the performance of each task relative to its corresponding Single-Task Expert"
 
     def __init__(
         self, perf_measure: str, ste_data: dict, ste_averaging_method: str = "metrics"
     ) -> None:
-
         super().__init__()
         self.perf_measure = perf_measure
         self.ste_data = ste_data

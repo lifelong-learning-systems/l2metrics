@@ -145,6 +145,7 @@ The default output files are saved in the current working directory under `resul
 - `multi_task_data.feather`: The log data DataFrame containing raw and preprocessed data.
 - `multi_task_metrics.json`: The lifetime and task-level metrics of the run.
 - `multi_task_settings.json`: The settings used to generate the metrics report.
+- `multi_task_regime.tsv`: The regime-level metrics of the run.
 - `plots/multi_task_evaluation.png`: Evaluation block [point plots](https://seaborn.pydata.org/generated/seaborn.pointplot.html) grouped by task labels (i.e., task variants appear on the same subplot).
 - `plots/multi_task_learning.png`: Plot showing smoothed, normalized learning curves for the lifetime.
 - `plots/multi_task_raw.png`: Plot showing raw training reward values with smoothed curve overlaid.

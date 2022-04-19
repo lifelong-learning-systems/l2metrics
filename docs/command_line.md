@@ -4,13 +4,13 @@ This document describes how to run L2Metrics from the command line.
 
 ```text
 usage: python -m l2metrics [-h] [-l LOG_DIR] [-R] [-r {aware,agnostic}] [-s {w,a}]
-                    [-v {metrics,time}] [-p PERF_MEASURE] [-a {mean,median}]
-                    [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}] [-n {task,run,none}]
-                    [-g {flat,hanning,hamming,bartlett,blackman,none}] [-G]
-                    [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
-                    [-O OUTPUT_DIR] [-o OUTPUT] [-e] [--no-show-eval-lines] [-P]
-                    [--no-plot] [-S] [--no-save]
-                    [-c LOAD_SETTINGS] [-C] [--no-save-settings]
+                   [-v {metrics,time}] [-p PERF_MEASURE] [-a {mean,median}]
+                   [-m {mrlep,mrtlp,both}] [-t {ratio,contrast,both}]
+                   [-n {task,run,none}] [-g {flat,hanning,hamming,bartlett,blackman,none}]
+                   [-G] [-w WINDOW_LENGTH] [-x] [-d DATA_RANGE_FILE] [-N MEAN STD]
+                   [-O OUTPUT_DIR] [-o OUTPUT] [-u {exp_num,steps}] [-e] [--no-show-eval-lines]
+                   [-P] [--no-plot] [-T {all,raw,eb,lb,ste} [{all,raw,eb,lb,ste} ...]]
+                   [-S] [--no-save] [-c LOAD_SETTINGS] [-C] [--no-save-settings]
 
 Run L2Metrics from the command line
 
@@ -50,11 +50,15 @@ optional arguments:
                         Directory for output files. Defaults to results.
   -o OUTPUT, --output OUTPUT
                         Specify output filename for plot and results. Defaults to None.
+  -u {exp_num,steps}, --unit {exp_num,steps}
+                        Unit for plotting data. Defaults to exp_num.
   -e, --show-eval-lines
                         Show lines between evaluation blocks. Defaults to true.
-  --no-show-eval-lines  Do not show lines between evaluation blocks
+  --no-show-eval-lines  do not show lines between evaluation blocks.
   -P, --do-plot         Plot performance. Defaults to true.
   --no-plot             Do not plot performance
+  -T {all,raw,eb,lb,ste} [{all,raw,eb,lb,ste} ...], --plot-types {all,raw,eb,lb,ste} [{all,raw,eb,lb,ste} ...]
+                        Specify which plot types to generate. Defaults to all.
   -S, --do-save         Save metrics outputs. Defaults to true.
   --no-save             Do not save metrics outputs
   -c LOAD_SETTINGS, --load-settings LOAD_SETTINGS
@@ -73,7 +77,7 @@ By default, the L2Metrics package will calculate metrics with the following opti
 - Aggregation method is `mean`, which reports the lifetime metrics as the mean of task-level metrics as opposed to median.
 - Performance maintenance method is `mrlep`, which uses the most recent learning evaluation performance as opposed to the most recent terminal learning performance (`mrtlp`).
 - Forward and backward transfer use `ratio`.
-- Normalization method is `task`, which computes the per-task data ranges by looking at LL and STE log data, then normalizing to [0, 100].
+- Normalization method is `task`, which computes the per-task data ranges by looking at LL and STE log data, then normalizing to [0, 100] plus an offset of 1 -> [1-101].
 - Smoothing method is `flat`, which smooths data with a rectangular sliding window. Other available options include [hanning](https://numpy.org/doc/stable/reference/generated/numpy.hanning.html#numpy.hanning), [hamming](https://numpy.org/doc/stable/reference/generated/numpy.hamming.html#numpy.hamming), [bartlett](https://numpy.org/doc/stable/reference/generated/numpy.bartlett.html#numpy.bartlett), and [blackman](https://numpy.org/doc/stable/reference/generated/numpy.blackman.html).
 - Smoothing of evaluation block data is `disabled`.
 - Smoothing window length is `None`, which defaults to min(int(`block_length` \* 0.2), 100).
@@ -81,8 +85,10 @@ By default, the L2Metrics package will calculate metrics with the following opti
 - Data range file is `None`, which means L2Metrics will use the per-task data ranges for normalization and clamping.
 - Gaussian noise is `disabled`.
 - Output directory is `results/`, which will be in the current working directory.
-- Output is `None`, which means L2Metrics will use the L2Logger directory name as the base output file names.
+- Output is `None`, which means L2Metrics will use the L2Logger directory name as the base output file name. The default output file name is `ll_metrics` if recursive mode is enabled.
 - Plotting is `enabled`.
+- x-axis unit for plotting is `exp_num`. If present in log data, users can also plot with `steps` as the x-axis.
+- `all` plot types are generated. Users can also choose one or more specific types to generate from the choices: {"raw", "eb", "lb", "ste"}.
 - Draw dotted lines between evaluation blocks is `enabled`.
 - Saving of results and log data is `enabled`.
 - Load settings from a JSON file is `disabled` unless a valid file path is provided.

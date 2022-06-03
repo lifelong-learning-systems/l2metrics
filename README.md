@@ -18,6 +18,7 @@
   - [Generating a Metrics Report](#generating-metrics-report)
   - [Custom Metrics](#custom-metrics)
 - [Changelog](#changelog)
+- [Citing](#citing)
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
 
@@ -240,6 +241,23 @@ See documentation in the examples folder at [examples/README.md](https://github.
 ## Changelog
 
 See [CHANGELOG.md](https://github.com/lifelong-learning-systems/l2metrics/blob/main/CHANGELOG.md) for a list of notable changes to the project.
+
+## Citing
+
+If you use this package in an academic work, it can be cited as
+```
+@misc{Nguyen2022metrics,
+  author       = {Eric Nguyen},
+  title        = {{lifelong-learning-systems/l2metrics: l2metrics 
+                   v3.1.0-zenodo}},
+  month        = may,
+  year         = 2022,
+  publisher    = {Zenodo},
+  version      = {v3.1.0-zenodo},
+  doi          = {10.5281/zenodo.6582396},
+  url          = {https://doi.org/10.5281/zenodo.6582396}
+}
+```
 
 ## License
 

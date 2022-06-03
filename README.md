@@ -1,5 +1,7 @@
 # Lifelong Learning Metrics (L2Metrics)
 
+[![DOI](https://zenodo.org/badge/226357766.svg)](https://zenodo.org/badge/latestdoi/226357766)
+
 ![APL Logo](https://github.com/lifelong-learning-systems/l2metrics/raw/main/docs/apl_small_horizontal_blue.png)
 
 ## Table of Contents

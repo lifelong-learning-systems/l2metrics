@@ -245,6 +245,23 @@ See [CHANGELOG.md](https://github.com/lifelong-learning-systems/l2metrics/blob/m
 
 See [LICENSE](https://github.com/lifelong-learning-systems/l2metrics/blob/main/LICENSE) for license information.
 
+## Citing
+
+If you use this package in an academic work, it can be cited as
+```
+@misc{Nguyen2022metrics,
+  author       = {Eric Nguyen},
+  title        = {{lifelong-learning-systems/l2metrics: l2metrics 
+                   v3.1.0-zenodo}},
+  month        = may,
+  year         = 2022,
+  publisher    = {Zenodo},
+  version      = {v3.1.0-zenodo},
+  doi          = {10.5281/zenodo.6582396},
+  url          = {https://doi.org/10.5281/zenodo.6582396}
+}
+```
+
 ## Acknowledgements
 
 Primary development of Lifelong Learning Metrics (L2Metrics) was funded by the DARPA Lifelong Learning Machines (L2M) Program.
